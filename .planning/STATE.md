@@ -14,7 +14,7 @@
 
 ```
 Progress: [███░░░░░░░░░░░░░░░░░] 15%
-Phase 1:  ████░ Not Started
+Phase 1:  ████░ In Progress
 Phase 2:  ░░░░░ Not Started
 Phase 3:  ░░░░░ Not Started
 Phase 4:  ░░░░░ Not Started
