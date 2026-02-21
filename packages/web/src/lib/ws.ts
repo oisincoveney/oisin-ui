@@ -15,7 +15,7 @@ type PongMessage = {
   requestId?: string
 }
 
-const WS_URL = 'ws://localhost:3000'
+const WS_URL = 'ws://localhost:3000/ws?clientSessionKey=web-client'
 const BASE_RETRY_DELAY_MS = 500
 const MAX_RETRY_DELAY_MS = 30_000
 
