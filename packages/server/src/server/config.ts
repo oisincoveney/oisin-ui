@@ -12,12 +12,27 @@ import {
   type AllowedHostsConfig,
 } from "./allowed-hosts.js";
 
-const DEFAULT_PORT = 6767;
+const DEFAULT_PORT = 3000;
 const DEFAULT_RELAY_ENDPOINT = "relay.paseo.sh:443";
 const DEFAULT_APP_BASE_URL = "https://app.paseo.sh";
+
+function parsePortValue(value: string | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const port = Number.parseInt(value, 10);
+  if (!Number.isFinite(port) || port <= 0 || port > 65535) {
+    return null;
+  }
+  return port;
+}
+
 function getDefaultListen(): string {
   // Main HTTP server defaults to TCP
-  return `127.0.0.1:${DEFAULT_PORT}`;
+  const portFromEnv = parsePortValue(process.env.PORT);
+  const port = portFromEnv ?? DEFAULT_PORT;
+  return `127.0.0.1:${port}`;
 }
 
 export type CliConfigOverrides = Partial<{
