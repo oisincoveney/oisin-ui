@@ -9,12 +9,12 @@
 ## Current Position
 
 **Phase:** 01 (Foundation & Docker)
-**Plan:** 01 of 5
-**Status:** Plan 01 tasks completed, atomic tasks committed, metadata updated.
+**Plan:** 02 of 5
+**Status:** Plan 01-02 tasks completed, atomic tasks committed, metadata updated.
 
 ```
-Progress: [█████░░░░░░░░░░░░░░░] 20%
-Phase 1:  █████ In Progress
+Progress: [██████████░░░░░░░░░░] 40%
+Phase 1:  ██████████ In Progress
 Phase 2:  ░░░░░ Not Started
 Phase 3:  ░░░░░ Not Started
 Phase 4:  ░░░░░ Not Started
@@ -24,8 +24,8 @@ Phase 4:  ░░░░░ Not Started
 
 | Metric | Value |
 |--------|-------|
-| Plans executed | 1 |
-| Plans passed | 1 |
+| Plans executed | 2 |
+| Plans passed | 2 |
 | Plans failed | 0 |
 | Total requirements | 11 |
 | Requirements complete | 0 |
@@ -44,6 +44,8 @@ Phase 4:  ░░░░░ Not Started
 | Docker with tini as PID 1 | Proper signal propagation for multi-process container | Phase 1 |
 | Remove app/desktop/website/relay from workspace | Keeps bootstrap monorepo minimal and aligned with new direction | Phase 01 |
 | Rewrite README to Oisin identity | Ensures project documentation reflects final scope | Phase 01 |
+| Honor `PORT` for daemon listen config with `3000` fallback | Keeps localhost defaults aligned with task objective while remaining configurable | Plan 01-02 |
+| Keep bootstrap server composition and attach WS heartbeat at transport layer | Avoids unnecessary architecture churn while adding required lifecycle behavior | Plan 01-02 |
 
 ### Research Insights
 
@@ -56,23 +58,25 @@ Phase 4:  ░░░░░ Not Started
 ### Todos
 
 - [x] Execute `01-01-PLAN.md`
-- [ ] Execute `01-02-PLAN.md`
+- [x] Execute `01-02-PLAN.md`
 
 ### Blockers
 
-None.
+| Blocker | Impact | Status |
+|---------|--------|--------|
+| Missing `@getpaseo/relay/e2ee` typing and esbuild optional binary in current environment | Prevented typecheck and live server smoke test from passing in this environment | Unrelated to plan scope, to be handled before full verification |
 
 ## Session Continuity
 
 ### Last Session
 
 **Date:** 2026-02-21
-**What happened:** Copied Paseo base, removed non-core packages, cleaned docs/readme, verified npm install, and wrote plan 01 summary.
-**Where we stopped:** Plan 01 (`01-01-PLAN.md`) completed.
+**What happened:** Completed daemon listener defaulting and websocket heartbeat updates for plan 01-02.
+**Where we stopped:** Plan 01-02 (`01-02-PLAN.md`) completed.
 
 ### Next Session Entry Point
 
-Proceed with `/gsd-execute-plan 01-foundation-and-docker/01-02`.
+Proceed with `/gsd-execute-plan 01-foundation-and-docker/01-03`.
 
 ---
 *State initialized: 2026-02-21*
