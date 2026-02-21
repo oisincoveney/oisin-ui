@@ -1,34 +1,20 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
+    <main className="min-h-screen bg-background p-6 text-foreground">
+      <div className="mx-auto flex max-w-3xl flex-col gap-4 rounded-xl bg-white/10 p-6 shadow-lg ring-1 ring-border/50">
+        <h1 className="text-3xl font-semibold">Oisin UI</h1>
+        <p className="text-sm text-foreground/80">
+          Vite + React SPA scaffolded with Tailwind, ShadCN foundation, and Effect TS
+          prepared for the terminal web client.
         </p>
+        <button
+          type="button"
+          className="w-fit rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+        >
+          Open the workspace
+        </button>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </main>
   )
 }
 
