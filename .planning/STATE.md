@@ -9,11 +9,11 @@
 ## Current Position
 
 **Phase:** 01 (Foundation & Docker)
-**Plan:** 03 of 5
-**Status:** Plan 01-03 complete, phase remains in progress.
+**Plan:** 04 of 5
+**Status:** Plan 01-04 complete, phase remains in progress.
 
 ```
-Progress: [████████████░░░░░░░░] 60%
+Progress: [████████████████░░░░] 80%
 Phase 1:  ██████████ In Progress
 Phase 2:  ░░░░░ Not Started
 Phase 3:  ░░░░░ Not Started
@@ -24,12 +24,12 @@ Phase 4:  ░░░░░ Not Started
 
 | Metric | Value |
 |--------|-------|
-| Plans executed | 3 |
-| Plans passed | 3 |
+| Plans executed | 4 |
+| Plans passed | 4 |
 | Plans failed | 0 |
 | Total requirements | 11 |
-| Requirements complete | 3 |
-| Requirements remaining | 8 |
+| Requirements complete | 4 |
+| Requirements remaining | 7 |
 
 ## Accumulated Context
 
@@ -42,6 +42,7 @@ Phase 4:  ░░░░░ Not Started
 | tmux for session persistence | Agents survive daemon restarts, browser disconnects | Phase 2 |
 | Terminal-first (no ACP) | Gets all CLI agents for free, no protocol reimplementation | Architecture |
 | Docker with tini as PID 1 | Proper signal propagation for multi-process container | Phase 1 |
+| Use `node:22-bookworm` + `tini` to run daemon and web in one container with signal-safe shutdown | Simplified local deployment and orphan cleanup for process lifecycle | Plan 01-04 |
 | Remove app/desktop/website/relay from workspace | Keeps bootstrap monorepo minimal and aligned with new direction | Phase 01 |
 | Rewrite README to Oisin identity | Ensures project documentation reflects final scope | Phase 01 |
 | Honor `PORT` for daemon listen config with `3000` fallback | Keeps localhost defaults aligned with task objective while remaining configurable | Plan 01-02 |
@@ -62,6 +63,7 @@ Phase 4:  ░░░░░ Not Started
 - [x] Execute `01-01-PLAN.md`
 - [x] Execute `01-02-PLAN.md`
 - [x] Execute `01-03-PLAN.md`
+- [x] Execute `01-04-PLAN.md`
 
 ### Blockers
 
@@ -74,12 +76,12 @@ Phase 4:  ░░░░░ Not Started
 ### Last Session
 
 **Date:** 2026-02-21
-**What happened:** Added `packages/web` Vite workspace with Tailwind/ShadCN base styles and Effect TS baseline dependencies.
-**Where we stopped:** Plan 01-03 (`01-03-PLAN.md`) completed.
+**What happened:** Added Docker runtime artifacts for single-container operation (`Dockerfile`, `docker-compose.yml`, `scripts/start.sh`) and validated image build + compose config.
+**Where we stopped:** Plan 01-04 (`01-04-PLAN.md`) completed.
 
 ### Next Session Entry Point
 
-Proceed with `/gsd-execute-plan 01-foundation-and-docker/01-04`.
+Proceed with `/gsd-execute-plan 01-foundation-and-docker/01-05`.
 
 ---
 *State initialized: 2026-02-21*
