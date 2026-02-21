@@ -24,7 +24,8 @@ tech-stack:
     - 'Expose socket state via a small subscription hook (`useConnectionStatus`)'
     - 'Render full-screen connection overlays for loading and reconnecting states in the web UI'
 key-files:
-  created: []
+  created:
+    - .dockerignore
   modified:
     - packages/web/src/lib/ws.ts
     - packages/web/src/App.tsx
@@ -48,7 +49,7 @@ patterns-established:
 - **Started:** 2026-02-21T23:08:00Z
 - **Completed:** 2026-02-21T23:10:00Z
 - **Tasks:** 3
-- **Files modified:** 3
+- **Files modified:** 4
 
 ## Accomplishments
 
@@ -59,14 +60,16 @@ patterns-established:
 ## Task Commits
 
 1. **Task 1: Effect-based WebSocket Client** - `d069a48` (`feat`)
-2. **Task 2: Connection Status UI** - `5b4f780` (`feat`)
-3. **Task 3: Full stack Docker environment and Web UI connection resilience verification** - no code commit (human-verified checkpoint completed)
+2. **Task 1 follow-up fix: WebSocket endpoint and dockerignore** - `1d5b80e` (`fix`)
+3. **Task 2: Connection Status UI** - `5b4f780` (`feat`)
+4. **Task 3: Full stack Docker environment and Web UI connection resilience verification** - no code commit (human-verified checkpoint completed)
 
 ## Files Created/Modified
 
 - `packages/web/src/lib/ws.ts` - effect-backed WebSocket client with reconnect scheduler, ping/pong support, and shared status subscription API.
 - `packages/web/src/components/ConnectionOverlay.tsx` - full-screen states for connecting and reconnecting/disconnected transport phases.
 - `packages/web/src/App.tsx` - status indicator in main layout and overlay integration for live status rendering.
+- `.dockerignore` - excludes workspace and local tooling directories from Docker build context.
 
 ## Decisions Made
 
@@ -76,7 +79,16 @@ patterns-established:
 
 ## Deviations from Plan
 
-None - plan executed exactly as written.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Corrected websocket endpoint and Docker build context config**
+
+- **Found during:** Task 1
+- **Issue:** Initial client target endpoint needed the daemon's websocket route and container build context should exclude local-only state directories.
+- **Fix:** Updated `WS_URL` to `ws://localhost:3000/ws?clientSessionKey=web-client` and added `.dockerignore` to prevent packaging of non-build directories.
+- **Files modified:** `.dockerignore`, `packages/web/src/lib/ws.ts`
+- **Verification:** Reconnect behavior remained working and Docker verification steps were passed during checkpoint approval.
+- **Committed in:** `1d5b80e`
 
 ## Issues Encountered
 
