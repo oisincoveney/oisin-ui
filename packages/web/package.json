@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@effect/schema": "^0.75.5",
     "clsx": "^2.1.1",
+    "effect": "^3.19.19",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwind-merge": "^3.5.0"
