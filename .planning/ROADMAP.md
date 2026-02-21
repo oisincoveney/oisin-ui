@@ -18,21 +18,25 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 **Dependencies:** None (starting point)
 
 **Plans:** 5 plans
-- [ ] 01-01-PLAN.md — Project Bootstrap & Codebase Cleanup
-- [ ] 01-02-PLAN.md — Daemon Simplification
-- [ ] 01-03-PLAN.md — Web Client Scaffold
-- [ ] 01-04-PLAN.md — Docker Configuration
-- [ ] 01-05-PLAN.md — Client-Daemon Connection Flow
+
+- [x] 01-01-PLAN.md — Project Bootstrap & Codebase Cleanup
+- [x] 01-02-PLAN.md — Daemon Simplification
+- [x] 01-03-PLAN.md — Web Client Scaffold
+- [x] 01-04-PLAN.md — Docker Configuration
+- [x] 01-05-PLAN.md — Client-Daemon Connection Flow
 
 **Requirements:**
+
 - DOCK-01: Application runs in a single Docker container (daemon + web UI + tmux)
 
 **Success Criteria:**
+
 1. User can `docker build` and `docker run` a single container that starts the daemon and web UI
 2. User opens the web UI in a browser and sees a connected status indicator (WebSocket handshake succeeds)
 3. User can stop the container with Ctrl+C and all child processes (tmux, node) terminate cleanly (no orphans)
 
 **Key Work:**
+
 - Fork Paseo, strip Expo/mobile/voice/Tauri/desktop/website
 - Simplify daemon bootstrap to Express + WS + core managers
 - Scaffold Vite + React web app (replaces Expo)
@@ -50,12 +54,14 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 **Dependencies:** Phase 1 (daemon + web client + Docker running)
 
 **Requirements:**
+
 - TERM-01: User can interact with a terminal session embedded in the browser per thread
 - TERM-02: WebSocket connection auto-reconnects with exponential backoff and state recovery
 - TERM-03: Terminal dimensions stay in sync across browser, WebSocket, and tmux/PTY
 - TERM-04: User can disconnect and reconnect to find their session exactly where they left off
 
 **Success Criteria:**
+
 1. User sees an interactive terminal in the browser, types commands, and sees output in real time
 2. User closes the browser tab, reopens it, and the terminal shows previous session state (scrollback intact)
 3. User resizes the browser window and the terminal content reflows correctly (no garbled output in vim/OpenCode)
@@ -63,6 +69,7 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 5. User runs a long-running agent (OpenCode), walks away, comes back hours later, and can resume interaction
 
 **Key Work:**
+
 - xterm.js v6 component with fit addon + WebGL renderer
 - Wire up Paseo's binary mux terminal streams end-to-end
 - tmux session integration (daemon spawns/attaches to tmux sessions per terminal)
@@ -82,6 +89,7 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 **Dependencies:** Phase 2 (working terminal sessions)
 
 **Requirements:**
+
 - PROJ-01: User can see all projects in a sidebar pulled from configured git repos
 - PROJ-02: User can create multiple threads per project, each with its own git worktree
 - PROJ-03: User can create and delete threads (worktree + tmux session lifecycle)
@@ -89,6 +97,7 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 - PROJ-05: User can select which CLI agent to run per thread (OpenCode, Claude Code, etc.)
 
 **Success Criteria:**
+
 1. User sees a sidebar listing all configured projects, with threads nested under each project
 2. User clicks "New Thread" on a project, picks an agent, and within seconds has a terminal running that agent in a fresh git worktree
 3. User clicks a different thread and the terminal panel switches to that thread's live session (previous thread keeps running)
@@ -96,6 +105,7 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 5. User can choose between OpenCode, Claude Code, or other CLI agents when creating a thread, and the selected agent starts in the terminal
 
 **Key Work:**
+
 - Reuse/adapt Paseo's `worktree.ts` (987 lines) for worktree CRUD
 - Thread lifecycle: create worktree → create tmux session → start agent → attach PTY
 - Multi-project sidebar component (list projects from config, expand/collapse threads)
@@ -115,13 +125,16 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 **Dependencies:** Phase 3 (threads with git worktrees)
 
 **Requirements:**
+
 - DIFF-01: User can view uncommitted code changes per thread with syntax highlighting
 
 **Success Criteria:**
+
 1. User clicks a thread and sees a diff panel showing all uncommitted changes in that thread's worktree with syntax-highlighted code
 2. User makes changes via the agent in the terminal, and the diff panel updates to reflect new changes (manual refresh or auto-poll)
 
 **Key Work:**
+
 - diff2html integration for rendering `git diff` output per worktree
 - Diff panel component (collapsible, alongside terminal)
 - Periodic or on-demand diff refresh (poll `git diff` in worktree directory)
@@ -134,34 +147,35 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 
 ## Progress
 
-| Phase | Status | Requirements | Completion |
-|-------|--------|--------------|------------|
-| 1 - Foundation & Docker | Not Started | DOCK-01 | 0% |
-| 2 - Terminal I/O | Not Started | TERM-01, TERM-02, TERM-03, TERM-04 | 0% |
-| 3 - Project & Thread Management | Not Started | PROJ-01, PROJ-02, PROJ-03, PROJ-04, PROJ-05 | 0% |
-| 4 - Code Diffs | Not Started | DIFF-01 | 0% |
+| Phase                           | Status                | Requirements                                | Completion |
+| ------------------------------- | --------------------- | ------------------------------------------- | ---------- |
+| 1 - Foundation & Docker         | Complete (2026-02-21) | DOCK-01                                     | 100%       |
+| 2 - Terminal I/O                | Not Started           | TERM-01, TERM-02, TERM-03, TERM-04          | 0%         |
+| 3 - Project & Thread Management | Not Started           | PROJ-01, PROJ-02, PROJ-03, PROJ-04, PROJ-05 | 0%         |
+| 4 - Code Diffs                  | Not Started           | DIFF-01                                     | 0%         |
 
-**Overall:** 0/11 requirements complete (0%)
+**Overall:** 1/11 requirements complete (9%)
 
 ## Coverage Map
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| DOCK-01 | Phase 1 | Pending |
-| TERM-01 | Phase 2 | Pending |
-| TERM-02 | Phase 2 | Pending |
-| TERM-03 | Phase 2 | Pending |
-| TERM-04 | Phase 2 | Pending |
-| PROJ-01 | Phase 3 | Pending |
-| PROJ-02 | Phase 3 | Pending |
-| PROJ-03 | Phase 3 | Pending |
-| PROJ-04 | Phase 3 | Pending |
-| PROJ-05 | Phase 3 | Pending |
-| DIFF-01 | Phase 4 | Pending |
+| Requirement | Phase   | Status   |
+| ----------- | ------- | -------- |
+| DOCK-01     | Phase 1 | Complete |
+| TERM-01     | Phase 2 | Pending  |
+| TERM-02     | Phase 2 | Pending  |
+| TERM-03     | Phase 2 | Pending  |
+| TERM-04     | Phase 2 | Pending  |
+| PROJ-01     | Phase 3 | Pending  |
+| PROJ-02     | Phase 3 | Pending  |
+| PROJ-03     | Phase 3 | Pending  |
+| PROJ-04     | Phase 3 | Pending  |
+| PROJ-05     | Phase 3 | Pending  |
+| DIFF-01     | Phase 4 | Pending  |
 
 **Mapped:** 11/11 ✓
 **Orphaned:** 0
 
 ---
-*Roadmap created: 2026-02-21*
-*Last updated: 2026-02-21*
+
+_Roadmap created: 2026-02-21_
+_Last updated: 2026-02-21_

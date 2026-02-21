@@ -3,18 +3,18 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Phase 1 baseline bootstrap in execution.
+**Current Focus:** Phase 1 complete; moving to terminal I/O bootstrap.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 01 (Foundation & Docker)
-**Plan:** 04 of 5
-**Status:** Plan 01-04 complete, phase remains in progress.
+**Plan:** 05 of 5
+**Status:** Phase complete.
 
 ```
-Progress: [████████████████░░░░] 80%
-Phase 1:  ██████████ In Progress
+Progress: [████████████████████] 100%
+Phase 1:  ██████████ Complete
 Phase 2:  ░░░░░ Not Started
 Phase 3:  ░░░░░ Not Started
 Phase 4:  ░░░░░ Not Started
@@ -22,33 +22,35 @@ Phase 4:  ░░░░░ Not Started
 
 ## Performance Metrics
 
-| Metric | Value |
-|--------|-------|
-| Plans executed | 4 |
-| Plans passed | 4 |
-| Plans failed | 0 |
-| Total requirements | 11 |
-| Requirements complete | 4 |
-| Requirements remaining | 7 |
+| Metric                 | Value |
+| ---------------------- | ----- |
+| Plans executed         | 5     |
+| Plans passed           | 5     |
+| Plans failed           | 0     |
+| Total requirements     | 11    |
+| Requirements complete  | 5     |
+| Requirements remaining | 6     |
 
 ## Accumulated Context
 
 ### Key Decisions
 
-| Decision | Rationale | Phase |
-|----------|-----------|-------|
-| Fork Paseo, strip to daemon + web client | Core architecture sound, problems fixable. ~40-50% daemon reusable. | Pre-phase |
-| Expo → Vite + React | Web-only, no mobile overhead, faster builds | Phase 1 |
-| tmux for session persistence | Agents survive daemon restarts, browser disconnects | Phase 2 |
-| Terminal-first (no ACP) | Gets all CLI agents for free, no protocol reimplementation | Architecture |
-| Docker with tini as PID 1 | Proper signal propagation for multi-process container | Phase 1 |
-| Use `node:22-bookworm` + `tini` to run daemon and web in one container with signal-safe shutdown | Simplified local deployment and orphan cleanup for process lifecycle | Plan 01-04 |
-| Remove app/desktop/website/relay from workspace | Keeps bootstrap monorepo minimal and aligned with new direction | Phase 01 |
-| Rewrite README to Oisin identity | Ensures project documentation reflects final scope | Phase 01 |
-| Honor `PORT` for daemon listen config with `3000` fallback | Keeps localhost defaults aligned with task objective while remaining configurable | Plan 01-02 |
-| Keep bootstrap server composition and attach WS heartbeat at transport layer | Avoids unnecessary architecture churn while adding required lifecycle behavior | Plan 01-02 |
-| Add `packages/web` as a Vite + React workspace in root workspaces | Gives a production-ready web-first client foundation without mobile/runtime complexity | Plan 01-03 |
-| Use ESM-safe Tailwind + ShadCN foundation files in web workspace | Enables styled default page and future component work to proceed without blocking CLI assumptions | Plan 01-03 |
+| Decision                                                                                         | Rationale                                                                                         | Phase        |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- | ------------ |
+| Fork Paseo, strip to daemon + web client                                                         | Core architecture sound, problems fixable. ~40-50% daemon reusable.                               | Pre-phase    |
+| Expo → Vite + React                                                                              | Web-only, no mobile overhead, faster builds                                                       | Phase 1      |
+| tmux for session persistence                                                                     | Agents survive daemon restarts, browser disconnects                                               | Phase 2      |
+| Terminal-first (no ACP)                                                                          | Gets all CLI agents for free, no protocol reimplementation                                        | Architecture |
+| Docker with tini as PID 1                                                                        | Proper signal propagation for multi-process container                                             | Phase 1      |
+| Use `node:22-bookworm` + `tini` to run daemon and web in one container with signal-safe shutdown | Simplified local deployment and orphan cleanup for process lifecycle                              | Plan 01-04   |
+| Remove app/desktop/website/relay from workspace                                                  | Keeps bootstrap monorepo minimal and aligned with new direction                                   | Phase 01     |
+| Rewrite README to Oisin identity                                                                 | Ensures project documentation reflects final scope                                                | Phase 01     |
+| Honor `PORT` for daemon listen config with `3000` fallback                                       | Keeps localhost defaults aligned with task objective while remaining configurable                 | Plan 01-02   |
+| Keep bootstrap server composition and attach WS heartbeat at transport layer                     | Avoids unnecessary architecture churn while adding required lifecycle behavior                    | Plan 01-02   |
+| Add `packages/web` as a Vite + React workspace in root workspaces                                | Gives a production-ready web-first client foundation without mobile/runtime complexity            | Plan 01-03   |
+| Use ESM-safe Tailwind + ShadCN foundation files in web workspace                                 | Enables styled default page and future component work to proceed without blocking CLI assumptions | Plan 01-03   |
+| Keep WebSocket state outside component lifecycle                                                 | Avoid duplicate socket creation and preserve reconnect behavior across re-renders                 | Plan 01-05   |
+| Add full-screen connection overlays                                                              | Prevent user interaction while transport is reconnecting, improving state safety                  | Plan 01-05   |
 
 ### Research Insights
 
@@ -64,11 +66,12 @@ Phase 4:  ░░░░░ Not Started
 - [x] Execute `01-02-PLAN.md`
 - [x] Execute `01-03-PLAN.md`
 - [x] Execute `01-04-PLAN.md`
+- [x] Execute `01-05-PLAN.md`
 
 ### Blockers
 
-| Blocker | Impact | Status |
-|---------|--------|--------|
+| Blocker                                                                                  | Impact                                                                          | Status                                                          |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | Missing `@getpaseo/relay/e2ee` typing and esbuild optional binary in current environment | Prevented typecheck and live server smoke test from passing in this environment | Unrelated to plan scope, to be handled before full verification |
 
 ## Session Continuity
@@ -76,13 +79,14 @@ Phase 4:  ░░░░░ Not Started
 ### Last Session
 
 **Date:** 2026-02-21
-**What happened:** Added Docker runtime artifacts for single-container operation (`Dockerfile`, `docker-compose.yml`, `scripts/start.sh`) and validated image build + compose config.
-**Where we stopped:** Plan 01-04 (`01-04-PLAN.md`) completed.
+**What happened:** Completed WebSocket connection resilience and UI transport states in the web client (`ws.ts`, `ConnectionOverlay`, `App.tsx`); user approved end-to-end reconnect verification.
+**Where we stopped:** Plan 01-05 (`01-05-PLAN.md`) completed.
 
 ### Next Session Entry Point
 
-Proceed with `/gsd-execute-plan 01-foundation-and-docker/01-05`.
+No follow-up plan exists in `.planning/phases` yet; ready to create/execute Phase 2 next.
 
 ---
-*State initialized: 2026-02-21*
-*Last updated: 2026-02-21*
+
+_State initialized: 2026-02-21_
+_Last updated: 2026-02-21T23:10:12Z_
