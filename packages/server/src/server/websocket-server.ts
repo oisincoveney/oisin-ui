@@ -1,4 +1,4 @@
-import { WebSocketServer } from "ws";
+import WebSocket, { WebSocketServer } from "ws";
 import type { Server as HTTPServer } from "http";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { join } from "path";
@@ -147,6 +147,12 @@ type WebSocketLike = {
   once: (event: "close" | "error", listener: (...args: any[]) => void) => void;
 };
 
+type HeartbeatWebSocket = WebSocket & {
+  isAlive: boolean;
+};
+
+const HEARTBEAT_INTERVAL_MS = 30_000;
+
 type SessionConnection = {
   session: Session;
   clientId: string;
@@ -207,6 +213,7 @@ export class VoiceAssistantWebSocketServer {
   private readonly voiceCallerContexts = new Map<string, VoiceCallerContext>();
   private readonly agentProviderRuntimeSettings: AgentProviderRuntimeSettingsMap | undefined;
   private serverCapabilities: ServerCapabilities | undefined;
+  private heartbeatInterval: ReturnType<typeof setInterval> | null;
 
   constructor(
     server: HTTPServer,
@@ -260,6 +267,7 @@ export class VoiceAssistantWebSocketServer {
     this.serverCapabilities = buildServerCapabilities({
       readiness: this.dictation?.getSpeechReadiness?.() ?? null,
     });
+    this.heartbeatInterval = null;
 
     const pushLogger = this.logger.child({ module: "push" });
     this.pushTokenStore = new PushTokenStore(
@@ -306,8 +314,28 @@ export class VoiceAssistantWebSocketServer {
     });
 
     this.wss.on("connection", (ws, request) => {
+      this.registerHeartbeatSocket(ws);
       void this.attachSocket(ws, request);
     });
+
+    this.heartbeatInterval = setInterval(() => {
+      for (const client of this.wss.clients) {
+        const heartbeatClient = client as HeartbeatWebSocket;
+        if (heartbeatClient.isAlive === false) {
+          this.logger.debug("WebSocket heartbeat missed pong; terminating client");
+          heartbeatClient.terminate();
+          continue;
+        }
+
+        heartbeatClient.isAlive = false;
+        try {
+          heartbeatClient.ping();
+        } catch (error) {
+          this.logger.warn({ err: error instanceof Error ? error : new Error(String(error)) }, "Failed to send websocket ping; terminating");
+          heartbeatClient.terminate();
+        }
+      }
+    }, HEARTBEAT_INTERVAL_MS);
 
     this.logger.info("WebSocket server initialized on /ws");
   }
@@ -326,6 +354,18 @@ export class VoiceAssistantWebSocketServer {
     this.updateServerCapabilities(buildServerCapabilities({ readiness }));
   }
 
+  private registerHeartbeatSocket(ws: WebSocketLike): void {
+    if (!(ws instanceof WebSocket)) {
+      return;
+    }
+
+    const heartbeatWs = ws as HeartbeatWebSocket;
+    heartbeatWs.isAlive = true;
+    heartbeatWs.on("pong", () => {
+      heartbeatWs.isAlive = true;
+    });
+  }
+
   public updateServerCapabilities(
     capabilities: ServerCapabilities | null | undefined
   ): void {
@@ -341,10 +381,16 @@ export class VoiceAssistantWebSocketServer {
     ws: WebSocketLike,
     metadata?: ExternalSocketMetadata
   ): Promise<void> {
+    this.registerHeartbeatSocket(ws);
     await this.attachSocket(ws, undefined, metadata);
   }
 
   public async close(): Promise<void> {
+    if (this.heartbeatInterval !== null) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+
     const uniqueConnections = new Set<SessionConnection>([
       ...this.sessions.values(),
       ...this.externalSessionsByKey.values(),
