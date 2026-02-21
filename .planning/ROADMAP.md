@@ -17,6 +17,13 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 
 **Dependencies:** None (starting point)
 
+**Plans:** 5 plans
+- [ ] 01-01-PLAN.md — Project Bootstrap & Codebase Cleanup
+- [ ] 01-02-PLAN.md — Daemon Simplification
+- [ ] 01-03-PLAN.md — Web Client Scaffold
+- [ ] 01-04-PLAN.md — Docker Configuration
+- [ ] 01-05-PLAN.md — Client-Daemon Connection Flow
+
 **Requirements:**
 - DOCK-01: Application runs in a single Docker container (daemon + web UI + tmux)
 
