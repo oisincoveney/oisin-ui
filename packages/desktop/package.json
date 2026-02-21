@@ -1,0 +1,14 @@
+{
+  "name": "@getpaseo/desktop",
+  "version": "0.1.15",
+  "private": true,
+  "description": "Paseo desktop app (Tauri wrapper)",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.6"
+  }
+}

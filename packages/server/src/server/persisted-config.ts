@@ -1,0 +1,275 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { z } from "zod";
+import { AGENT_PROVIDER_IDS } from "./agent/provider-manifest.js";
+import { AgentProviderRuntimeSettingsMapSchema } from "./agent/provider-launch-config.js";
+
+const LogConfigSchema = z
+  .object({
+    level: z
+      .enum(["trace", "debug", "info", "warn", "error", "fatal"])
+      .optional(),
+    format: z.enum(["pretty", "json"]).optional(),
+  })
+  .strict();
+
+const ProviderCredentialsSchema = z
+  .object({
+    apiKey: z.string().min(1).optional(),
+  })
+  .strict();
+
+const LocalSpeechProviderSchema = z
+  .object({
+    modelsDir: z.string().min(1).optional(),
+  })
+  .strict();
+
+const ProvidersSchema = z
+  .object({
+    openai: ProviderCredentialsSchema.optional(),
+    local: LocalSpeechProviderSchema.optional(),
+  })
+  .strict();
+
+const SpeechProviderIdSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .pipe(z.enum(["openai", "local"]));
+
+const FeatureDictationSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    stt: z
+      .object({
+        provider: SpeechProviderIdSchema.optional(),
+        model: z.string().min(1).optional(),
+        confidenceThreshold: z.number().optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+const FeatureVoiceModeSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    llm: z
+      .object({
+        provider: z.enum(AGENT_PROVIDER_IDS as [string, ...string[]]).optional(),
+        model: z.string().min(1).optional(),
+      })
+      .strict()
+      .optional(),
+    stt: z
+      .object({
+        provider: SpeechProviderIdSchema.optional(),
+        model: z.string().min(1).optional(),
+      })
+      .strict()
+      .optional(),
+    tts: z
+      .object({
+        provider: SpeechProviderIdSchema.optional(),
+        model: z.string().min(1).optional(),
+        voice: z.enum(["alloy", "echo", "fable", "onyx", "nova", "shimmer"]).optional(),
+        speakerId: z.number().int().optional(),
+        speed: z.number().optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+export const PersistedConfigSchema = z
+  .object({
+    // v1 schema marker
+    version: z.literal(1).optional(),
+
+    // v1 config layout
+    daemon: z
+      .object({
+        listen: z.string().optional(),
+        allowedHosts: z.union([z.literal(true), z.array(z.string())]).optional(),
+        mcp: z
+          .object({
+            enabled: z.boolean().optional(),
+          })
+          .strict()
+          .optional(),
+        cors: z
+          .object({
+            allowedOrigins: z.array(z.string()).optional(),
+          })
+          .strict()
+          .optional(),
+        relay: z
+          .object({
+            enabled: z.boolean().optional(),
+            endpoint: z.string().optional(),
+            publicEndpoint: z.string().optional(),
+          })
+          .strict()
+          .optional(),
+      })
+      .strict()
+      .optional(),
+
+    app: z
+      .object({
+        baseUrl: z.string().optional(),
+      })
+      .strict()
+      .optional(),
+
+    providers: ProvidersSchema.optional(),
+    agents: z
+      .object({
+        providers: AgentProviderRuntimeSettingsMapSchema.optional(),
+      })
+      .strict()
+      .optional(),
+    features: z
+      .object({
+        dictation: FeatureDictationSchema.optional(),
+        voiceMode: FeatureVoiceModeSchema.optional(),
+      })
+      .strict()
+      .optional(),
+
+    log: LogConfigSchema.optional(),
+  })
+  .strict();
+
+export type PersistedConfig = z.infer<typeof PersistedConfigSchema>;
+
+const CONFIG_FILENAME = "config.json";
+const DEFAULT_PERSISTED_CONFIG: PersistedConfig = PersistedConfigSchema.parse({
+  version: 1,
+  daemon: {
+    listen: "127.0.0.1:6767",
+    cors: {
+      allowedOrigins: ["https://app.paseo.sh"],
+    },
+    relay: {
+      enabled: true,
+    },
+  },
+  app: {
+    baseUrl: "https://app.paseo.sh",
+  },
+});
+
+type LoggerLike = {
+  child(bindings: Record<string, unknown>): LoggerLike;
+  info(...args: any[]): void;
+};
+
+function getConfigPath(paseoHome: string): string {
+  return path.join(paseoHome, CONFIG_FILENAME);
+}
+
+function getLogger(logger: LoggerLike | undefined): LoggerLike | undefined {
+  return logger?.child({ module: "config" });
+}
+
+function stripDeprecatedLocalSpeechConfigFields(parsed: unknown): unknown {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return parsed;
+  }
+
+  const root = { ...(parsed as Record<string, unknown>) };
+  const providers = root.providers;
+  if (!providers || typeof providers !== "object" || Array.isArray(providers)) {
+    return root;
+  }
+
+  const providersRecord = { ...(providers as Record<string, unknown>) };
+  const local = providersRecord.local;
+  if (!local || typeof local !== "object" || Array.isArray(local)) {
+    root.providers = providersRecord;
+    return root;
+  }
+
+  const localRecord = { ...(local as Record<string, unknown>) };
+  if ("autoDownload" in localRecord) {
+    delete localRecord.autoDownload;
+  }
+
+  providersRecord.local = localRecord;
+  root.providers = providersRecord;
+  return root;
+}
+
+export function loadPersistedConfig(
+  paseoHome: string,
+  logger?: LoggerLike
+): PersistedConfig {
+  const log = getLogger(logger);
+  const configPath = getConfigPath(paseoHome);
+
+  if (!existsSync(configPath)) {
+    try {
+      mkdirSync(path.dirname(configPath), { recursive: true });
+      writeFileSync(configPath, JSON.stringify(DEFAULT_PERSISTED_CONFIG, null, 2) + "\n");
+      log?.info(`Initialized config file at ${configPath}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`[Config] Failed to initialize ${configPath}: ${message}`);
+    }
+  }
+
+  let raw: string;
+  try {
+    raw = readFileSync(configPath, "utf-8");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`[Config] Failed to read ${configPath}: ${message}`);
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`[Config] Invalid JSON in ${configPath}: ${message}`);
+  }
+
+  const migrated = stripDeprecatedLocalSpeechConfigFields(parsed);
+  const result = PersistedConfigSchema.safeParse(migrated);
+  if (!result.success) {
+    const issues = result.error.issues
+      .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
+      .join("\n");
+    throw new Error(`[Config] Invalid config in ${configPath}:\n${issues}`);
+  }
+
+  log?.info(`Loaded from ${configPath}`);
+  return result.data;
+}
+
+export function savePersistedConfig(
+  paseoHome: string,
+  config: PersistedConfig,
+  logger?: LoggerLike
+): void {
+  const log = getLogger(logger);
+  const configPath = getConfigPath(paseoHome);
+
+  const result = PersistedConfigSchema.safeParse(config);
+  if (!result.success) {
+    const issues = result.error.issues
+      .map((i) => `  - ${i.path.join(".")}: ${i.message}`)
+      .join("\n");
+    throw new Error(`[Config] Invalid config to save:\n${issues}`);
+  }
+
+  try {
+    writeFileSync(configPath, JSON.stringify(result.data, null, 2) + "\n");
+    log?.info(`Saved to ${configPath}`);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`[Config] Failed to write ${configPath}: ${message}`);
+  }
+}
