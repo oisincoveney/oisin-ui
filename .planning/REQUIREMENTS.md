@@ -71,7 +71,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOCK-01 | Phase 1: Foundation & Docker | Pending |
+| DOCK-01 | Phase 1: Foundation & Docker | Complete |
 | TERM-01 | Phase 2: Terminal I/O | Pending |
 | TERM-02 | Phase 2: Terminal I/O | Pending |
 | TERM-03 | Phase 2: Terminal I/O | Pending |
