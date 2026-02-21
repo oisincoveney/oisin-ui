@@ -71,23 +71,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TERM-01 | — | Pending |
-| TERM-02 | — | Pending |
-| TERM-03 | — | Pending |
-| TERM-04 | — | Pending |
-| PROJ-01 | — | Pending |
-| PROJ-02 | — | Pending |
-| PROJ-03 | — | Pending |
-| PROJ-04 | — | Pending |
-| PROJ-05 | — | Pending |
-| DIFF-01 | — | Pending |
-| DOCK-01 | — | Pending |
+| DOCK-01 | Phase 1: Foundation & Docker | Pending |
+| TERM-01 | Phase 2: Terminal I/O | Pending |
+| TERM-02 | Phase 2: Terminal I/O | Pending |
+| TERM-03 | Phase 2: Terminal I/O | Pending |
+| TERM-04 | Phase 2: Terminal I/O | Pending |
+| PROJ-01 | Phase 3: Project & Thread Management | Pending |
+| PROJ-02 | Phase 3: Project & Thread Management | Pending |
+| PROJ-03 | Phase 3: Project & Thread Management | Pending |
+| PROJ-04 | Phase 3: Project & Thread Management | Pending |
+| PROJ-05 | Phase 3: Project & Thread Management | Pending |
+| DIFF-01 | Phase 4: Code Diffs | Pending |
 
 **Coverage:**
 - v1 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11 ⚠️
+- Mapped to phases: 11 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-21 after initial definition*
+*Last updated: 2026-02-21 after roadmap creation*
