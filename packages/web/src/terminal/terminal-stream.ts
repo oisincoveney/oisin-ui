@@ -1,28 +1,42 @@
 import { Terminal } from "@xterm/xterm";
-import { 
-  encodeBinaryMuxFrame, 
-  BinaryMuxChannel, 
+import {
+  encodeBinaryMuxFrame,
+  BinaryMuxChannel,
   TerminalBinaryMessageType,
+  TerminalBinaryFlags,
   type BinaryMuxFrame
 } from "./binary-mux";
+
+type TerminalStreamChunkEvent = {
+  replay: boolean;
+  endOffset: number;
+};
+
+type TerminalStreamAdapterOptions = {
+  onChunkApplied?: (event: TerminalStreamChunkEvent) => void;
+};
 
 export class TerminalStreamAdapter {
   offset = 0;
   attached = false;
+  transportConnected = false;
   decoder = new TextDecoder();
   encoder = new TextEncoder();
   terminal: Terminal;
   streamId: number;
   sendBinary: (data: Uint8Array) => void;
+  private readonly onChunkApplied?: (event: TerminalStreamChunkEvent) => void;
 
   constructor(
     terminal: Terminal,
     streamId: number,
-    sendBinary: (data: Uint8Array) => void
+    sendBinary: (data: Uint8Array) => void,
+    options?: TerminalStreamAdapterOptions
   ) {
     this.terminal = terminal;
     this.streamId = streamId;
     this.sendBinary = sendBinary;
+    this.onChunkApplied = options?.onChunkApplied;
   }
 
   handleFrame(frame: BinaryMuxFrame) {
@@ -30,29 +44,28 @@ export class TerminalStreamAdapter {
     if (frame.streamId !== this.streamId) return;
 
     if (frame.messageType === TerminalBinaryMessageType.OutputUtf8 && frame.payload) {
-      // Decode output chunk
       const text = this.decoder.decode(frame.payload);
-      
-      // Update offset and render
-      this.offset = frame.offset + frame.payload.byteLength;
-      
-      // Write to xterm
+      const nextOffset = frame.offset + frame.payload.byteLength;
+      const replay = ((frame.flags ?? 0) & TerminalBinaryFlags.Replay) !== 0;
+
+      this.offset = nextOffset;
+
       this.terminal.write(text, () => {
-        // Send ACK back to server once rendered
-        this.sendAck(this.offset);
+        this.sendAck(nextOffset);
+        this.onChunkApplied?.({ replay, endOffset: nextOffset });
       });
     }
   }
 
   public sendInput(text: string) {
-    if (!this.attached) return;
-    
+    if (!this.attached || !this.transportConnected) return;
+
     const payload = this.encoder.encode(text);
     const frame = encodeBinaryMuxFrame({
       channel: BinaryMuxChannel.Terminal,
       streamId: this.streamId,
       messageType: TerminalBinaryMessageType.InputUtf8,
-      offset: 0, // Input offsets not strictly tracked currently
+      offset: 0,
       payload,
     });
     this.sendBinary(frame);
@@ -73,11 +86,23 @@ export class TerminalStreamAdapter {
   public setAttached(attached: boolean) {
     this.attached = attached;
   }
-  
+
+  public setTransportConnected(connected: boolean) {
+    this.transportConnected = connected;
+  }
+
+  public clearPendingInput() {
+    // Input is intentionally not buffered across disconnects.
+  }
+
+  public setStreamId(streamId: number) {
+    this.streamId = streamId;
+  }
+
   public getOffset() {
     return this.offset;
   }
-  
+
   public setOffset(offset: number) {
     this.offset = offset;
   }

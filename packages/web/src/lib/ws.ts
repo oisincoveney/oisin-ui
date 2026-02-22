@@ -1,7 +1,11 @@
 import { Effect, Ref } from "effect";
 import { useEffect, useState } from "react";
 
-export type ConnectionStatus = "connecting" | "connected" | "disconnected";
+export type ConnectionStatus =
+  | "connecting"
+  | "reconnecting"
+  | "connected"
+  | "disconnected";
 
 type ConnectionStatusListener = (status: ConnectionStatus) => void;
 
@@ -13,6 +17,11 @@ type PingMessage = {
 type PongMessage = {
   type: "pong";
   requestId?: string;
+};
+
+type WrappedSessionMessage = {
+  type: "session";
+  message: unknown;
 };
 
 function getWsUrl(): string {
@@ -88,18 +97,25 @@ function computeBackoffDelay(retries: number): number {
   return Math.min(exponential, MAX_RETRY_DELAY_MS);
 }
 
-function scheduleReconnect(): void {
+function scheduleReconnect(reason: "close" | "error"): void {
   if (shouldStop) {
     return;
   }
 
-  clearReconnectTimer();
+  if (reconnectTimer !== null) {
+    return;
+  }
+
+  emit("disconnected");
 
   const nextRetry = runSync(Ref.get(retryCountRef)) + 1;
   runSync(Ref.set(retryCountRef, nextRetry));
 
   const delay = computeBackoffDelay(nextRetry);
-  emit("disconnected");
+  console.warn(
+    `[ws] ${reason} detected; reconnect attempt #${nextRetry} in ${delay}ms`,
+  );
+  emit("reconnecting");
 
   reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
@@ -118,7 +134,12 @@ function sendIfOpen(payload: PongMessage): void {
 
 export function sendWsMessage(message: unknown): void {
   if (socket?.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify(message));
+    socket.send(
+      JSON.stringify({
+        type: "session",
+        message,
+      } satisfies WrappedSessionMessage),
+    );
   }
 }
 
@@ -188,6 +209,23 @@ function handleSocketMessage(event: MessageEvent): void {
     return;
   }
 
+  if (event.data instanceof ArrayBuffer) {
+    const data = new Uint8Array(event.data);
+    const listeners = runSync(Ref.get(binaryListenersRef));
+    for (const listener of listeners) {
+      listener(data);
+    }
+    return;
+  }
+
+  if (event.data instanceof Uint8Array) {
+    const listeners = runSync(Ref.get(binaryListenersRef));
+    for (const listener of listeners) {
+      listener(event.data);
+    }
+    return;
+  }
+
   if (typeof event.data !== "string") {
     return;
   }
@@ -202,6 +240,22 @@ function handleSocketMessage(event: MessageEvent): void {
 
   if (isPingMessage(parsed)) {
     sendIfOpen({ type: "pong", requestId: parsed.requestId });
+    return;
+  }
+
+  if (
+    typeof parsed === "object" &&
+    parsed !== null &&
+    (parsed as { type?: unknown }).type === "session"
+  ) {
+    const sessionMessage = (parsed as { message?: unknown }).message;
+    if (sessionMessage === undefined) {
+      return;
+    }
+    const listeners = runSync(Ref.get(textListenersRef));
+    for (const listener of listeners) {
+      listener(sessionMessage);
+    }
     return;
   }
 
@@ -224,34 +278,56 @@ function connect(): void {
     return;
   }
 
-  emit("connecting");
+  const currentRetry = runSync(Ref.get(retryCountRef));
+  emit(currentRetry > 0 ? "reconnecting" : "connecting");
+  console.info(
+    `[ws] connecting to ${getWsUrl()}${
+      currentRetry > 0 ? ` (attempt #${currentRetry})` : ""
+    }`,
+  );
 
-  socket = new WebSocket(getWsUrl());
+  const nextSocket = new WebSocket(getWsUrl());
+  nextSocket.binaryType = "arraybuffer";
+  socket = nextSocket;
 
-  socket.addEventListener("open", () => {
+  nextSocket.addEventListener("open", () => {
+    if (socket !== nextSocket) {
+      return;
+    }
     emit("connected");
+    console.info("[ws] connected");
     runSync(Ref.set(retryCountRef, 0));
     clearReconnectTimer();
   });
 
-  socket.addEventListener("message", handleSocketMessage);
+  nextSocket.addEventListener("message", handleSocketMessage);
 
-  socket.addEventListener("close", () => {
+  nextSocket.addEventListener("close", () => {
+    if (socket !== nextSocket) {
+      return;
+    }
+
+    socket = null;
     if (shouldStop) {
       emit("disconnected");
       return;
     }
 
-    scheduleReconnect();
+    scheduleReconnect("close");
   });
 
-  socket.addEventListener("error", () => {
+  nextSocket.addEventListener("error", () => {
+    if (socket !== nextSocket) {
+      return;
+    }
+
+    console.error("[ws] socket error before reconnect");
     if (shouldStop) {
       emit("disconnected");
       return;
     }
 
-    scheduleReconnect();
+    scheduleReconnect("error");
   });
 }
 
