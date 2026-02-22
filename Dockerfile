@@ -19,7 +19,7 @@ RUN chmod +x scripts/start.sh
 
 ENV PASEO_HOME=/config
 ENV PASEO_LISTEN=0.0.0.0:3000
-ENV PASEO_CORS_ORIGINS=http://localhost:5173
+ENV PASEO_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://0.0.0.0:5173
 
 EXPOSE 3000
 EXPOSE 5173
