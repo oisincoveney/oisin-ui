@@ -1,245 +1,258 @@
-import { Effect, Ref } from 'effect'
-import { useEffect, useState } from 'react'
+import { Effect, Ref } from "effect";
+import { useEffect, useState } from "react";
 
-export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected'
+export type ConnectionStatus = "connecting" | "connected" | "disconnected";
 
-type ConnectionStatusListener = (status: ConnectionStatus) => void
+type ConnectionStatusListener = (status: ConnectionStatus) => void;
 
 type PingMessage = {
-  type: 'ping'
-  requestId?: string
-}
+  type: "ping";
+  requestId?: string;
+};
 
 type PongMessage = {
-  type: 'pong'
-  requestId?: string
+  type: "pong";
+  requestId?: string;
+};
+
+function getWsUrl(): string {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const hostname = window.location.hostname;
+  const port = import.meta.env.VITE_DAEMON_PORT || "3000";
+
+  return `${protocol}//${hostname}:${port}/ws?clientSessionKey=web-client`;
 }
+const BASE_RETRY_DELAY_MS = 500;
+const MAX_RETRY_DELAY_MS = 30_000;
 
-const WS_URL = 'ws://localhost:3000/ws?clientSessionKey=web-client'
-const BASE_RETRY_DELAY_MS = 500
-const MAX_RETRY_DELAY_MS = 30_000
+const currentStatusRef = Effect.runSync(
+  Ref.make<ConnectionStatus>("disconnected"),
+);
+const listenersRef = Effect.runSync(
+  Ref.make<Set<ConnectionStatusListener>>(new Set()),
+);
+const retryCountRef = Effect.runSync(Ref.make(0));
 
-const currentStatusRef = Effect.runSync(Ref.make<ConnectionStatus>('disconnected'))
-const listenersRef = Effect.runSync(Ref.make<Set<ConnectionStatusListener>>(new Set()))
-const retryCountRef = Effect.runSync(Ref.make(0))
-
-let socket: WebSocket | null = null
-let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-let shouldStop = false
-let started = false
-let subscriberCount = 0
+let socket: WebSocket | null = null;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let shouldStop = false;
+let started = false;
+let subscriberCount = 0;
 
 function runSync<T>(effect: Effect.Effect<T>): T {
-  return Effect.runSync(effect)
+  return Effect.runSync(effect);
 }
 
 function isPingMessage(message: unknown): message is PingMessage {
   return (
-    typeof message === 'object' &&
+    typeof message === "object" &&
     message !== null &&
-    (message as { type?: unknown }).type === 'ping'
-  )
+    (message as { type?: unknown }).type === "ping"
+  );
 }
 
 function emit(status: ConnectionStatus): void {
   runSync(
     Effect.gen(function* () {
-      const current = yield* Ref.get(currentStatusRef)
+      const current = yield* Ref.get(currentStatusRef);
       if (current === status) {
-        return
+        return;
       }
 
-      yield* Ref.set(currentStatusRef, status)
-      const listeners = yield* Ref.get(listenersRef)
+      yield* Ref.set(currentStatusRef, status);
+      const listeners = yield* Ref.get(listenersRef);
       for (const listener of listeners) {
-        listener(status)
+        listener(status);
       }
-    })
-  )
+    }),
+  );
 }
 
 function currentStatus(): ConnectionStatus {
-  return runSync(Ref.get(currentStatusRef))
+  return runSync(Ref.get(currentStatusRef));
 }
 
 function clearReconnectTimer(): void {
   if (reconnectTimer !== null) {
-    clearTimeout(reconnectTimer)
-    reconnectTimer = null
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
   }
 }
 
 function computeBackoffDelay(retries: number): number {
   if (retries <= 0) {
-    return BASE_RETRY_DELAY_MS
+    return BASE_RETRY_DELAY_MS;
   }
 
-  const exponential = BASE_RETRY_DELAY_MS * 2 ** retries
-  return Math.min(exponential, MAX_RETRY_DELAY_MS)
+  const exponential = BASE_RETRY_DELAY_MS * 2 ** retries;
+  return Math.min(exponential, MAX_RETRY_DELAY_MS);
 }
 
 function scheduleReconnect(): void {
   if (shouldStop) {
-    return
+    return;
   }
 
-  clearReconnectTimer()
+  clearReconnectTimer();
 
-  const nextRetry = runSync(Ref.get(retryCountRef)) + 1
-  runSync(Ref.set(retryCountRef, nextRetry))
+  const nextRetry = runSync(Ref.get(retryCountRef)) + 1;
+  runSync(Ref.set(retryCountRef, nextRetry));
 
-  const delay = computeBackoffDelay(nextRetry)
-  emit('disconnected')
+  const delay = computeBackoffDelay(nextRetry);
+  emit("disconnected");
 
   reconnectTimer = setTimeout(() => {
-    reconnectTimer = null
+    reconnectTimer = null;
     if (shouldStop) {
-      return
+      return;
     }
-    connect()
-  }, delay)
+    connect();
+  }, delay);
 }
 
 function sendIfOpen(payload: PongMessage): void {
   if (socket?.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify(payload))
+    socket.send(JSON.stringify(payload));
   }
 }
 
 function handleSocketMessage(event: MessageEvent): void {
-  if (typeof event.data !== 'string') {
-    return
+  if (typeof event.data !== "string") {
+    return;
   }
 
-  let parsed: unknown
+  let parsed: unknown;
 
   try {
-    parsed = JSON.parse(event.data)
+    parsed = JSON.parse(event.data);
   } catch {
-    return
+    return;
   }
 
   if (!isPingMessage(parsed)) {
-    return
+    return;
   }
 
-  sendIfOpen({ type: 'pong', requestId: parsed.requestId })
+  sendIfOpen({ type: "pong", requestId: parsed.requestId });
 }
 
 function connect(): void {
   if (shouldStop || !started) {
-    return
+    return;
   }
 
   if (
     socket !== null &&
-    (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)
+    (socket.readyState === WebSocket.CONNECTING ||
+      socket.readyState === WebSocket.OPEN)
   ) {
-    return
+    return;
   }
 
-  emit('connecting')
+  emit("connecting");
 
-  socket = new WebSocket(WS_URL)
+  socket = new WebSocket(getWsUrl());
 
-  socket.addEventListener('open', () => {
-    emit('connected')
-    runSync(Ref.set(retryCountRef, 0))
-    clearReconnectTimer()
-  })
+  socket.addEventListener("open", () => {
+    emit("connected");
+    runSync(Ref.set(retryCountRef, 0));
+    clearReconnectTimer();
+  });
 
-  socket.addEventListener('message', handleSocketMessage)
+  socket.addEventListener("message", handleSocketMessage);
 
-  socket.addEventListener('close', () => {
+  socket.addEventListener("close", () => {
     if (shouldStop) {
-      emit('disconnected')
-      return
+      emit("disconnected");
+      return;
     }
 
-    scheduleReconnect()
-  })
+    scheduleReconnect();
+  });
 
-  socket.addEventListener('error', () => {
+  socket.addEventListener("error", () => {
     if (shouldStop) {
-      emit('disconnected')
-      return
+      emit("disconnected");
+      return;
     }
 
-    scheduleReconnect()
-  })
+    scheduleReconnect();
+  });
 }
 
 function stop(): void {
-  shouldStop = true
-  started = false
-  clearReconnectTimer()
-  emit('disconnected')
+  shouldStop = true;
+  started = false;
+  clearReconnectTimer();
+  emit("disconnected");
 
   if (
     socket !== null &&
     socket.readyState !== WebSocket.CLOSING &&
     socket.readyState !== WebSocket.CLOSED
   ) {
-    socket.close()
+    socket.close();
   }
 
-  socket = null
+  socket = null;
 }
 
 export function startConnection(): void {
   if (started) {
-    return
+    return;
   }
 
-  shouldStop = false
-  started = true
-  connect()
+  shouldStop = false;
+  started = true;
+  connect();
 }
 
-export function subscribeConnectionStatus(listener: ConnectionStatusListener): () => void {
+export function subscribeConnectionStatus(
+  listener: ConnectionStatusListener,
+): () => void {
   runSync(
     Ref.update(listenersRef, (listeners) => {
-      const next = new Set(listeners)
-      next.add(listener)
-      return next
-    })
-  )
+      const next = new Set(listeners);
+      next.add(listener);
+      return next;
+    }),
+  );
 
   return () => {
     runSync(
       Ref.update(listenersRef, (listeners) => {
-        const next = new Set(listeners)
-        next.delete(listener)
-        return next
-      })
-    )
-  }
+        const next = new Set(listeners);
+        next.delete(listener);
+        return next;
+      }),
+    );
+  };
 }
 
 export function useConnectionStatus(): ConnectionStatus {
-  const [status, setStatus] = useState<ConnectionStatus>(currentStatus())
+  const [status, setStatus] = useState<ConnectionStatus>(currentStatus());
 
   useEffect(() => {
-    startConnection()
-    subscriberCount += 1
+    startConnection();
+    subscriberCount += 1;
 
-    const unsubscribe = subscribeConnectionStatus(setStatus)
+    const unsubscribe = subscribeConnectionStatus(setStatus);
 
-    setStatus(currentStatus())
+    setStatus(currentStatus());
 
     return () => {
-      unsubscribe()
-      subscriberCount -= 1
+      unsubscribe();
+      subscriberCount -= 1;
 
       if (subscriberCount <= 0) {
-        stop()
+        stop();
       }
-    }
-  }, [])
+    };
+  }, []);
 
-  return status
+  return status;
 }
 
 export function getConnectionStatus(): ConnectionStatus {
-  return currentStatus()
+  return currentStatus();
 }
