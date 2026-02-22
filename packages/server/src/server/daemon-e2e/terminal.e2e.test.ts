@@ -468,6 +468,59 @@ const shouldRun = !process.env.CI;
   );
 
   test(
+    "applies attach dimensions and keeps stream output flowing during resize",
+    async () => {
+      const cwd = tmpCwd();
+      const list = await ctx.client.listTerminals(cwd);
+      const terminalId = list.terminals[0].id;
+
+      const attach = await ctx.client.attachTerminalStream(terminalId, { rows: 28, cols: 96 });
+      expect(attach.error).toBeNull();
+      expect(attach.streamId).toBeTypeOf("number");
+
+      const subscribeResult = await ctx.client.subscribeTerminal(terminalId);
+      expect(subscribeResult.error).toBeNull();
+      expect(subscribeResult.state?.rows).toBe(28);
+      expect(subscribeResult.state?.cols).toBe(96);
+
+      let output = "";
+      const unsubscribe = ctx.client.onTerminalStreamData(attach.streamId!, (chunk) => {
+        output += decoder.decode(chunk.data, { stream: true });
+      });
+
+      ctx.client.sendTerminalStreamInput(
+        attach.streamId!,
+        "for i in 1 2 3 4; do echo resize-flow-$i; sleep 0.1; done\r"
+      );
+
+      ctx.client.sendTerminalInput(terminalId, {
+        type: "resize",
+        rows: 33,
+        cols: 120,
+      });
+      ctx.client.sendTerminalInput(terminalId, {
+        type: "resize",
+        rows: 36,
+        cols: 128,
+      });
+
+      await waitForCondition(() => output.includes("resize-flow-4"), 10000);
+
+      const refreshedState = await ctx.client.subscribeTerminal(terminalId);
+      expect(refreshedState.error).toBeNull();
+      expect(refreshedState.state?.rows).toBe(36);
+      expect(refreshedState.state?.cols).toBe(128);
+
+      const detach = await ctx.client.detachTerminalStream(attach.streamId!);
+      expect(detach.success).toBe(true);
+      ctx.client.unsubscribeTerminal(terminalId);
+      unsubscribe();
+      rmSync(cwd, { recursive: true, force: true });
+    },
+    30000
+  );
+
+  test(
     "resets stale resume offsets and replays from tmux capture-pane history",
     async () => {
       const cwd = tmpCwd();
