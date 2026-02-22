@@ -9,7 +9,7 @@
 ## Current Position
 
 **Phase:** 01 (Foundation & Docker)
-**Plan:** 05 of 5
+**Plan:** 06 of 6
 **Status:** Phase complete.
 
 ```
@@ -24,12 +24,12 @@ Phase 4:  ░░░░░ Not Started
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 5     |
-| Plans passed           | 5     |
+| Plans executed         | 6     |
+| Plans passed           | 6     |
 | Plans failed           | 0     |
 | Total requirements     | 11    |
-| Requirements complete  | 5     |
-| Requirements remaining | 6     |
+| Requirements complete  | 6     |
+| Requirements remaining | 5     |
 
 ## Accumulated Context
 
@@ -51,6 +51,7 @@ Phase 4:  ░░░░░ Not Started
 | Use ESM-safe Tailwind + ShadCN foundation files in web workspace                                 | Enables styled default page and future component work to proceed without blocking CLI assumptions | Plan 01-03   |
 | Keep WebSocket state outside component lifecycle                                                 | Avoid duplicate socket creation and preserve reconnect behavior across re-renders                 | Plan 01-05   |
 | Add full-screen connection overlays                                                              | Prevent user interaction while transport is reconnecting, improving state safety                  | Plan 01-05   |
+| Build the client WebSocket URL from browser location + optional daemon port env var              | Makes UI connect from LAN hostnames and non-localhost container IPs without DNS issues            | Plan 01-06   |
 
 ### Research Insights
 
@@ -67,6 +68,7 @@ Phase 4:  ░░░░░ Not Started
 - [x] Execute `01-03-PLAN.md`
 - [x] Execute `01-04-PLAN.md`
 - [x] Execute `01-05-PLAN.md`
+- [x] Execute `01-06-PLAN.md`
 
 ### Blockers
 
@@ -78,9 +80,9 @@ Phase 4:  ░░░░░ Not Started
 
 ### Last Session
 
-**Date:** 2026-02-21
-**What happened:** Completed WebSocket connection resilience and UI transport states in the web client (`ws.ts`, `ConnectionOverlay`, `App.tsx`); user approved end-to-end reconnect verification.
-**Where we stopped:** Plan 01-05 (`01-05-PLAN.md`) completed.
+**Date:** 2026-02-22
+**What happened:** Updated WebSocket URL derivation to use browser hostname and protocol with configurable daemon port, enabling non-localhost access to the running container web UI.
+**Where we stopped:** Plan 01-06 (`01-06-PLAN.md`) completed.
 
 ### Next Session Entry Point
 
@@ -89,4 +91,4 @@ No follow-up plan exists in `.planning/phases` yet; ready to create/execute Phas
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-21T23:10:12Z_
+_Last updated: 2026-02-22T01:41:13Z_

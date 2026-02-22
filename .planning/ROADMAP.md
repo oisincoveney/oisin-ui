@@ -24,7 +24,7 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 - [x] 01-03-PLAN.md — Web Client Scaffold
 - [x] 01-04-PLAN.md — Docker Configuration
 - [x] 01-05-PLAN.md — Client-Daemon Connection Flow
-- [ ] 01-06-PLAN.md — Dynamic WebSocket URL
+- [x] 01-06-PLAN.md — Dynamic WebSocket URL
 
 **Requirements:**
 
