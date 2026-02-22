@@ -116,7 +116,78 @@ function sendIfOpen(payload: PongMessage): void {
   }
 }
 
+export function sendWsMessage(message: unknown): void {
+  if (socket?.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify(message));
+  }
+}
+
+export function sendWsBinary(data: Uint8Array): void {
+  if (socket?.readyState === WebSocket.OPEN) {
+    socket.send(data);
+  }
+}
+
+type TextMessageListener = (data: unknown) => void;
+type BinaryMessageListener = (data: Uint8Array) => void;
+
+const textListenersRef = Effect.runSync(
+  Ref.make<Set<TextMessageListener>>(new Set()),
+);
+const binaryListenersRef = Effect.runSync(
+  Ref.make<Set<BinaryMessageListener>>(new Set()),
+);
+
+export function subscribeTextMessages(listener: TextMessageListener): () => void {
+  runSync(
+    Ref.update(textListenersRef, (listeners) => {
+      const next = new Set(listeners);
+      next.add(listener);
+      return next;
+    }),
+  );
+  return () => {
+    runSync(
+      Ref.update(textListenersRef, (listeners) => {
+        const next = new Set(listeners);
+        next.delete(listener);
+        return next;
+      }),
+    );
+  };
+}
+
+export function subscribeBinaryMessages(listener: BinaryMessageListener): () => void {
+  runSync(
+    Ref.update(binaryListenersRef, (listeners) => {
+      const next = new Set(listeners);
+      next.add(listener);
+      return next;
+    }),
+  );
+  return () => {
+    runSync(
+      Ref.update(binaryListenersRef, (listeners) => {
+        const next = new Set(listeners);
+        next.delete(listener);
+        return next;
+      }),
+    );
+  };
+}
+
 function handleSocketMessage(event: MessageEvent): void {
+  if (event.data instanceof Blob) {
+    event.data.arrayBuffer().then((buffer: ArrayBuffer) => {
+      const data = new Uint8Array(buffer);
+      const listeners = runSync(Ref.get(binaryListenersRef));
+      for (const listener of listeners) {
+        listener(data);
+      }
+    });
+    return;
+  }
+
   if (typeof event.data !== "string") {
     return;
   }
@@ -129,11 +200,15 @@ function handleSocketMessage(event: MessageEvent): void {
     return;
   }
 
-  if (!isPingMessage(parsed)) {
+  if (isPingMessage(parsed)) {
+    sendIfOpen({ type: "pong", requestId: parsed.requestId });
     return;
   }
 
-  sendIfOpen({ type: "pong", requestId: parsed.requestId });
+  const listeners = runSync(Ref.get(textListenersRef));
+  for (const listener of listeners) {
+    listener(parsed);
+  }
 }
 
 function connect(): void {
