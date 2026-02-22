@@ -56,6 +56,29 @@ const shouldRun = !process.env.CI;
   }, 60000);
 
   test(
+    "ensures default terminal identity for active-thread placeholder",
+    async () => {
+      const first = await ctx.client.ensureDefaultTerminal();
+      const second = await ctx.client.ensureDefaultTerminal();
+
+      expect(first.error).toBeNull();
+      expect(first.terminal).toBeTruthy();
+      expect(first.threadId).toBe("active");
+      expect(first.threadScope).toBe("phase2-active-thread-placeholder");
+      expect(first.sessionKey).toBeTruthy();
+      expect(first.cwd).toBeTruthy();
+
+      expect(second.error).toBeNull();
+      expect(second.terminal).toBeTruthy();
+      expect(second.terminal!.id).toBe(first.terminal!.id);
+      expect(second.threadId).toBe("active");
+      expect(second.threadScope).toBe("phase2-active-thread-placeholder");
+      expect(second.sessionKey).toBe(first.sessionKey);
+    },
+    30000
+  );
+
+  test(
     "lists terminals for a directory (auto-creates first)",
     async () => {
       const cwd = tmpCwd();
@@ -445,13 +468,83 @@ const shouldRun = !process.env.CI;
   );
 
   test(
+    "resets stale resume offsets and replays from tmux capture-pane history",
+    async () => {
+      const cwd = tmpCwd();
+      const list = await ctx.client.listTerminals(cwd);
+      const terminalId = list.terminals[0].id;
+
+      const attach = await ctx.client.attachTerminalStream(terminalId, { rows: 24, cols: 80 });
+      expect(attach.error).toBeNull();
+      const streamId = attach.streamId!;
+
+      let text = "";
+      let resumeOffset = attach.currentOffset;
+      const unsub = ctx.client.onTerminalStreamData(streamId, (chunk) => {
+        text += decoder.decode(chunk.data, { stream: true });
+        resumeOffset = chunk.endOffset;
+      });
+
+      ctx.client.sendTerminalStreamInput(streamId, "echo before-overflow-marker\r");
+      await waitForCondition(() => text.includes("before-overflow-marker"), 10000);
+
+      const detach = await ctx.client.detachTerminalStream(streamId);
+      expect(detach.success).toBe(true);
+      unsub();
+
+      ctx.client.sendTerminalInput(terminalId, {
+        type: "input",
+        data: "perl -e 'print \"B\" x 600000'\r",
+      });
+      ctx.client.sendTerminalInput(terminalId, {
+        type: "input",
+        data: "echo after-overflow-marker\r",
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      const requestedResumeOffset = resumeOffset + 1;
+      const resumed = await ctx.client.attachTerminalStream(terminalId, {
+        resumeOffset: requestedResumeOffset,
+      });
+      expect(resumed.error).toBeNull();
+      expect(resumed.streamId).toBeTypeOf("number");
+      expect(resumed.reset).toBe(true);
+      expect(resumed.replayedFrom).not.toBe(requestedResumeOffset);
+      expect(resumed.currentOffset).toBeGreaterThanOrEqual(resumed.replayedFrom);
+
+      let replayText = "";
+      let streamText = "";
+      const replayUnsub = ctx.client.onTerminalStreamData(resumed.streamId!, (chunk) => {
+        streamText += decoder.decode(chunk.data, { stream: true });
+        if (chunk.replay) {
+          replayText += decoder.decode(chunk.data, { stream: true });
+        }
+      });
+
+      await waitForCondition(
+        () => replayText.length > 0 && streamText.includes("after-overflow-marker"),
+        10000
+      );
+
+      const resumedDetach = await ctx.client.detachTerminalStream(resumed.streamId!);
+      expect(resumedDetach.success).toBe(true);
+      replayUnsub();
+      rmSync(cwd, { recursive: true, force: true });
+    },
+    30000
+  );
+
+  test(
     "applies stream backpressure window until client ack advances",
     async () => {
       const cwd = tmpCwd();
       const list = await ctx.client.listTerminals(cwd);
       const terminalId = list.terminals[0].id;
 
-      const ws = new WebSocket(`ws://127.0.0.1:${ctx.daemon.port}/ws`);
+      const ws = new WebSocket(
+        `ws://127.0.0.1:${ctx.daemon.port}/ws?clientSessionKey=terminal-e2e-raw-${Date.now()}`
+      );
       await new Promise<void>((resolve, reject) => {
         ws.once("open", () => resolve());
         ws.once("error", reject);
@@ -546,7 +639,7 @@ const shouldRun = !process.env.CI;
             terminalId,
             message: {
               type: "input",
-              data: "head -c 1048576 /dev/zero | tr '\\0' 'A'\r",
+              data: "yes A | head -c 1048576\r",
             },
           },
         })

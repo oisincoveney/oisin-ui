@@ -118,6 +118,9 @@ export function loadConfig(
   const voiceLlmProviderExplicit =
     envVoiceLlmProvider !== null || persistedVoiceLlmProvider !== null;
   const voiceLlmModel = persisted.features?.voiceMode?.llm?.model ?? null;
+  const defaultTerminalAgentCommand =
+    env.PASEO_DEFAULT_TERMINAL_AGENT_COMMAND?.trim() || "opencode";
+  const defaultTerminalCwd = path.resolve(env.PASEO_DEFAULT_TERMINAL_CWD ?? process.cwd());
 
   return {
     listen,
@@ -141,5 +144,7 @@ export function loadConfig(
     voiceLlmProviderExplicit,
     voiceLlmModel,
     agentProviderSettings: persisted.agents?.providers,
+    defaultTerminalAgentCommand,
+    defaultTerminalCwd,
   };
 }

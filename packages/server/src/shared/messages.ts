@@ -1025,6 +1025,11 @@ export const AttachTerminalStreamRequestSchema = z.object({
   requestId: z.string(),
 })
 
+export const EnsureDefaultTerminalRequestSchema = z.object({
+  type: z.literal('ensure_default_terminal_request'),
+  requestId: z.string(),
+})
+
 export const DetachTerminalStreamRequestSchema = z.object({
   type: z.literal('detach_terminal_stream_request'),
   streamId: z.number().int().nonnegative(),
@@ -1093,6 +1098,7 @@ export const SessionInboundMessageSchema = z.discriminatedUnion('type', [
   KillTerminalRequestSchema,
   AttachTerminalStreamRequestSchema,
   DetachTerminalStreamRequestSchema,
+  EnsureDefaultTerminalRequestSchema,
 ])
 
 export type SessionInboundMessage = z.infer<typeof SessionInboundMessageSchema>
@@ -1977,6 +1983,19 @@ export const AttachTerminalStreamResponseSchema = z.object({
   }),
 })
 
+export const EnsureDefaultTerminalResponseSchema = z.object({
+  type: z.literal('ensure_default_terminal_response'),
+  payload: z.object({
+    terminal: TerminalInfoSchema.nullable(),
+    threadId: z.literal('active'),
+    threadScope: z.literal('phase2-active-thread-placeholder'),
+    sessionKey: z.string().nullable(),
+    cwd: z.string().nullable(),
+    error: z.string().nullable(),
+    requestId: z.string(),
+  }),
+})
+
 export const DetachTerminalStreamResponseSchema = z.object({
   type: z.literal('detach_terminal_stream_response'),
   payload: z.object({
@@ -2055,6 +2074,7 @@ export const SessionOutboundMessageSchema = z.discriminatedUnion('type', [
   KillTerminalResponseSchema,
   AttachTerminalStreamResponseSchema,
   DetachTerminalStreamResponseSchema,
+  EnsureDefaultTerminalResponseSchema,
   TerminalStreamExitSchema,
 ])
 
@@ -2183,7 +2203,9 @@ export type TerminalOutput = z.infer<typeof TerminalOutputSchema>
 export type KillTerminalRequest = z.infer<typeof KillTerminalRequestSchema>
 export type KillTerminalResponse = z.infer<typeof KillTerminalResponseSchema>
 export type AttachTerminalStreamRequest = z.infer<typeof AttachTerminalStreamRequestSchema>
+export type EnsureDefaultTerminalRequest = z.infer<typeof EnsureDefaultTerminalRequestSchema>
 export type AttachTerminalStreamResponse = z.infer<typeof AttachTerminalStreamResponseSchema>
+export type EnsureDefaultTerminalResponse = z.infer<typeof EnsureDefaultTerminalResponseSchema>
 export type DetachTerminalStreamRequest = z.infer<typeof DetachTerminalStreamRequestSchema>
 export type DetachTerminalStreamResponse = z.infer<typeof DetachTerminalStreamResponseSchema>
 export type TerminalStreamExit = z.infer<typeof TerminalStreamExitSchema>

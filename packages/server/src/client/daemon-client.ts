@@ -41,6 +41,7 @@ import type {
   TerminalOutput,
   KillTerminalResponse,
   AttachTerminalStreamResponse,
+  EnsureDefaultTerminalResponse,
   DetachTerminalStreamResponse,
   TerminalInput,
   SessionInboundMessage,
@@ -230,6 +231,7 @@ type SubscribeTerminalPayload = SubscribeTerminalResponse['payload']
 type TerminalOutputPayload = TerminalOutput['payload']
 type KillTerminalPayload = KillTerminalResponse['payload']
 type AttachTerminalStreamPayload = AttachTerminalStreamResponse['payload']
+type EnsureDefaultTerminalPayload = EnsureDefaultTerminalResponse['payload']
 type DetachTerminalStreamPayload = DetachTerminalStreamResponse['payload']
 export type FetchAgentTimelinePayload = FetchAgentTimelineResponseMessage['payload']
 
@@ -2489,6 +2491,21 @@ export class DaemonClient {
       requestId: resolvedRequestId,
       message,
       responseType: 'attach_terminal_stream_response',
+      timeout: 10000,
+      options: { skipQueue: true },
+    })
+  }
+
+  async ensureDefaultTerminal(requestId?: string): Promise<EnsureDefaultTerminalPayload> {
+    const resolvedRequestId = this.createRequestId(requestId)
+    const message = SessionInboundMessageSchema.parse({
+      type: 'ensure_default_terminal_request',
+      requestId: resolvedRequestId,
+    })
+    return this.sendCorrelatedRequest({
+      requestId: resolvedRequestId,
+      message,
+      responseType: 'ensure_default_terminal_response',
       timeout: 10000,
       options: { skipQueue: true },
     })

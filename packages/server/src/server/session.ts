@@ -25,6 +25,7 @@ import {
   type KillTerminalRequest,
   type AttachTerminalStreamRequest,
   type DetachTerminalStreamRequest,
+  type EnsureDefaultTerminalRequest,
   type SubscribeCheckoutDiffRequest,
   type UnsubscribeCheckoutDiffRequest,
   type DirectorySuggestionsRequest,
@@ -1495,6 +1496,10 @@ export class Session {
 
         case 'detach_terminal_stream_request':
           this.handleDetachTerminalStreamRequest(msg)
+          break
+
+        case 'ensure_default_terminal_request':
+          await this.handleEnsureDefaultTerminalRequest(msg)
           break
       }
     } catch (error: any) {
@@ -6304,6 +6309,61 @@ export class Session {
         payload: {
           cwd: msg.cwd,
           terminals: [],
+          requestId: msg.requestId,
+        },
+      })
+    }
+  }
+
+  private async handleEnsureDefaultTerminalRequest(msg: EnsureDefaultTerminalRequest): Promise<void> {
+    if (!this.terminalManager) {
+      this.emit({
+        type: 'ensure_default_terminal_response',
+        payload: {
+          terminal: null,
+          threadId: 'active',
+          threadScope: 'phase2-active-thread-placeholder',
+          sessionKey: null,
+          cwd: null,
+          error: 'Terminal manager not available',
+          requestId: msg.requestId,
+        },
+      })
+      return
+    }
+
+    try {
+      const ensured = await this.terminalManager.ensureDefaultTerminal()
+      this.ensureTerminalExitSubscription(ensured.terminal)
+      // Phase 2 handoff marker: `threadId: "active"` is a placeholder identity.
+      // Replace with real project/thread lifecycle IDs in Phase 3 (PROJ-02 / PROJ-04).
+      this.emit({
+        type: 'ensure_default_terminal_response',
+        payload: {
+          terminal: {
+            id: ensured.terminal.id,
+            name: ensured.terminal.name,
+            cwd: ensured.terminal.cwd,
+          },
+          threadId: ensured.threadId,
+          threadScope: ensured.threadScope,
+          sessionKey: ensured.sessionKey,
+          cwd: ensured.cwd,
+          error: null,
+          requestId: msg.requestId,
+        },
+      })
+    } catch (error: any) {
+      this.sessionLogger.error({ err: error }, 'Failed to ensure default terminal')
+      this.emit({
+        type: 'ensure_default_terminal_response',
+        payload: {
+          terminal: null,
+          threadId: 'active',
+          threadScope: 'phase2-active-thread-placeholder',
+          sessionKey: null,
+          cwd: null,
+          error: error.message,
           requestId: msg.requestId,
         },
       })

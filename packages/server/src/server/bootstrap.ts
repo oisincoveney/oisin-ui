@@ -121,6 +121,8 @@ export type PaseoDaemonConfig = {
   dictationFinalTimeoutMs?: number;
   downloadTokenTtlMs?: number;
   agentProviderSettings?: AgentProviderRuntimeSettingsMap;
+  defaultTerminalAgentCommand?: string;
+  defaultTerminalCwd?: string;
 };
 
 export interface PaseoDaemon {
@@ -275,7 +277,10 @@ export async function createPaseoDaemon(
     logger,
   });
 
-  const terminalManager = createTerminalManager();
+  const terminalManager = createTerminalManager({
+    defaultTerminalAgentCommand: config.defaultTerminalAgentCommand,
+    defaultTerminalCwd: config.defaultTerminalCwd,
+  });
 
   const detachAgentStoragePersistence = attachAgentStoragePersistence(
     logger,
