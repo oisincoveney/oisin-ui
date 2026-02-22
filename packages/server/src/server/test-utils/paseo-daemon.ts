@@ -86,6 +86,7 @@ export async function createTestPaseoDaemon(
       voiceLlmModel: options.voiceLlmModel ?? null,
       dictationFinalTimeoutMs: options.dictationFinalTimeoutMs,
       downloadTokenTtlMs: options.downloadTokenTtlMs,
+      tmuxSocketPath: path.join(paseoHome, "test-tmux.sock"),
     };
 
     const logger = options.logger ?? pino({ level: "silent" });

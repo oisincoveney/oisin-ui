@@ -123,6 +123,7 @@ export type PaseoDaemonConfig = {
   agentProviderSettings?: AgentProviderRuntimeSettingsMap;
   defaultTerminalAgentCommand?: string;
   defaultTerminalCwd?: string;
+  tmuxSocketPath?: string;
 };
 
 export interface PaseoDaemon {
@@ -280,6 +281,7 @@ export async function createPaseoDaemon(
   const terminalManager = createTerminalManager({
     defaultTerminalAgentCommand: config.defaultTerminalAgentCommand,
     defaultTerminalCwd: config.defaultTerminalCwd,
+    tmuxSocketPath: config.tmuxSocketPath,
   });
 
   const detachAgentStoragePersistence = attachAgentStoragePersistence(
