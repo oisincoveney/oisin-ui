@@ -1,18 +1,29 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 import "@xterm/xterm/css/xterm.css";
+import { useTerminalResize } from "./terminal-resize";
 
 export interface TerminalViewProps {
   onTerminalReady?: (terminal: Terminal) => void;
   onDispose?: () => void;
+  onResize?: (cols: number, rows: number) => void;
   className?: string;
 }
 
-export function TerminalView({ onTerminalReady, onDispose, className = "" }: TerminalViewProps) {
+export function TerminalView({ onTerminalReady, onDispose, onResize, className = "" }: TerminalViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+  const [terminalState, setTerminalState] = useState<Terminal | null>(null);
+
+  useTerminalResize({
+    terminal: terminalState,
+    fitAddon: fitAddonRef.current,
+    container: containerRef.current,
+    onResize,
+  });
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -35,9 +46,11 @@ export function TerminalView({ onTerminalReady, onDispose, className = "" }: Ter
     });
 
     terminalRef.current = term;
+    setTerminalState(term);
 
     // Load addons
     const fitAddon = new FitAddon();
+    fitAddonRef.current = fitAddon;
     term.loadAddon(fitAddon);
 
     let webglAddon: WebglAddon | null = null;
@@ -59,8 +72,7 @@ export function TerminalView({ onTerminalReady, onDispose, className = "" }: Ter
       }
     }
 
-    // Initial fit
-    // Use a small timeout to ensure DOM is ready and sized
+    // Use a small timeout to ensure DOM is ready and sized.
     setTimeout(() => {
       try {
         fitAddon.fit();
@@ -72,23 +84,14 @@ export function TerminalView({ onTerminalReady, onDispose, className = "" }: Ter
       }
     }, 10);
 
-    const resizeObserver = new ResizeObserver(() => {
-      try {
-        fitAddon.fit();
-      } catch (e) {
-        // ignore
-      }
-    });
-    
-    resizeObserver.observe(containerRef.current);
-
     return () => {
-      resizeObserver.disconnect();
       if (onDispose) {
         onDispose();
       }
       term.dispose();
       terminalRef.current = null;
+      fitAddonRef.current = null;
+      setTerminalState(null);
     };
   }, [onTerminalReady, onDispose]);
 

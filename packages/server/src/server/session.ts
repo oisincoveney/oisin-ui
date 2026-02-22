@@ -6602,7 +6602,7 @@ export class Session {
       return
     }
 
-    if (msg.rows || msg.cols) {
+    if (typeof msg.rows === 'number' || typeof msg.cols === 'number') {
       const state = session.getState()
       session.send({
         type: 'resize',
