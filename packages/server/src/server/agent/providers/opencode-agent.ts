@@ -360,7 +360,7 @@ export class OpenCodeServerManager {
 }
 
 export class OpenCodeAgentClient implements AgentClient {
-  readonly provider: "opencode" = "opencode";
+  readonly provider = "opencode" as const;
   readonly capabilities = OPENCODE_CAPABILITIES;
 
   private readonly serverManager: OpenCodeServerManager;
@@ -524,7 +524,7 @@ export class OpenCodeAgentClient implements AgentClient {
 }
 
 class OpenCodeAgentSession implements AgentSession {
-  readonly provider: "opencode" = "opencode";
+  readonly provider = "opencode" as const;
   readonly capabilities = OPENCODE_CAPABILITIES;
 
   private readonly config: OpenCodeAgentConfig;

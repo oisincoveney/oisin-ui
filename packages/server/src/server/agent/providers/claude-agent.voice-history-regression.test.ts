@@ -104,7 +104,7 @@ describe("ClaudeAgentSession history replay regression", () => {
     configDir = path.join(tempRoot, "claude-config");
     mkdirSync(cwd, { recursive: true });
 
-    const sanitized = cwd.replace(/[\\/\.]/g, "-").replace(/_/g, "-");
+    const sanitized = cwd.replace(/[\\/.]/g, "-").replace(/_/g, "-");
     const historyDir = path.join(configDir, "projects", sanitized);
     mkdirSync(historyDir, { recursive: true });
     const historyPath = path.join(historyDir, "history-session.jsonl");

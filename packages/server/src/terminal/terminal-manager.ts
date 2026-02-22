@@ -163,7 +163,7 @@ export function createTerminalManager(): TerminalManager {
       const inheritedEnv = resolveDefaultEnvForCwd(options.cwd);
       const mergedEnv =
         inheritedEnv || options.env
-          ? { ...(inheritedEnv ?? {}), ...(options.env ?? {}) }
+          ? { ...inheritedEnv, ...options.env }
           : undefined;
       const session = registerSession(
         await createTerminal({

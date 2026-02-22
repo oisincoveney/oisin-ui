@@ -9,14 +9,14 @@ export PASEO_CORS_ORIGINS="${PASEO_CORS_ORIGINS:-http://localhost:5173,http://12
 cd /workspace
 
 if [ ! -d node_modules ]; then
-  npm install
+  bun install
 fi
 
 echo "Starting daemon and web server..."
-npm run dev:server &
+bun run dev:server &
 DAEMON_PID=$!
 
-npm run dev --workspace=@oisin/web -- --host 0.0.0.0 --port 5173 &
+bun run --filter @oisin/web dev -- --host 0.0.0.0 --port 5173 &
 WEB_PID=$!
 
 cleanup() {

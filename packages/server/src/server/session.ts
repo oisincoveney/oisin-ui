@@ -313,7 +313,7 @@ const MIN_STREAMING_SEGMENT_DURATION_MS = 1000
 const MIN_STREAMING_SEGMENT_BYTES = Math.round(PCM_BYTES_PER_MS * MIN_STREAMING_SEGMENT_DURATION_MS)
 const VOICE_MODE_INACTIVITY_FLUSH_MS = 4500
 const VOICE_INTERNAL_DICTATION_ID_PREFIX = '__voice_turn__:'
-const SAFE_GIT_REF_PATTERN = /^[A-Za-z0-9._\/-]+$/
+const SAFE_GIT_REF_PATTERN = /^[A-Za-z0-9._/-]+$/
 const AgentIdSchema = z.string().uuid()
 const VOICE_MCP_SERVER_NAME = 'paseo_voice'
 
@@ -1987,7 +1987,7 @@ export class Session {
       throw new Error('Voice MCP stdio bridge is not configured')
     }
     return {
-      ...(existing ?? {}),
+      ...existing,
       [VOICE_MCP_SERVER_NAME]: buildVoiceAgentMcpServerConfig({
         command: mcpStdio.command,
         baseArgs: mcpStdio.baseArgs,

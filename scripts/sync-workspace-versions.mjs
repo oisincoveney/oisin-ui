@@ -69,7 +69,7 @@ function syncDesktopCargoPackageVersion(version) {
       return line
     }
 
-    if (inPackageSection && /^\[/.test(line)) {
+    if (inPackageSection && line.startsWith('[')) {
       inPackageSection = false
       return line
     }

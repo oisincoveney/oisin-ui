@@ -6,6 +6,10 @@ services:
       - "5173:5173"
     volumes:
       - .:/workspace
+      - /workspace/node_modules
+      - /workspace/packages/server/node_modules
+      - /workspace/packages/web/node_modules
+      - /workspace/packages/cli/node_modules
       - oisin-ui-config:/config
       - ${HOME}/.ssh:/root/.ssh:ro
 

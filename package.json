@@ -11,32 +11,32 @@
     "dev": "./scripts/dev.sh",
     "dev:server": "NODE_ENV=development tsx packages/server/scripts/daemon-runner.ts --dev",
     "postinstall": "node scripts/postinstall-patches.mjs",
-    "build": "npm run build --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "start": "npm run start --workspace=@getpaseo/server",
+    "build": "bun run --filter '*' build",
+    "typecheck": "bun run --filter '*' typecheck",
+    "test": "bun run --filter '*' test",
+    "format": "oxlint --fix .",
+    "format:check": "oxlint .",
+    "start": "bun run --filter @getpaseo/server start",
     "cli": "npx tsx packages/cli/src/index.js",
-    "version": "npm run version:sync-internal && npm run release:prepare && git add -A",
+    "version": "bun run version:sync-internal && bun run release:prepare && git add -A",
     "version:sync-internal": "node scripts/sync-workspace-versions.mjs",
-    "release:prepare": "npm install --workspaces --include-workspace-root",
-    "version:all:patch": "npm version patch --include-workspace-root --message \"chore(release): cut %s\"",
-    "version:all:minor": "npm version minor --include-workspace-root --message \"chore(release): cut %s\"",
-    "version:all:major": "npm version major --include-workspace-root --message \"chore(release): cut %s\"",
-    "release:check": "npm run release:prepare && npm run typecheck --workspace=@getpaseo/server && npm run typecheck --workspace=@getpaseo/cli && npm run build --workspace=@getpaseo/server && npm run build --workspace=@getpaseo/cli",
-    "release:publish:dry-run": "npm publish --dry-run --workspace=@getpaseo/server --access public && npm publish --dry-run --workspace=@getpaseo/cli --access public",
-    "release:publish": "npm publish --workspace=@getpaseo/server --access public && npm publish --workspace=@getpaseo/cli --access public",
+    "release:prepare": "bun install",
+    "version:all:patch": "bun pm version patch --message \"chore(release): cut %s\"",
+    "version:all:minor": "bun pm version minor --message \"chore(release): cut %s\"",
+    "version:all:major": "bun pm version major --message \"chore(release): cut %s\"",
+    "release:check": "bun run release:prepare && bun run --filter @getpaseo/server typecheck && bun run --filter @getpaseo/cli typecheck && bun run --filter @getpaseo/server build && bun run --filter @getpaseo/cli build",
+    "release:publish:dry-run": "bun publish --dry-run --workspace=@getpaseo/server --access public && bun publish --dry-run --workspace=@getpaseo/cli --access public",
+    "release:publish": "bun publish --workspace=@getpaseo/server --access public && bun publish --workspace=@getpaseo/cli --access public",
     "release:push": "node scripts/push-current-release-tag.mjs",
-    "release:patch": "npm run version:all:patch && npm run release:check && npm run release:publish && npm run release:push",
-    "release:minor": "npm run version:all:minor && npm run release:check && npm run release:publish && npm run release:push",
-    "release:major": "npm run version:all:major && npm run release:check && npm run release:publish && npm run release:push"
+    "release:patch": "bun run version:all:patch && bun run release:check && bun run release:publish && bun run release:push",
+    "release:minor": "bun run version:all:minor && bun run release:check && bun run release:publish && bun run release:push",
+    "release:major": "bun run version:all:major && bun run release:check && bun run release:publish && bun run release:push"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
-    "prettier": "^3.5.3",
     "get-port-cli": "^3.0.0",
     "knip": "^5.82.1",
+    "oxlint": "^1.49.0",
     "patch-package": "^8.0.1",
     "typescript": "^5.9.3"
   },
@@ -55,6 +55,10 @@
     "lightningcss": "1.30.1"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.11"
-  }
+    "@anthropic-ai/claude-agent-sdk": "^0.2.11",
+    "ws": "^8.19.0"
+  },
+  "trustedDependencies": [
+    "onnxruntime-node"
+  ]
 }

@@ -84,7 +84,7 @@ export function applyProviderEnv(
 ): Record<string, string | undefined> {
   return {
     ...baseEnv,
-    ...(runtimeSettings?.env ?? {}),
+    ...runtimeSettings?.env,
   };
 }
 

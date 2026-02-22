@@ -4,7 +4,7 @@ import { findSessionByName, killSession } from "./tmux.js";
 
 const TEST_SESSION = "test-terminal-manager";
 
-const ANSI_ESCAPE_REGEX = /\u001B[\[\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
+const ANSI_ESCAPE_REGEX = /\u001B[[\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
 
 function stripAnsi(value: string): string {
   return value.replace(ANSI_ESCAPE_REGEX, "");

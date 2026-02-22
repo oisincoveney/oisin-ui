@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
 
 COPY . .
 
-RUN npm install
+RUN bun install
 
 RUN chmod +x scripts/start.sh
 

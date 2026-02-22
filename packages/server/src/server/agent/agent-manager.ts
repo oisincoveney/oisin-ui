@@ -227,7 +227,7 @@ function attachPersistenceCwd(
   return {
     ...handle,
     metadata: {
-      ...(handle.metadata ?? {}),
+      ...handle.metadata,
       cwd,
     },
   };

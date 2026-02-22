@@ -653,19 +653,16 @@ function mapFileChangeItem(
     })
     .filter((change) => change.path !== undefined);
 
-  const inputBase = {
-    ...(files.length > 0
+  const inputBase = (files.length > 0
       ? {
           files: files.map((file) => ({
             path: file.path,
             ...(file.kind !== undefined ? { kind: file.kind } : {}),
           })),
         }
-      : {}),
-  };
+      : {});
 
-  const output = toNullableObject({
-    ...(files.length > 0
+  const output = toNullableObject((files.length > 0
       ? {
           files: files.map((file) => ({
             path: file.path,
@@ -673,8 +670,7 @@ function mapFileChangeItem(
             ...asEditFileOutputFields(file.diff),
           })),
         }
-      : {}),
-  });
+      : {}));
 
   const name = "apply_patch";
   const error = item.error ?? null;

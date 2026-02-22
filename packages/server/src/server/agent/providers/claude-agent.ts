@@ -492,7 +492,7 @@ function resolvePermissionKind(
 }
 
 export class ClaudeAgentClient implements AgentClient {
-  readonly provider: "claude" = "claude";
+  readonly provider = "claude" as const;
   readonly capabilities = CLAUDE_CAPABILITIES;
 
   private readonly defaults?: { agents?: Record<string, AgentDefinition> };
@@ -648,7 +648,7 @@ export class ClaudeAgentClient implements AgentClient {
 }
 
 class ClaudeAgentSession implements AgentSession {
-  readonly provider: "claude" = "claude";
+  readonly provider = "claude" as const;
   readonly capabilities = CLAUDE_CAPABILITIES;
 
   private readonly config: ClaudeAgentConfig;
@@ -2063,7 +2063,7 @@ class ClaudeAgentSession implements AgentSession {
     const cwd = this.config.cwd;
     if (!cwd) return null;
     // Match Claude CLI's path sanitization: replace slashes, dots, and underscores with dashes
-    const sanitized = cwd.replace(/[\\/\.]/g, "-").replace(/_/g, "-");
+    const sanitized = cwd.replace(/[\\/.]/g, "-").replace(/_/g, "-");
     const configDir = process.env.CLAUDE_CONFIG_DIR ?? path.join(os.homedir(), ".claude");
     const dir = path.join(configDir, "projects", sanitized);
     return path.join(dir, `${sessionId}.jsonl`);
