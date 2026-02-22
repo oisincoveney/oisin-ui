@@ -157,21 +157,21 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 | Phase                           | Status                | Requirements                                | Completion |
 | ------------------------------- | --------------------- | ------------------------------------------- | ---------- |
 | 1 - Foundation & Docker         | Complete (2026-02-21) | DOCK-01                                     | 10100%     |
-| 2 - Terminal I/O                | Not Started           | TERM-01, TERM-02, TERM-03, TERM-04          | 0%         |
+| 2 - Terminal I/O                | Complete (2026-02-22) | TERM-01, TERM-02, TERM-03, TERM-04          | 100%       |
 | 3 - Project & Thread Management | Not Started           | PROJ-01, PROJ-02, PROJ-03, PROJ-04, PROJ-05 | 0%         |
 | 4 - Code Diffs                  | Not Started           | DIFF-01                                     | 0%         |
 
-**Overall:** 1/11 requirements complete (9%)
+**Overall:** 5/11 requirements complete (45%)
 
 ## Coverage Map
 
 | Requirement | Phase   | Status   |
 | ----------- | ------- | -------- |
 | DOCK-01     | Phase 1 | Complete |
-| TERM-01     | Phase 2 | Pending  |
-| TERM-02     | Phase 2 | Pending  |
-| TERM-03     | Phase 2 | Pending  |
-| TERM-04     | Phase 2 | Pending  |
+| TERM-01     | Phase 2 | Complete |
+| TERM-02     | Phase 2 | Complete |
+| TERM-03     | Phase 2 | Complete |
+| TERM-04     | Phase 2 | Complete |
 | PROJ-01     | Phase 3 | Pending  |
 | PROJ-02     | Phase 3 | Pending  |
 | PROJ-03     | Phase 3 | Pending  |
