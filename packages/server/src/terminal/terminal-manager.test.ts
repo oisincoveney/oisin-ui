@@ -36,6 +36,11 @@ async function withShell<T>(shell: string, run: () => Promise<T>): Promise<T> {
 describe("TerminalManager", () => {
   let manager: TerminalManager;
   const temporaryDirs: string[] = [];
+  const testTmuxSocket = join(tmpdir(), "tmux-test-manager.sock");
+
+  function createTestTerminalManager() {
+    return createTerminalManager({ tmuxSocketPath: testTmuxSocket });
+  }
 
   afterEach(() => {
     if (manager) {
@@ -51,7 +56,7 @@ describe("TerminalManager", () => {
 
   describe("getTerminals", () => {
     it("auto-creates first terminal for new cwd", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       const terminals = await manager.getTerminals("/tmp");
 
       expect(terminals.length).toBe(1);
@@ -60,7 +65,7 @@ describe("TerminalManager", () => {
     });
 
     it("returns existing terminals on subsequent calls", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       const first = await manager.getTerminals("/tmp");
       const second = await manager.getTerminals("/tmp");
 
@@ -69,12 +74,12 @@ describe("TerminalManager", () => {
     });
 
     it("throws for relative paths", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       await expect(manager.getTerminals("tmp")).rejects.toThrow("cwd must be absolute path");
     });
 
     it("creates separate terminals for different cwds", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       const tmpTerminals = await manager.getTerminals("/tmp");
       const homeTerminals = await manager.getTerminals("/home");
 
@@ -86,7 +91,7 @@ describe("TerminalManager", () => {
 
   describe("createTerminal", () => {
     it("creates additional terminal with auto-incrementing name", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       await manager.getTerminals("/tmp");
       const second = await manager.createTerminal({ cwd: "/tmp" });
 
@@ -97,14 +102,14 @@ describe("TerminalManager", () => {
     });
 
     it("uses custom name when provided", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       const session = await manager.createTerminal({ cwd: "/tmp", name: "Dev Server" });
 
       expect(session.name).toBe("Dev Server");
     });
 
     it("creates first terminal if none exist", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       const session = await manager.createTerminal({ cwd: "/tmp" });
 
       expect(session.name).toBe("Terminal 1");
@@ -115,13 +120,13 @@ describe("TerminalManager", () => {
     });
 
     it("throws for relative paths", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       await expect(manager.createTerminal({ cwd: "tmp" })).rejects.toThrow("cwd must be absolute path");
     });
 
     it("inherits registered env for the worktree root cwd", async () => {
       await withShell("/bin/sh", async () => {
-        manager = createTerminalManager();
+        manager = createTestTerminalManager();
         const cwd = mkdtempSync(join(tmpdir(), "terminal-manager-env-root-"));
         temporaryDirs.push(cwd);
         const markerPath = join(cwd, "root-port.txt");
@@ -146,7 +151,7 @@ describe("TerminalManager", () => {
 
     it("inherits registered env for subdirectories within the worktree", async () => {
       await withShell("/bin/sh", async () => {
-        manager = createTerminalManager();
+        manager = createTestTerminalManager();
         const rootCwd = mkdtempSync(join(tmpdir(), "terminal-manager-env-subdir-"));
         const subdirCwd = join(rootCwd, "packages", "app");
         mkdirSync(subdirCwd, { recursive: true });
@@ -174,7 +179,7 @@ describe("TerminalManager", () => {
 
   describe("getTerminal", () => {
     it("returns terminal by id", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       const terminals = await manager.getTerminals("/tmp");
       const found = manager.getTerminal(terminals[0].id);
 
@@ -182,7 +187,7 @@ describe("TerminalManager", () => {
     });
 
     it("returns undefined for unknown id", () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       const found = manager.getTerminal("unknown-id");
 
       expect(found).toBeUndefined();
@@ -191,7 +196,7 @@ describe("TerminalManager", () => {
 
   describe("killTerminal", () => {
     it("removes terminal from manager", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       const terminals = await manager.getTerminals("/tmp");
       const id = terminals[0].id;
 
@@ -201,7 +206,7 @@ describe("TerminalManager", () => {
     });
 
     it("removes cwd entry when last terminal is killed", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       const terminals = await manager.getTerminals("/tmp");
 
       manager.killTerminal(terminals[0].id);
@@ -210,7 +215,7 @@ describe("TerminalManager", () => {
     });
 
     it("keeps cwd entry when other terminals remain", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       await manager.getTerminals("/tmp");
       const second = await manager.createTerminal({ cwd: "/tmp" });
 
@@ -224,12 +229,12 @@ describe("TerminalManager", () => {
     });
 
     it("is no-op for unknown id", () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       expect(() => manager.killTerminal("unknown-id")).not.toThrow();
     });
 
     it("auto-removes terminal when shell exits", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       const terminals = await manager.getTerminals("/tmp");
       const exitedId = terminals[0].id;
       terminals[0].kill();
@@ -246,12 +251,12 @@ describe("TerminalManager", () => {
 
   describe("listDirectories", () => {
     it("returns empty array initially", () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       expect(manager.listDirectories()).toEqual([]);
     });
 
     it("returns all cwds with active terminals", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       await manager.getTerminals("/tmp");
       await manager.getTerminals("/home");
 
@@ -264,7 +269,7 @@ describe("TerminalManager", () => {
 
   describe("killAll", () => {
     it("kills all terminals and clears state", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       const tmpTerminals = await manager.getTerminals("/tmp");
       const homeTerminals = await manager.getTerminals("/home");
       const tmpId = tmpTerminals[0].id;
@@ -280,7 +285,7 @@ describe("TerminalManager", () => {
 
   describe("subscribeTerminalsChanged", () => {
     it("emits cwd snapshots when terminals are created", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       const snapshots: Array<{ cwd: string; terminalNames: string[] }> = [];
       const unsubscribe = manager.subscribeTerminalsChanged((input) => {
         snapshots.push({
@@ -305,7 +310,7 @@ describe("TerminalManager", () => {
     });
 
     it("emits empty snapshot when last terminal is removed", async () => {
-      manager = createTerminalManager();
+      manager = createTestTerminalManager();
       const snapshots: Array<{ cwd: string; terminalCount: number }> = [];
       const unsubscribe = manager.subscribeTerminalsChanged((input) => {
         snapshots.push({
