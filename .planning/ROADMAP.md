@@ -143,12 +143,14 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 
 **Dependencies:** Phase 3 (threads with git worktrees)
 
-**Plans:** 4 plans
+**Plans:** 6 plans
 
 - [x] 04-01-PLAN.md — Server diff contracts and git-order alignment
 - [x] 04-02-PLAN.md — Thread-scoped diff external store and subscription lifecycle
 - [x] 04-03-PLAN.md — Desktop/mobile diff panel shells with persisted resize behavior
-- [ ] 04-04-PLAN.md — diff2html rendering, refresh flow, and browser regressions
+- [x] 04-04-PLAN.md — diff2html rendering, refresh flow, and browser regressions
+- [x] 04-05-PLAN.md — Gap closure: preserve git-order diff payloads and regression coverage
+- [x] 04-06-PLAN.md — Gap closure: rename metadata and syntax-highlight fidelity
 
 **Requirements:**
 
@@ -178,9 +180,9 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 | 1 - Foundation & Docker         | Complete (2026-02-21) | DOCK-01                                     | 10100%     |
 | 2 - Terminal I/O                | Complete (2026-02-23) | TERM-01, TERM-02, TERM-03, TERM-04          | 100%       |
 | 3 - Project & Thread Management | Complete (2026-02-23) | PROJ-01, PROJ-02, PROJ-03, PROJ-04, PROJ-05 | 100%       |
-| 4 - Code Diffs                  | In progress (3/4)     | DIFF-01                                     | 75%        |
+| 4 - Code Diffs                  | Complete (2026-02-23) | DIFF-01                                     | 100%       |
 
-**Overall:** 10/11 requirements complete (91%)
+**Overall:** 11/11 requirements complete (100%)
 
 ## Coverage Map
 
@@ -196,7 +198,7 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 | PROJ-03     | Phase 3 | Complete |
 | PROJ-04     | Phase 3 | Complete |
 | PROJ-05     | Phase 3 | Complete |
-| DIFF-01     | Phase 4 | Pending  |
+| DIFF-01     | Phase 4 | Complete |
 
 **Mapped:** 11/11 ✓
 **Orphaned:** 0

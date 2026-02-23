@@ -24,7 +24,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Code Review
 
-- [ ] **DIFF-01**: User can view uncommitted code changes per thread with syntax highlighting
+- [x] **DIFF-01**: User can view uncommitted code changes per thread with syntax highlighting
 
 ### Deployment
 
@@ -81,7 +81,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROJ-03 | Phase 3: Project & Thread Management | Complete |
 | PROJ-04 | Phase 3: Project & Thread Management | Complete |
 | PROJ-05 | Phase 3: Project & Thread Management | Complete |
-| DIFF-01 | Phase 4: Code Diffs | Pending |
+| DIFF-01 | Phase 4: Code Diffs | Complete |
 
 **Coverage:**
 - v1 requirements: 11 total
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-23 after phase 3 verification*
+*Last updated: 2026-02-23 after phase 4 verification*
