@@ -14,10 +14,12 @@ import { TerminalStreamAdapter } from './terminal/terminal-stream'
 import { decodeBinaryMuxFrame } from './terminal/binary-mux'
 import {
   clearUnreadForActiveThread,
+  dismissThreadToast,
   getActiveThread,
   switchRelativeThread,
   useThreadStoreSnapshot,
 } from './thread/thread-store'
+import { toast } from 'sonner'
 
 type SessionMessage = {
   type: string
@@ -169,6 +171,21 @@ function App() {
       }
     }
   }, [status, activeThreadTerminalId])
+
+  useEffect(() => {
+    if (threadSnapshot.toasts.length === 0) {
+      return
+    }
+
+    for (const threadToast of threadSnapshot.toasts) {
+      toast(threadToast.threadTitle, {
+        id: threadToast.id,
+        description: threadToast.message,
+        duration: 5000,
+      })
+      dismissThreadToast(threadToast.id)
+    }
+  }, [threadSnapshot.toasts])
 
   useEffect(() => {
     if (status !== 'connected') {
