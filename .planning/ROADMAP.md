@@ -99,6 +99,13 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 
 **Dependencies:** Phase 2 (working terminal sessions)
 
+**Plans:** 4 plans
+
+- [ ] 03-01-PLAN.md — Canonical project registry, thread persistence foundation, and contract migration
+- [ ] 03-02-PLAN.md — Server thread lifecycle orchestration (create/switch/delete + cleanup)
+- [ ] 03-03-PLAN.md — Shadcn sidebar, thread dialogs, and external thread store switching UX
+- [ ] 03-04-PLAN.md — Session reaper and end-to-end regression coverage for thread management
+
 **Requirements:**
 
 - PROJ-01: User can see all projects in a sidebar pulled from configured git repos
