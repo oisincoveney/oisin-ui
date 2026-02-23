@@ -3,21 +3,21 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Phase 2 terminal reliability complete with reconnect/refresh and reconnect+resize regression gates; ready to begin multi-project thread management.
+**Current Focus:** Phase 3 project/thread identity foundation complete (canonical project registry + persisted thread registry + RPC contracts); ready for lifecycle orchestration.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
-**Phase:** 02 of 4 (Terminal I/O)
-**Plan:** 07 of 07
-**Status:** Phase complete.
-**Last activity:** 2026-02-23 - Completed 02-terminal-i-07-PLAN.md
+**Phase:** 03 of 4 (Project & Thread Management)
+**Plan:** 01 of 04
+**Status:** In progress.
+**Last activity:** 2026-02-23 - Completed 03-project-and-thread-management-01-PLAN.md
 
 ```
-Progress: [████████████████████] 100%
+Progress: [████████████████░░░░] 82%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
-Phase 3:  ░░░░░ Not Started
+Phase 3:  ██░░░░ In Progress (1/4)
 Phase 4:  ░░░░░ Not Started
 ```
 
@@ -25,12 +25,12 @@ Phase 4:  ░░░░░ Not Started
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 13    |
-| Plans passed           | 13    |
+| Plans executed         | 14    |
+| Plans passed           | 14    |
 | Plans failed           | 0     |
 | Total requirements     | 11    |
-| Requirements complete  | 11    |
-| Requirements remaining | 0     |
+| Requirements complete  | 5     |
+| Requirements remaining | 6     |
 
 ## Accumulated Context
 
@@ -49,6 +49,9 @@ Phase 4:  ░░░░░ Not Started
 | Invalidate stream identity on reconnect transitions and accept attach responses only for active reconnect cycle | Prevent stale streamId reuse after reconnect/refresh churn | 02-06 |
 | Gate adapter input on attach-confirmed active stream and keep server stale-stream rejection lifecycle-aware | Ensure post-reconnect input routes only to latest stream without permissive fallback | 02-06 |
 | Exercise reconnect/refresh and reconnect+resize via deterministic client churn regressions with stale-stream warning assertions | Keep UAT stream-id drift and resize continuity blockers permanently covered by e2e gate | 02-07 |
+| Use `projects.repositories` in persisted daemon config as canonical configured project source | Guarantees deterministic sidebar project source across restarts and avoids transient agent-derived drift | 03-01 |
+| Persist thread identity in `$PASEO_HOME/thread-registry.json` with atomic temp-write + rename | Ensures durable project/thread metadata and minimizes corruption risk on write interruption | 03-01 |
+| Keep legacy ensure-default terminal placeholder fields while adding additive concrete identity fields | Preserves existing client bootstrap compatibility during Phase 3 contract migration | 03-01 |
 
 ### Blockers
 
@@ -58,11 +61,11 @@ Phase 4:  ░░░░░ Not Started
 
 ## Session Continuity
 
-**Last session:** 2026-02-22 19:56 PST
-**Stopped at:** Completed 02-terminal-i-07-PLAN.md
+**Last session:** 2026-02-23 06:42 PST
+**Stopped at:** Completed 03-project-and-thread-management-01-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-23T03:56:00Z_
+_Last updated: 2026-02-23T14:42:33Z_
