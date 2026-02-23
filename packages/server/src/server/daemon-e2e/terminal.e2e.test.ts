@@ -3,10 +3,12 @@ import { mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import path from "path";
 import WebSocket from "ws";
+import pino from "pino";
 import {
   createDaemonTestContext,
   type DaemonTestContext,
 } from "../test-utils/index.js";
+import { DaemonClient } from "../test-utils/daemon-client.js";
 import {
   BinaryMuxChannel,
   TerminalBinaryMessageType,
@@ -15,6 +17,7 @@ import {
 } from "../../shared/binary-mux.js";
 
 const decoder = new TextDecoder();
+const STALE_STREAM_INPUT_WARNING = "Terminal stream not found for input";
 
 function tmpCwd(): string {
   return mkdtempSync(path.join(tmpdir(), "daemon-terminal-e2e-"));
@@ -42,18 +45,121 @@ function percentile(values: number[], p: number): number {
   return sorted[index];
 }
 
+function countLogEntries(lines: string[], needle: string): number {
+  let total = 0;
+  for (const line of lines) {
+    if (line.includes(needle)) {
+      total += 1;
+    }
+  }
+  return total;
+}
+
 const shouldRun = !process.env.CI;
 
 (shouldRun ? describe : describe.skip)("daemon E2E terminal", () => {
   let ctx: DaemonTestContext;
+  let daemonLogLines: string[];
+
+  async function connectChurnClient(port: number, clientSessionKey: string, suffix: string) {
+    const client = new DaemonClient({
+      url: `ws://127.0.0.1:${port}/ws`,
+      clientSessionKey,
+    });
+    await client.connect();
+    await client.fetchAgents({
+      subscribe: { subscriptionId: `terminal-churn-${suffix}-${Date.now()}` },
+    });
+    return client;
+  }
 
   beforeEach(async () => {
-    ctx = await createDaemonTestContext();
+    daemonLogLines = [];
+    const logger = pino(
+      { level: "warn" },
+      {
+        write(chunk: string) {
+          daemonLogLines.push(chunk);
+          return true;
+        },
+      } as any
+    );
+    ctx = await createDaemonTestContext({ logger });
   });
 
   afterEach(async () => {
     await ctx.cleanup();
   }, 60000);
+
+  test(
+    "keeps reconnect refresh stream routing on latest stream id after repeated attach churn",
+    async () => {
+      const clientSessionKey = `terminal-reconnect-refresh-${Date.now()}`;
+      const warningBaseline = countLogEntries(daemonLogLines, STALE_STREAM_INPUT_WARNING);
+      let previousStreamId: number | null = null;
+      let latestClient: DaemonClient | null = null;
+      let terminalId: string | null = null;
+
+      try {
+        for (let cycle = 0; cycle < 4; cycle += 1) {
+          if (latestClient) {
+            await latestClient.close();
+          }
+
+          latestClient = await connectChurnClient(
+            ctx.daemon.port,
+            clientSessionKey,
+            `stream-${cycle}`
+          );
+
+          const ensure = await latestClient.ensureDefaultTerminal(
+            `reconnect-refresh-stream-${cycle}-${Date.now()}`
+          );
+          expect(ensure.error).toBeNull();
+          expect(ensure.terminal).toBeTruthy();
+          expect(ensure.terminal?.id).toBeTruthy();
+
+          if (!terminalId) {
+            terminalId = ensure.terminal!.id;
+          }
+          expect(ensure.terminal?.id).toBe(terminalId);
+
+          const attach = await latestClient.attachTerminalStream(terminalId, {
+            rows: 24,
+            cols: 80,
+          });
+          expect(attach.error).toBeNull();
+          expect(attach.streamId).toBeTypeOf("number");
+
+          if (previousStreamId !== null) {
+            expect(attach.streamId).not.toBe(previousStreamId);
+          }
+
+          let output = "";
+          const streamId = attach.streamId!;
+          const unsubscribe = latestClient.onTerminalStreamData(streamId, (chunk) => {
+            output += decoder.decode(chunk.data, { stream: true });
+          });
+
+          const marker = `reconnect-refresh-stream-marker-${cycle}-${Date.now()}`;
+          latestClient.sendTerminalStreamInput(streamId, `echo ${marker}\r`);
+          await waitForCondition(() => output.includes(marker), 10000);
+
+          const detach = await latestClient.detachTerminalStream(streamId);
+          expect(detach.success).toBe(true);
+          unsubscribe();
+          previousStreamId = streamId;
+        }
+      } finally {
+        await latestClient?.close();
+      }
+
+      const warningDelta =
+        countLogEntries(daemonLogLines, STALE_STREAM_INPUT_WARNING) - warningBaseline;
+      expect(warningDelta).toBe(0);
+    },
+    30000
+  );
 
   test(
     "ensures default terminal identity for active-thread placeholder",
