@@ -7,7 +7,14 @@ export type ConnectionStatus =
   | "connected"
   | "disconnected";
 
+export type ConnectionDiagnostics = {
+  wsUrl: string;
+  endpoint: string;
+  lastFailureReason: string | null;
+};
+
 type ConnectionStatusListener = (status: ConnectionStatus) => void;
+type ConnectionDiagnosticsListener = (diagnostics: ConnectionDiagnostics) => void;
 
 type PingMessage = {
   type: "ping";
@@ -26,13 +33,17 @@ type WrappedSessionMessage = {
 
 const DEFAULT_DAEMON_PORT = "6767";
 
-function getWsUrl(): string {
+function resolveWsTarget(): { wsUrl: string; endpoint: string } {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const hostname = window.location.hostname;
   const port = import.meta.env.VITE_DAEMON_PORT || DEFAULT_DAEMON_PORT;
 
-  return `${protocol}//${hostname}:${port}/ws?clientSessionKey=web-client`;
+  return {
+    wsUrl: `${protocol}//${hostname}:${port}/ws?clientSessionKey=web-client`,
+    endpoint: `${hostname}:${port}`,
+  };
 }
+
 const BASE_RETRY_DELAY_MS = 500;
 const MAX_RETRY_DELAY_MS = 30_000;
 
@@ -43,6 +54,12 @@ const listenersRef = Effect.runSync(
   Ref.make<Set<ConnectionStatusListener>>(new Set()),
 );
 const retryCountRef = Effect.runSync(Ref.make(0));
+
+let connectionDiagnostics: ConnectionDiagnostics = {
+  ...resolveWsTarget(),
+  lastFailureReason: null,
+};
+const connectionDiagnosticsListeners = new Set<ConnectionDiagnosticsListener>();
 
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -81,6 +98,22 @@ function emit(status: ConnectionStatus): void {
 
 function currentStatus(): ConnectionStatus {
   return runSync(Ref.get(currentStatusRef));
+}
+
+function emitConnectionDiagnostics(next: ConnectionDiagnostics): void {
+  connectionDiagnostics = next;
+  for (const listener of connectionDiagnosticsListeners) {
+    listener(next);
+  }
+}
+
+function patchConnectionDiagnostics(
+  patch: Partial<ConnectionDiagnostics>,
+): void {
+  emitConnectionDiagnostics({
+    ...connectionDiagnostics,
+    ...patch,
+  });
 }
 
 function clearReconnectTimer(): void {
@@ -281,14 +314,16 @@ function connect(): void {
   }
 
   const currentRetry = runSync(Ref.get(retryCountRef));
+  const target = resolveWsTarget();
+  patchConnectionDiagnostics(target);
   emit(currentRetry > 0 ? "reconnecting" : "connecting");
   console.info(
-    `[ws] connecting to ${getWsUrl()}${
+    `[ws] connecting to ${target.wsUrl}${
       currentRetry > 0 ? ` (attempt #${currentRetry})` : ""
     }`,
   );
 
-  const nextSocket = new WebSocket(getWsUrl());
+  const nextSocket = new WebSocket(target.wsUrl);
   nextSocket.binaryType = "arraybuffer";
   socket = nextSocket;
 
@@ -298,13 +333,14 @@ function connect(): void {
     }
     emit("connected");
     console.info("[ws] connected");
+    patchConnectionDiagnostics({ lastFailureReason: null });
     runSync(Ref.set(retryCountRef, 0));
     clearReconnectTimer();
   });
 
   nextSocket.addEventListener("message", handleSocketMessage);
 
-  nextSocket.addEventListener("close", () => {
+  nextSocket.addEventListener("close", (event) => {
     if (socket !== nextSocket) {
       return;
     }
@@ -315,6 +351,11 @@ function connect(): void {
       return;
     }
 
+    const closeReason = event.wasClean
+      ? `WebSocket closed (${event.code})`
+      : `WebSocket closed unexpectedly (${event.code})`;
+    patchConnectionDiagnostics({ lastFailureReason: closeReason });
+
     scheduleReconnect("close");
   });
 
@@ -324,6 +365,9 @@ function connect(): void {
     }
 
     console.error("[ws] socket error before reconnect");
+    patchConnectionDiagnostics({
+      lastFailureReason: "WebSocket transport error while connecting",
+    });
     if (shouldStop) {
       emit("disconnected");
       return;
@@ -404,6 +448,33 @@ export function useConnectionStatus(): ConnectionStatus {
   }, []);
 
   return status;
+}
+
+export function getConnectionDiagnostics(): ConnectionDiagnostics {
+  return connectionDiagnostics;
+}
+
+export function subscribeConnectionDiagnostics(
+  listener: ConnectionDiagnosticsListener,
+): () => void {
+  connectionDiagnosticsListeners.add(listener);
+  return () => {
+    connectionDiagnosticsListeners.delete(listener);
+  };
+}
+
+export function useConnectionDiagnostics(): ConnectionDiagnostics {
+  const [diagnostics, setDiagnostics] = useState<ConnectionDiagnostics>(
+    getConnectionDiagnostics(),
+  );
+
+  useEffect(() => {
+    const unsubscribe = subscribeConnectionDiagnostics(setDiagnostics);
+    setDiagnostics(getConnectionDiagnostics());
+    return unsubscribe;
+  }, []);
+
+  return diagnostics;
 }
 
 export function getConnectionStatus(): ConnectionStatus {

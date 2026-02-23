@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { ConnectionOverlay } from './components/ConnectionOverlay'
 import {
+  useConnectionDiagnostics,
   useConnectionStatus,
   sendWsMessage,
   sendWsBinary,
@@ -30,7 +31,9 @@ function randomId(prefix: string): string {
 
 function App() {
   const status = useConnectionStatus()
+  const diagnostics = useConnectionDiagnostics()
   const [_, setTerminalId] = useState<string | null>(null)
+  const [attachFailureReason, setAttachFailureReason] = useState<string | null>(null)
   const adapterRef = useRef<TerminalStreamAdapter | null>(null)
   const terminalRef = useRef<Terminal | null>(null)
   const terminalIdRef = useRef<string | null>(null)
@@ -67,6 +70,7 @@ function App() {
   }
 
   const sendAttachRequest = (terminalId: string, forceRefresh: boolean) => {
+    setAttachFailureReason(null)
     const nextResumeOffset = forceRefresh ? 0 : (adapterRef.current?.getOffset() ?? 0)
     const requestId = randomId('attach')
     const dimensions = getTerminalDimensions()
@@ -102,6 +106,7 @@ function App() {
     }
 
     const requestId = randomId('ensure-default')
+    setAttachFailureReason(null)
     pendingEnsureRequestIdRef.current = requestId
     sendWsMessage({
       type: 'ensure_default_terminal_request',
@@ -144,6 +149,7 @@ function App() {
 
         const terminal = msg.payload?.terminal
         if (!terminal?.id) {
+          setAttachFailureReason('Daemon did not return a terminal id during ensure')
           return
         }
         terminalIdRef.current = terminal.id
@@ -164,9 +170,16 @@ function App() {
       pendingAttachRef.current = null
 
       if (msg.payload?.error || typeof msg.payload?.streamId !== 'number') {
+        const attachError =
+          typeof msg.payload?.error === 'string' && msg.payload.error.length > 0
+            ? msg.payload.error
+            : 'attach_terminal_stream_response missing streamId'
+        setAttachFailureReason(attachError)
         console.error('[terminal] attach failed', msg.payload?.error)
         return
       }
+
+      setAttachFailureReason(null)
 
       const adapter = adapterRef.current
       if (!adapter) {
@@ -255,7 +268,14 @@ function App() {
           className="w-full h-full"
         />
       </div>
-      <ConnectionOverlay status={status} />
+      <ConnectionOverlay
+        status={status}
+        diagnostics={{
+          endpoint: diagnostics.endpoint,
+          wsFailureReason: diagnostics.lastFailureReason,
+          attachFailureReason,
+        }}
+      />
     </main>
   )
 }
