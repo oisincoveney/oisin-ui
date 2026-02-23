@@ -3,34 +3,34 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Phase 4 now has diff panel shells and layout lifecycle locked; ready for diff2html rendering integration.
+**Current Focus:** Roadmap implementation complete through DIFF-01 with thread-scoped diff rendering and refresh flow.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 04 of 4 (Code Diffs)
-**Plan:** 03 of 04
-**Status:** In progress.
-**Last activity:** 2026-02-23 - Completed 04-03-PLAN.md
+**Plan:** 04 of 04
+**Status:** Phase complete.
+**Last activity:** 2026-02-23 - Completed 04-04-PLAN.md
 
 ```
-Progress: [███████████████████░] 95%
+Progress: [████████████████████] 100%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
 Phase 3:  █████ Complete (5/5)
-Phase 4:  ███░░ In progress (3/4)
+Phase 4:  ████ Complete (4/4)
 ```
 
 ## Performance Metrics
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 21    |
-| Plans passed           | 20    |
+| Plans executed         | 22    |
+| Plans passed           | 21    |
 | Plans failed           | 1     |
 | Total requirements     | 11    |
-| Requirements complete  | 10    |
-| Requirements remaining | 1     |
+| Requirements complete  | 11    |
+| Requirements remaining | 0     |
 
 ## Accumulated Context
 
@@ -68,6 +68,9 @@ Phase 4:  ███░░ In progress (3/4)
 | Bridge thread store active context into diff store during app bootstrap | Ensures diff subscriptions track active thread/worktree without component-owned websocket lifecycles | 04-02 |
 | Persist diff panel width through local storage while keeping width state in diff-store | Preserves user-selected split ratio across reloads without moving ownership out of diff store | 04-03 |
 | Close diff panel on active-thread transitions from app lifecycle | Guarantees thread switch resets panel visibility consistently for desktop and mobile | 04-03 |
+| Map ParsedDiffFile payloads into diff2html JSON input with adapter-level context and hunk limits | Keeps git-ordered server payload fidelity while controlling browser render cost | 04-04 |
+| Keep binary and too-large diff files summary-only in panel/sheet | Prevents broken hunk rendering for non-renderable payload states and preserves explicit UX | 04-04 |
+| Guard diff-panel Playwright regression on active-thread availability | Avoids false negatives in empty local daemon bootstrap states while preserving coverage when thread context exists | 04-04 |
 
 ### Blockers
 
@@ -78,11 +81,11 @@ Phase 4:  ███░░ In progress (3/4)
 
 ## Session Continuity
 
-**Last session:** 2026-02-23 21:44 UTC
-**Stopped at:** Completed 04-03-PLAN.md
+**Last session:** 2026-02-23 21:56 UTC
+**Stopped at:** Completed 04-04-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-23T21:44:24Z_
+_Last updated: 2026-02-23T21:56:27Z_
