@@ -9,10 +9,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Terminal & Connectivity
 
-- [ ] **TERM-01**: User can interact with a terminal session embedded in the browser per thread
-- [ ] **TERM-02**: WebSocket connection auto-reconnects with exponential backoff and state recovery
-- [ ] **TERM-03**: Terminal dimensions stay in sync across browser, WebSocket, and tmux/PTY
-- [ ] **TERM-04**: User can disconnect and reconnect to find their session exactly where they left off
+- [x] **TERM-01**: User can interact with a terminal session embedded in the browser per thread
+- [x] **TERM-02**: WebSocket connection auto-reconnects with exponential backoff and state recovery
+- [x] **TERM-03**: Terminal dimensions stay in sync across browser, WebSocket, and tmux/PTY
+- [x] **TERM-04**: User can disconnect and reconnect to find their session exactly where they left off
 
 ### Project & Thread Management
 
@@ -28,7 +28,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Deployment
 
-- [ ] **DOCK-01**: Application runs in a single Docker container (daemon + web UI + tmux)
+- [x] **DOCK-01**: Application runs in a single Docker container (daemon + web UI + tmux)
 
 ## v2 Requirements
 
@@ -72,10 +72,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | DOCK-01 | Phase 1: Foundation & Docker | Complete |
-| TERM-01 | Phase 2: Terminal I/O | Pending |
-| TERM-02 | Phase 2: Terminal I/O | Pending |
-| TERM-03 | Phase 2: Terminal I/O | Pending |
-| TERM-04 | Phase 2: Terminal I/O | Pending |
+| TERM-01 | Phase 2: Terminal I/O | Complete |
+| TERM-02 | Phase 2: Terminal I/O | Complete |
+| TERM-03 | Phase 2: Terminal I/O | Complete |
+| TERM-04 | Phase 2: Terminal I/O | Complete |
 | PROJ-01 | Phase 3: Project & Thread Management | Pending |
 | PROJ-02 | Phase 3: Project & Thread Management | Pending |
 | PROJ-03 | Phase 3: Project & Thread Management | Pending |
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-21 after roadmap creation*
+*Last updated: 2026-02-23 after phase 2 verification*

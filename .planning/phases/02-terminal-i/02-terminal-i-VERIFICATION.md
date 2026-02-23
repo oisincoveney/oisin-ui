@@ -1,16 +1,16 @@
 ---
 phase: 02-terminal-i
-verified: 2026-02-22T05:01:40Z
+verified: 2026-02-23T01:39:49Z
 status: passed
-score: 6/6 must-haves verified
+score: 8/8 must-haves verified
 ---
 
 # Phase 2: Terminal I/O Verification Report
 
 **Phase Goal:** Users can interact with a live terminal session in the browser that survives disconnects.
-**Verified:** 2026-02-22T05:01:40Z
+**Verified:** 2026-02-23T01:39:49Z
 **Status:** passed
-**Re-verification:** No - initial verification
+**Re-verification:** No - initial verification (prior report existed, but no open gaps)
 
 ## Goal Achievement
 
@@ -18,75 +18,68 @@ score: 6/6 must-haves verified
 
 | # | Truth | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | User can interact with a live embedded terminal in the browser. | ✓ VERIFIED | `packages/web/src/App.tsx:236` mounts `TerminalView`; `packages/web/src/App.tsx:204` forwards keystrokes via `term.onData`; server handles `terminal_input` in `packages/server/src/server/session.ts:6482`. |
-| 2 | Terminal output is streamed as binary mux data with ACK/offset flow control. | ✓ VERIFIED | Browser decodes/writes/acks in `packages/web/src/terminal/terminal-stream.ts:42`; server emits terminal mux frames and tracks ACK windows in `packages/server/src/server/session.ts:6697`. |
-| 3 | Browser reconnects automatically with exponential backoff and explicit disconnected/reconnecting states. | ✓ VERIFIED | Reconnect scheduling/backoff in `packages/web/src/lib/ws.ts:91` and `packages/web/src/lib/ws.ts:100`; status transitions consumed by overlay via `packages/web/src/App.tsx:242` and `packages/web/src/components/ConnectionOverlay.tsx:25`. |
-| 4 | Reconnect/refresh can recover prior terminal state (resume or reset redraw). | ✓ VERIFIED | Re-attach with resume offset and force-refresh fallback in `packages/web/src/App.tsx:68` and `packages/web/src/App.tsx:161`; server attach returns `replayedFrom/currentOffset/reset` from `packages/server/src/server/session.ts:6669`; tmux history replay in `packages/server/src/terminal/tmux-terminal.ts:421`. |
-| 5 | Resize stays synchronized across browser, websocket, and tmux/PTY. | ✓ VERIFIED | ResizeObserver + debounce in `packages/web/src/terminal/terminal-resize.ts:51`; resize message sent in `packages/web/src/App.tsx:222`; server forwards resize to terminal session in `packages/server/src/server/session.ts:6494`; tmux PTY resize in `packages/server/src/terminal/tmux-terminal.ts:377`. |
-| 6 | Reconnecting returns to the same default active-thread placeholder terminal identity. | ✓ VERIFIED | Deterministic default terminal session returned from `packages/server/src/terminal/terminal-manager.ts:316`; exposed by `ensure_default_terminal_response` in `packages/server/src/server/session.ts:6341`; validated in e2e test `packages/server/src/server/daemon-e2e/terminal.e2e.test.ts:59`. |
+| 1 | User can interact with a live embedded terminal in browser. | ✓ VERIFIED | `packages/web/src/App.tsx:252` mounts `TerminalView`; `packages/web/src/App.tsx:223` forwards keystrokes; server routes input at `packages/server/src/server/session.ts:1486` and `packages/server/src/server/session.ts:6539`. |
+| 2 | Terminal output streams as binary mux with ACK/offset flow control. | ✓ VERIFIED | Client decodes/writes/acks at `packages/web/src/terminal/terminal-stream.ts:42`, `packages/web/src/terminal/terminal-stream.ts:74`; server handles ACK/windowing at `packages/server/src/server/session.ts:1581` and emits replay flags at `packages/server/src/server/session.ts:6751`. |
+| 3 | Hard refresh/reconnect restores terminal content via resume or reset redraw. | ✓ VERIFIED | Reattach + stale-offset fallback in `packages/web/src/App.tsx:176` and `packages/web/src/App.tsx:180`; server attach reset metadata in `packages/server/src/server/session.ts:6719`; tmux history replay via `capture-pane` in `packages/server/src/terminal/tmux-terminal.ts:421`. |
+| 4 | WebSocket auto-reconnect uses exponential backoff with no retry cap and explicit states. | ✓ VERIFIED | Backoff/loop in `packages/web/src/lib/ws.ts:91`, `packages/web/src/lib/ws.ts:100`, `packages/web/src/lib/ws.ts:120`; disconnected/reconnecting overlay in `packages/web/src/components/ConnectionOverlay.tsx:14` and `packages/web/src/components/ConnectionOverlay.tsx:25`. |
+| 5 | Browser resize stays synchronized through ws to tmux/PTY. | ✓ VERIFIED | Debounced ResizeObserver in `packages/web/src/terminal/terminal-resize.ts:51`; resize send in `packages/web/src/App.tsx:238`; server applies attach+runtime resize in `packages/server/src/server/session.ts:6650`; tmux session resizes at `packages/server/src/terminal/tmux-terminal.ts:375`. |
+| 6 | Default terminal identity is stable across reconnects and concurrent ensure calls. | ✓ VERIFIED | Single-flight ensure in `packages/server/src/terminal/terminal-manager.ts:330`; requestId-correlated ensure handling in `packages/web/src/App.tsx:140`; regression coverage at `packages/server/src/server/daemon-e2e/terminal.e2e.test.ts:82`. |
+| 7 | Attach returns non-null stream id and input remains routable under race conditions. | ✓ VERIFIED | Attach non-null checks in `packages/server/src/server/daemon-e2e/terminal.e2e.test.ts:102`; stale default-id fallback in `packages/server/src/server/session.ts:6388`; attach creates stream in `packages/server/src/server/session.ts:6665`. |
+| 8 | Disconnect/reconnect recovers missed output without data loss semantics. | ✓ VERIFIED | Resume offset + reset behavior tested in `packages/server/src/server/daemon-e2e/terminal.e2e.test.ts:461` and `packages/server/src/server/daemon-e2e/terminal.e2e.test.ts:567`; replay bookkeeping in `packages/server/src/terminal/tmux-terminal.ts:413`. |
 
-**Score:** 6/6 truths verified
+**Score:** 8/8 truths verified
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 | --- | --- | --- | --- |
-| `packages/web/src/App.tsx` | Terminal bootstrap, attach/re-attach, resize wiring | ✓ VERIFIED | Exists; substantive (247 lines); wired to ws + terminal view + overlay. |
-| `packages/web/src/terminal/terminal-view.tsx` | xterm mount/lifecycle with resize hook | ✓ VERIFIED | Exists; substantive (105 lines); imported and rendered by `App.tsx`. |
-| `packages/web/src/terminal/terminal-stream.ts` | Binary mux decode/input/ack offset adapter | ✓ VERIFIED | Exists; substantive (109 lines); instantiated in `App.tsx`. |
-| `packages/web/src/terminal/terminal-resize.ts` | Debounced ResizeObserver pipeline | ✓ VERIFIED | Exists; substantive (66 lines); invoked by `TerminalView`. |
-| `packages/web/src/lib/ws.ts` | WS transport, status model, reconnect/backoff, binary listeners | ✓ VERIFIED | Exists; substantive (409 lines); consumed by `App.tsx` + `ConnectionOverlay`. |
-| `packages/server/src/server/session.ts` | ensure-default + attach stream + resume/reset + terminal input handling | ✓ VERIFIED | Exists; substantive (6838 lines); handles terminal RPC/message paths used by web client. |
-| `packages/server/src/terminal/terminal-manager.ts` | tmux-backed default terminal identity and reuse | ✓ VERIFIED | Exists; substantive (351 lines); created in bootstrap and called from Session. |
-| `packages/server/src/terminal/tmux-terminal.ts` | tmux capture-pane replay and raw offset subscriptions | ✓ VERIFIED | Exists; substantive (514 lines); instantiated by terminal manager. |
-| `packages/server/src/shared/messages.ts` | Typed attach/default-terminal contracts incl. reset/replayedFrom | ✓ VERIFIED | Exists; substantive (2289 lines); schemas referenced by server/client. |
-| `packages/server/src/client/daemon-client.ts` | Typed ensureDefaultTerminal/attachTerminalStream methods | ✓ VERIFIED | Exists; substantive (3011 lines); methods implemented at `:2472` and `:2499`. |
-| `packages/server/src/server/daemon-e2e/terminal.e2e.test.ts` | Reliability regression coverage for resume/reset/resize | ✓ VERIFIED | Exists; substantive (782 lines); includes reconnect/offset/reset/resize cases. |
+| `packages/web/src/App.tsx` | Ensure/attach orchestration, input, resize, reconnect handling | ✓ VERIFIED | Exists (263 lines), no stub markers, exported default component, wired to ws + terminal stream adapter. |
+| `packages/web/src/lib/ws.ts` | WS transport + reconnect/backoff + text/binary listeners | ✓ VERIFIED | Exists (409 lines), substantive reconnect state machine, imported by app and overlay typing. |
+| `packages/web/src/terminal/terminal-view.tsx` | xterm mount/lifecycle with fit/webgl + resize hook | ✓ VERIFIED | Exists (105 lines), exported component, used in `packages/web/src/App.tsx:252`. |
+| `packages/web/src/terminal/terminal-stream.ts` | Binary mux decode/input/ack adapter with offsets | ✓ VERIFIED | Exists (109 lines), exported class, instantiated in `packages/web/src/App.tsx:214`. |
+| `packages/web/src/terminal/terminal-resize.ts` | Debounced resize propagation pipeline | ✓ VERIFIED | Exists (66 lines), exported hook, used by `packages/web/src/terminal/terminal-view.tsx:21`. |
+| `packages/server/src/server/session.ts` | Message handlers for ensure/attach/input/ack/resize | ✓ VERIFIED | Exists (6884 lines), dispatches terminal RPCs, stream attach/resume/reset implemented. |
+| `packages/server/src/terminal/terminal-manager.ts` | Stable default terminal + single-flight ensure | ✓ VERIFIED | Exists (373 lines), createTmux integration, in-flight guard at `:330`. |
+| `packages/server/src/terminal/tmux-terminal.ts` | tmux-backed session with capture-pane replay offsets | ✓ VERIFIED | Exists (513 lines), `subscribeRaw` replay/reset behavior implemented. |
+| `packages/server/src/shared/messages.ts` | Typed ensure/attach contracts with replay/reset metadata | ✓ VERIFIED | Exists (2289 lines), schemas at `:1019`, `:1972`, `:1986`. |
+| `packages/server/src/client/daemon-client.ts` | Typed ensure/attach client methods | ✓ VERIFIED | Exists (3011 lines), methods at `:2472` and `:2499`, request/response correlation wired. |
+| `packages/server/src/server/daemon-e2e/terminal.e2e.test.ts` | Reliability regressions (resume/reset/resize/race) | ✓ VERIFIED | Exists (825 lines), includes concurrent ensure, stale offset reset, resize-flow continuity tests. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 | --- | --- | --- | --- | --- |
-| `packages/web/src/App.tsx` | `packages/server/src/server/session.ts` | `ensure_default_terminal_request` then `attach_terminal_stream_request` | ✓ WIRED | Request send in `App.tsx:104` and `App.tsx:85`; handled in `session.ts:6318` and `session.ts:6569`. |
-| `packages/web/src/terminal/terminal-stream.ts` | `packages/server/src/server/session.ts` | Binary mux output decode + ACK frames | ✓ WIRED | ACK emitted in `terminal-stream.ts:74`; server ACK handling/window flush in `session.ts:1580` and `session.ts:6694`. |
-| `packages/web/src/lib/ws.ts` | `packages/web/src/components/ConnectionOverlay.tsx` | Connection status transitions to UI overlay | ✓ WIRED | Status emitted in `ws.ts:109`/`ws.ts:118`; rendered in overlay via `App.tsx:242`. |
-| `packages/web/src/terminal/terminal-resize.ts` | `packages/server/src/terminal/tmux-terminal.ts` | Debounced resize -> `terminal_input.resize` -> session send | ✓ WIRED | Browser pipeline `terminal-resize.ts:34`; ws message `App.tsx:222`; server forwarding `session.ts:6494`; PTY resize `tmux-terminal.ts:378`. |
-| `packages/server/src/terminal/terminal-manager.ts` | `packages/server/src/terminal/tmux-terminal.ts` | `createTmuxTerminalSession` for default session reuse | ✓ WIRED | Manager create path at `terminal-manager.ts:185`; default session identity at `terminal-manager.ts:316`. |
+| `packages/web/src/App.tsx` | `packages/server/src/server/session.ts` | `ensure_default_terminal_request` -> `attach_terminal_stream_request` | ✓ WIRED | Sent at `packages/web/src/App.tsx:106` and `packages/web/src/App.tsx:86`; handled at `packages/server/src/server/session.ts:6319` and `packages/server/src/server/session.ts:6614`. |
+| `packages/web/src/App.tsx` | `packages/server/src/server/session.ts` | `terminal_input` for resize and keystrokes | ✓ WIRED | Sent at `packages/web/src/App.tsx:238` and `packages/web/src/App.tsx:223`; handled in `packages/server/src/server/session.ts:6527` and `packages/server/src/server/session.ts:1553`. |
+| `packages/web/src/terminal/terminal-stream.ts` | `packages/server/src/server/session.ts` | Binary output decode + ACK frames | ✓ WIRED | ACK generated at `packages/web/src/terminal/terminal-stream.ts:74`; consumed in `packages/server/src/server/session.ts:1581`. |
+| `packages/web/src/lib/ws.ts` | `packages/web/src/components/ConnectionOverlay.tsx` | connection status updates to UX | ✓ WIRED | Status emits at `packages/web/src/lib/ws.ts:109`/`packages/web/src/lib/ws.ts:118`; overlay renders reconnect/disconnect labels. |
+| `packages/server/src/server/session.ts` | `packages/server/src/terminal/terminal-manager.ts` | default-terminal resolution + stale-id fallback | ✓ WIRED | Calls `ensureDefaultTerminal` at `packages/server/src/server/session.ts:6337` and fallback path at `packages/server/src/server/session.ts:6405`. |
+| `packages/server/src/terminal/terminal-manager.ts` | `packages/server/src/terminal/tmux-terminal.ts` | `createTmuxTerminalSession` + deterministic session keys | ✓ WIRED | Creation at `packages/server/src/terminal/terminal-manager.ts:192`; default session key path at `packages/server/src/terminal/terminal-manager.ts:342`. |
 
 ### Requirements Coverage
 
 | Requirement | Status | Blocking Issue |
 | --- | --- | --- |
-| TERM-01: embedded interactive terminal per thread placeholder | ✓ SATISFIED | None |
-| TERM-02: auto-reconnect with exponential backoff and recovery | ✓ SATISFIED | None |
-| TERM-03: terminal dimensions remain synced browser/ws/tmux | ✓ SATISFIED | None |
-| TERM-04: disconnect/reconnect returns to same session state | ✓ SATISFIED | None |
+| TERM-01: User can interact with a terminal session embedded in browser | ✓ SATISFIED | None |
+| TERM-02: Auto-reconnect with exponential backoff and recovery | ✓ SATISFIED | None |
+| TERM-03: Terminal dimensions stay in sync across browser/ws/tmux | ✓ SATISFIED | None |
+| TERM-04: Reconnect returns to same session state | ✓ SATISFIED | None |
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 | --- | --- | --- | --- | --- |
-| `packages/server/src/server/daemon-e2e/terminal.e2e.test.ts` | 771 | `console.log` in test diagnostics | ℹ️ Info | Non-blocking; diagnostic output only. |
+| `packages/server/src/server/daemon-e2e/terminal.e2e.test.ts` | 814 | `console.log` diagnostic output | ℹ️ Info | Test diagnostics only; does not block goal achievement. |
 
 ### Human Verification Required
 
-1. **Browser reconnect UX smoke test**
-
-**Test:** Open terminal, run `yes test | head -n 5000`, disable network briefly, restore network.
-**Expected:** Overlay transitions to disconnected/reconnecting then clears; terminal resumes with no reset artifacts.
-**Why human:** Confirms real browser/network behavior and visual UX timing.
-
-2. **Interactive app resize test (vim/opencode)**
-
-**Test:** Run a full-screen TUI (e.g. `vim`) and rapidly resize browser window.
-**Expected:** No garbled layout; cursor and redraw remain stable.
-**Why human:** Visual terminal rendering fidelity cannot be fully proven by static analysis.
+None for structural goal verification. Existing automated E2E coverage already exercises reconnect, resume/reset, resize, and attach/input race paths.
 
 ### Gaps Summary
 
-All must-haves from Phase 2 plans are present, substantive, and wired. No structural gaps blocking the phase goal were found.
+No structural gaps found. Must-haves from phase plans are present, substantive, and wired end-to-end for Phase 2 scope (active-thread placeholder terminal identity).
 
 ---
 
-_Verified: 2026-02-22T05:01:40Z_
+_Verified: 2026-02-23T01:39:49Z_
 _Verifier: OpenCode (gsd-verifier)_

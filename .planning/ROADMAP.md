@@ -54,11 +54,12 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 
 **Dependencies:** Phase 1 (daemon + web client + Docker running)
 
-**Plans:** 3 plans
+**Plans:** 4 plans
 
-- [ ] 02-01-PLAN.md — tmux-authoritative terminal backend and default session bootstrap
-- [ ] 02-02-PLAN.md — xterm terminal UI and binary stream wiring in the web client
-- [ ] 02-03-PLAN.md — reconnect recovery, resize sync, and reliability coverage
+- [x] 02-01-PLAN.md — tmux-authoritative terminal backend and default session bootstrap
+- [x] 02-02-PLAN.md — xterm terminal UI and binary stream wiring in the web client
+- [x] 02-03-PLAN.md — reconnect recovery, resize sync, and reliability coverage
+- [x] 02-04-PLAN.md — concurrent ensure bootstrap race closure
 
 **Requirements:**
 
@@ -185,4 +186,4 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 ---
 
 _Roadmap created: 2026-02-21_
-_Last updated: 2026-02-21_
+_Last updated: 2026-02-23_
