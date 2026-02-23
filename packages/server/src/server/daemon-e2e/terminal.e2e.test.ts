@@ -617,6 +617,114 @@ const shouldRun = !process.env.CI;
   );
 
   test(
+    "preserves output and post-reconnect input routing during reconnect resize churn",
+    async () => {
+      const clientSessionKey = `terminal-reconnect-resize-${Date.now()}`;
+      const warningBaseline = countLogEntries(daemonLogLines, STALE_STREAM_INPUT_WARNING);
+      const firstClient = await connectChurnClient(ctx.daemon.port, clientSessionKey, "resize-pre");
+
+      let secondClient: DaemonClient | null = null;
+      try {
+        const ensure = await firstClient.ensureDefaultTerminal(
+          `reconnect-resize-ensure-pre-${Date.now()}`
+        );
+        expect(ensure.error).toBeNull();
+        const terminalId = ensure.terminal!.id;
+
+        const firstAttach = await firstClient.attachTerminalStream(terminalId, {
+          rows: 24,
+          cols: 80,
+        });
+        expect(firstAttach.error).toBeNull();
+        const firstStreamId = firstAttach.streamId!;
+
+        let firstOutput = "";
+        const firstUnsub = firstClient.onTerminalStreamData(firstStreamId, (chunk) => {
+          firstOutput += decoder.decode(chunk.data, { stream: true });
+        });
+
+        firstClient.sendTerminalStreamInput(
+          firstStreamId,
+          "echo reconnect-resize-pre-1; echo reconnect-resize-pre-2; echo reconnect-resize-pre-3\r"
+        );
+        await waitForCondition(() => firstOutput.includes("reconnect-resize-pre-3"), 10000);
+
+        const firstDetach = await firstClient.detachTerminalStream(firstStreamId);
+        expect(firstDetach.success).toBe(true);
+        firstUnsub();
+        await firstClient.close();
+
+        secondClient = await connectChurnClient(ctx.daemon.port, clientSessionKey, "resize-post");
+
+        const ensuredAfterReconnect = await secondClient.ensureDefaultTerminal(
+          `reconnect-resize-ensure-post-${Date.now()}`
+        );
+        expect(ensuredAfterReconnect.error).toBeNull();
+        expect(ensuredAfterReconnect.terminal?.id).toBe(terminalId);
+
+        const secondAttach = await secondClient.attachTerminalStream(terminalId, {
+          rows: 30,
+          cols: 100,
+        });
+        expect(secondAttach.error).toBeNull();
+        const secondStreamId = secondAttach.streamId!;
+        expect(secondStreamId).not.toBe(firstStreamId);
+
+        let secondOutput = "";
+        const secondUnsub = secondClient.onTerminalStreamData(secondStreamId, (chunk) => {
+          secondOutput += decoder.decode(chunk.data, { stream: true });
+        });
+
+        secondClient.sendTerminalInput(terminalId, {
+          type: "resize",
+          rows: 33,
+          cols: 120,
+        });
+        secondClient.sendTerminalInput(terminalId, {
+          type: "resize",
+          rows: 36,
+          cols: 128,
+        });
+
+        secondClient.sendTerminalStreamInput(
+          secondStreamId,
+          "echo reconnect-resize-post-1; echo reconnect-resize-post-2; echo reconnect-resize-post-3\r"
+        );
+        await waitForCondition(() => secondOutput.includes("reconnect-resize-post-3"), 10000);
+
+        const post1Index = secondOutput.indexOf("reconnect-resize-post-1");
+        const post2Index = secondOutput.indexOf("reconnect-resize-post-2");
+        const post3Index = secondOutput.indexOf("reconnect-resize-post-3");
+        expect(post1Index).toBeGreaterThanOrEqual(0);
+        expect(post2Index).toBeGreaterThan(post1Index);
+        expect(post3Index).toBeGreaterThan(post2Index);
+
+        const routingMarker = `reconnect-resize-input-route-${Date.now()}`;
+        secondClient.sendTerminalStreamInput(secondStreamId, `echo ${routingMarker}\r`);
+        await waitForCondition(() => secondOutput.includes(routingMarker), 10000);
+
+        const refreshedState = await secondClient.subscribeTerminal(terminalId);
+        expect(refreshedState.error).toBeNull();
+        expect(refreshedState.state?.rows).toBe(36);
+        expect(refreshedState.state?.cols).toBe(128);
+
+        const secondDetach = await secondClient.detachTerminalStream(secondStreamId);
+        expect(secondDetach.success).toBe(true);
+        secondClient.unsubscribeTerminal(terminalId);
+        secondUnsub();
+      } finally {
+        await firstClient.close();
+        await secondClient?.close();
+      }
+
+      const warningDelta =
+        countLogEntries(daemonLogLines, STALE_STREAM_INPUT_WARNING) - warningBaseline;
+      expect(warningDelta).toBe(0);
+    },
+    30000
+  );
+
+  test(
     "applies attach dimensions and keeps stream output flowing during resize",
     async () => {
       const cwd = tmpCwd();
