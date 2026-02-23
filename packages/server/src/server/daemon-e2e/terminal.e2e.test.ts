@@ -79,6 +79,49 @@ const shouldRun = !process.env.CI;
   );
 
   test(
+    "keeps stream attach/input stable after concurrent default ensure requests",
+    async () => {
+      const now = Date.now();
+      const ensures = await Promise.all(
+        Array.from({ length: 6 }, (_, index) =>
+          ctx.client.ensureDefaultTerminal(`ensure-race-${now}-${index}`)
+        )
+      );
+
+      for (const ensured of ensures) {
+        expect(ensured.error).toBeNull();
+        expect(ensured.terminal?.id).toBeTruthy();
+      }
+
+      const terminalIds = ensures.map((ensured) => ensured.terminal!.id);
+      expect(new Set(terminalIds).size).toBe(1);
+      const terminalId = terminalIds[0];
+
+      const attach = await ctx.client.attachTerminalStream(terminalId, { rows: 24, cols: 80 });
+      expect(attach.error).toBeNull();
+      expect(attach.streamId).toBeTypeOf("number");
+
+      const streamId = attach.streamId!;
+      let output = "";
+      const unsubscribe = ctx.client.onTerminalStreamData(streamId, (chunk) => {
+        output += decoder.decode(chunk.data, { stream: true });
+      });
+
+      const marker = `ensure-race-marker-${Date.now()}`;
+      ctx.client.sendTerminalInput(terminalId, {
+        type: "input",
+        data: `echo ${marker}\r`,
+      });
+      await waitForCondition(() => output.includes(marker), 10000);
+
+      const detach = await ctx.client.detachTerminalStream(streamId);
+      expect(detach.success).toBe(true);
+      unsubscribe();
+    },
+    30000
+  );
+
+  test(
     "lists terminals for a directory (auto-creates first)",
     async () => {
       const cwd = tmpCwd();
