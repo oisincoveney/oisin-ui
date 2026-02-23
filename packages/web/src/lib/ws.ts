@@ -11,6 +11,7 @@ export type ConnectionDiagnostics = {
   wsUrl: string;
   endpoint: string;
   lastFailureReason: string | null;
+  lastFailureHint: string | null;
 };
 
 type ConnectionStatusListener = (status: ConnectionStatus) => void;
@@ -72,6 +73,7 @@ const retryCountRef = Effect.runSync(Ref.make(0));
 let connectionDiagnostics: ConnectionDiagnostics = {
   ...resolveWsTarget(),
   lastFailureReason: null,
+  lastFailureHint: null,
 };
 const connectionDiagnosticsListeners = new Set<ConnectionDiagnosticsListener>();
 
@@ -347,7 +349,7 @@ function connect(): void {
     }
     emit("connected");
     console.info("[ws] connected");
-    patchConnectionDiagnostics({ lastFailureReason: null });
+    patchConnectionDiagnostics({ lastFailureReason: null, lastFailureHint: null });
     runSync(Ref.set(retryCountRef, 0));
     clearReconnectTimer();
   });
@@ -368,7 +370,11 @@ function connect(): void {
     const closeReason = event.wasClean
       ? `WebSocket closed (${event.code})`
       : `WebSocket closed unexpectedly (${event.code})`;
-    patchConnectionDiagnostics({ lastFailureReason: closeReason });
+    patchConnectionDiagnostics({
+      lastFailureReason: closeReason,
+      lastFailureHint:
+        "Verify daemon is reachable at endpoint and web/daemon ports are aligned",
+    });
 
     scheduleReconnect("close");
   });
@@ -381,6 +387,8 @@ function connect(): void {
     console.error("[ws] socket error before reconnect");
     patchConnectionDiagnostics({
       lastFailureReason: "WebSocket transport error while connecting",
+      lastFailureHint:
+        "Check daemon process health and PASEO_LISTEN/VITE_DAEMON_PORT values",
     });
     if (shouldStop) {
       emit("disconnected");

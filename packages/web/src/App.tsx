@@ -271,8 +271,10 @@ function App() {
       <ConnectionOverlay
         status={status}
         diagnostics={{
+          wsUrl: diagnostics.wsUrl,
           endpoint: diagnostics.endpoint,
           wsFailureReason: diagnostics.lastFailureReason,
+          wsFailureHint: diagnostics.lastFailureHint,
           attachFailureReason,
         }}
       />
