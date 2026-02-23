@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 02-terminal-i
 source: 02-terminal-i-01-SUMMARY.md, 02-terminal-i-02-SUMMARY.md, 02-terminal-i-03-SUMMARY.md, 02-terminal-i-04-SUMMARY.md
 started: 2026-02-23T01:42:36Z
-updated: 2026-02-23T01:48:53Z
+updated: 2026-02-23T01:51:37Z
 ---
 
 ## Current Test
@@ -64,7 +64,20 @@ skipped: 6
   reason: "User reported: No, I cannot see the cursor or type text. It is clear that the fixes you had \"implemented\" were not tested."
   severity: blocker
   test: 1
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Web terminal interactivity is blocked because websocket endpoint defaults are inconsistent (web client targets VITE_DAEMON_PORT || 3000 while runtime/CLI expects daemon on 127.0.0.1:6767), so attach never completes and cursor/input remain inactive."
+  artifacts:
+    - path: "packages/web/src/lib/ws.ts"
+      issue: "Hardcoded fallback VITE_DAEMON_PORT || 3000 can target wrong daemon endpoint in standard UAT setup"
+    - path: "packages/web/src/App.tsx"
+      issue: "Terminal input is gated behind successful attach and disconnected path disables cursor blink"
+    - path: "packages/server/src/server/config.ts"
+      issue: "Default port value/comment mismatch creates environment drift"
+    - path: ".planning/phases/02-terminal-i/02-terminal-i-VERIFICATION.md"
+      issue: "Structural verification passed without a live interactive smoke gate"
+  missing:
+    - "Unify daemon port source-of-truth across server config, CLI defaults, and web ws URL resolution"
+    - "Set web daemon endpoint fallback to the same runtime default or require explicit env in dev/UAT"
+    - "Fix packages/server/src/server/config.ts default/comment mismatch so documented and actual listen port are identical"
+    - "Add automated web UAT smoke test asserting terminal cursor/input/output interactivity"
+    - "Surface ws endpoint mismatch and attach failure reason in UI telemetry"
+  debug_session: ".planning/debug/phase-02-terminal-i-uat-block.md"
