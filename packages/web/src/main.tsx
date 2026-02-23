@@ -5,9 +5,21 @@ import App from './App.tsx'
 import { AppSidebar } from './components/app-sidebar'
 import { Toaster } from './components/ui/sonner'
 import { SidebarInset, SidebarProvider } from './components/ui/sidebar'
-import { startThreadStore } from './thread/thread-store'
+import { setActiveDiffThread, startDiffStore } from './diff/diff-store'
+import {
+  getActiveThreadDiffTarget,
+  getThreadStoreSnapshot,
+  startThreadStore,
+  subscribeThreadStore,
+} from './thread/thread-store'
 
 startThreadStore()
+startDiffStore()
+
+setActiveDiffThread(getActiveThreadDiffTarget(getThreadStoreSnapshot()))
+subscribeThreadStore(() => {
+  setActiveDiffThread(getActiveThreadDiffTarget(getThreadStoreSnapshot()))
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

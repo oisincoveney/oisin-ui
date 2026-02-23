@@ -25,11 +25,19 @@ export type ThreadSummary = {
   title: string
   status: 'running' | 'idle' | 'error' | 'closed' | 'unknown'
   unreadCount: number
+  worktreePath?: string | null
   terminalId?: string | null
   agentId?: string | null
   updatedAt: string
   lastOutputAt?: string | null
   lastStatusAt?: string | null
+}
+
+export type ActiveThreadDiffTarget = {
+  projectId: string
+  threadId: string
+  threadKey: string
+  cwd: string
 }
 
 export type ThreadLaunchConfigInput = {
@@ -82,6 +90,14 @@ export type ThreadStoreState = {
       branches: string[]
     }
   >
+  toasts: Array<{
+    id: string
+    projectId: string
+    threadId: string
+    threadTitle: string
+    status: 'error' | 'closed'
+    message: string
+  }>
 }
 
 type PendingRequest =
@@ -127,6 +143,7 @@ const initialState: ThreadStoreState = {
     list: [],
   },
   branchSuggestionsByProjectId: {},
+  toasts: [],
 }
 
 let state: ThreadStoreState = initialState
@@ -267,6 +284,35 @@ function parseDirtyDeleteError(error: string | null | undefined): string | null 
     return error
   }
   return null
+}
+
+function makeThreadStatusToast(input: {
+  projectId: string
+  threadId: string
+  threadTitle: string
+  status: 'error' | 'closed'
+}): ThreadStoreState['toasts'][number] {
+  return {
+    id: randomRequestId('thread-toast'),
+    projectId: input.projectId,
+    threadId: input.threadId,
+    threadTitle: input.threadTitle,
+    status: input.status,
+    message:
+      input.status === 'error'
+        ? `${input.threadTitle} exited with an error in the background.`
+        : `${input.threadTitle} finished in the background.`,
+  }
+}
+
+function pushThreadToast(
+  snapshot: ThreadStoreState,
+  toast: ThreadStoreState['toasts'][number]
+): ThreadStoreState['toasts'] {
+  const deduped = snapshot.toasts.filter(
+    (entry) => !(entry.projectId === toast.projectId && entry.threadId === toast.threadId)
+  )
+  return [...deduped, toast].slice(-4)
 }
 
 function clearThreadUnread(projectId: string, threadId: string): void {
@@ -541,10 +587,16 @@ function handleThreadStatusUpdated(message: SessionMessage): void {
 
   updateState((previous) => {
     const current = previous.threadsByProjectId[projectId] ?? []
+    const threadKey = toThreadKey(projectId, threadId)
+    const isActiveThread = previous.activeThreadKey === threadKey
+    let previousStatus: ThreadSummary['status'] | null = null
+    let threadTitle = threadId
     const next = current.map((thread) => {
       if (thread.threadId !== threadId) {
         return thread
       }
+      previousStatus = thread.status
+      threadTitle = thread.title
       return {
         ...thread,
         status,
@@ -552,12 +604,29 @@ function handleThreadStatusUpdated(message: SessionMessage): void {
       }
     })
 
+    const shouldToast =
+      !isActiveThread &&
+      (status === 'error' || status === 'closed') &&
+      previousStatus !== null &&
+      previousStatus !== status
+
     return {
       ...previous,
       threadsByProjectId: {
         ...previous.threadsByProjectId,
         [projectId]: next,
       },
+      toasts: shouldToast
+        ? pushThreadToast(
+            previous,
+            makeThreadStatusToast({
+              projectId,
+              threadId,
+              threadTitle,
+              status,
+            })
+          )
+        : previous.toasts,
     }
   })
 }
@@ -797,6 +866,30 @@ export function getActiveThread(snapshot = state): ThreadSummary | null {
   return threads.find((thread) => thread.threadId === threadId) ?? null
 }
 
+export function getActiveThreadDiffTarget(snapshot = state): ActiveThreadDiffTarget | null {
+  if (!snapshot.activeThreadKey) {
+    return null
+  }
+
+  const activeThread = getActiveThread(snapshot)
+  if (!activeThread) {
+    return null
+  }
+
+  const project = snapshot.projects.find((candidate) => candidate.projectId === activeThread.projectId)
+  const cwd = activeThread.worktreePath ?? project?.repoRoot ?? null
+  if (!cwd) {
+    return null
+  }
+
+  return {
+    projectId: activeThread.projectId,
+    threadId: activeThread.threadId,
+    threadKey: toThreadKey(activeThread.projectId, activeThread.threadId),
+    cwd,
+  }
+}
+
 export function switchToThread(projectId: string, threadId: string): void {
   const nextThreadKey = toThreadKey(projectId, threadId)
   const previousActiveThreadKey = state.activeThreadKey
@@ -1007,7 +1100,7 @@ export function requestDeleteThread(projectId: string, threadId: string, force: 
       type: 'thread_delete_request',
       projectId,
       threadId,
-      force,
+      forceDirtyDelete: force,
       requestId,
     },
     {
@@ -1016,6 +1109,13 @@ export function requestDeleteThread(projectId: string, threadId: string, force: 
       threadId,
     }
   )
+}
+
+export function dismissThreadToast(toastId: string): void {
+  updateState((previous) => ({
+    ...previous,
+    toasts: previous.toasts.filter((toast) => toast.id !== toastId),
+  }))
 }
 
 export function clearDeleteThreadError(): void {
