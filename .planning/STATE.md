@@ -3,20 +3,20 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Phase 2 terminal reliability + interactivity smoke gate complete; ready to begin multi-project thread management.
+**Current Focus:** Phase 2 reconnect stream-id drift hardening complete; final reconnect/resize regression gate remains.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 02 of 4 (Terminal I/O)
-**Plan:** 05 of 05
-**Status:** Phase complete.
-**Last activity:** 2026-02-23 - Completed 02-terminal-i-05-PLAN.md
+**Plan:** 06 of 07
+**Status:** In progress.
+**Last activity:** 2026-02-23 - Completed 02-terminal-i-06-PLAN.md
 
 ```
-Progress: [████████████████████] 100%
+Progress: [██████████████████░░] 92%
 Phase 1:  ██████████ Complete
-Phase 2:  ██████████ Complete
+Phase 2:  █████████░ In Progress
 Phase 3:  ░░░░░ Not Started
 Phase 4:  ░░░░░ Not Started
 ```
@@ -25,8 +25,8 @@ Phase 4:  ░░░░░ Not Started
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 11    |
-| Plans passed           | 11    |
+| Plans executed         | 12    |
+| Plans passed           | 12    |
 | Plans failed           | 0     |
 | Total requirements     | 11    |
 | Requirements complete  | 10    |
@@ -46,6 +46,8 @@ Phase 4:  ░░░░░ Not Started
 | Correlate default terminal ensure by requestId + single-flight server ensure | Prevent bootstrap races from churning terminal IDs and breaking attach/input routing | 02-04 |
 | Standardize daemon/web default endpoint on port 6767 with startup env propagation | Remove ws attach drift between runtime defaults and web fallback resolution | 02-05 |
 | Disable speech providers in terminal smoke runtime | Keep e2e startup deterministic by avoiding local model bootstrap delays | 02-05 |
+| Invalidate stream identity on reconnect transitions and accept attach responses only for active reconnect cycle | Prevent stale streamId reuse after reconnect/refresh churn | 02-06 |
+| Gate adapter input on attach-confirmed active stream and keep server stale-stream rejection lifecycle-aware | Ensure post-reconnect input routes only to latest stream without permissive fallback | 02-06 |
 
 ### Blockers
 
@@ -55,11 +57,11 @@ Phase 4:  ░░░░░ Not Started
 
 ## Session Continuity
 
-**Last session:** 2026-02-22 18:13 PST
-**Stopped at:** Completed 02-terminal-i-05-PLAN.md
+**Last session:** 2026-02-22 19:48 PST
+**Stopped at:** Completed 02-terminal-i-06-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-23T02:13:05Z_
+_Last updated: 2026-02-23T03:48:34Z_
