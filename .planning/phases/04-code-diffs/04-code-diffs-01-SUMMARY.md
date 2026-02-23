@@ -38,7 +38,7 @@ patterns-established:
   - "Thread payload contract pattern: add optional+nullable fields in shared schema, then project source values in session adapters."
   - "Diff order regression pattern: assert mixed tracked/untracked sequences to guard against accidental alphabetical sorting."
 
-duration: 1 min
+duration: 2 min
 completed: 2026-02-23
 ---
 
@@ -48,9 +48,9 @@ completed: 2026-02-23
 
 ## Performance
 
-- **Duration:** 1 min
+- **Duration:** 2 min
 - **Started:** 2026-02-23T20:41:19Z
-- **Completed:** 2026-02-23T20:43:04Z
+- **Completed:** 2026-02-23T20:43:51Z
 - **Tasks:** 2
 - **Files modified:** 4
 
