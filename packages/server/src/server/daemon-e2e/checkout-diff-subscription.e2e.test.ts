@@ -79,13 +79,13 @@ describe("daemon E2E checkout diff subscriptions", () => {
   }, 60000);
 
   test(
-    "pushes file-level checkout diff updates with deterministic path order",
+    "pushes file-level checkout diff updates in git diff order",
     async () => {
       const cwd = tmpCwd();
 
       try {
         initGitRepo(cwd);
-        commitFile(cwd, "base.txt", "base\n");
+        commitFile(cwd, "tracked-first.txt", "base\n");
 
         const subscriptionId = "checkout-diff-e2e-subscription";
         const initial = await ctx.client.subscribeCheckoutDiff(
@@ -97,22 +97,25 @@ describe("daemon E2E checkout diff subscriptions", () => {
         expect(initial.error).toBeNull();
         expect(initial.files).toEqual([]);
 
-        writeFileSync(path.join(cwd, "zeta.txt"), "zeta\n");
-        writeFileSync(path.join(cwd, "alpha.txt"), "alpha\n");
+        writeFileSync(path.join(cwd, "tracked-first.txt"), "tracked change\n");
+        writeFileSync(path.join(cwd, "untracked-second.txt"), "untracked change\n");
 
         const update = await waitForCheckoutDiffUpdate(
           ctx,
           subscriptionId,
           (payload) => {
             const paths = payload.files.map((file) => file.path);
-            return paths.includes("alpha.txt") && paths.includes("zeta.txt");
+            return (
+              paths.includes("tracked-first.txt") &&
+              paths.includes("untracked-second.txt")
+            );
           }
         );
 
         expect(update.error).toBeNull();
         expect(update.files.map((file) => file.path)).toEqual([
-          "alpha.txt",
-          "zeta.txt",
+          "tracked-first.txt",
+          "untracked-second.txt",
         ]);
 
         ctx.client.unsubscribeCheckoutDiff(subscriptionId);
