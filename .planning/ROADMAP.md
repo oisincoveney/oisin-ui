@@ -179,10 +179,10 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 
 **Dependencies:** Phase 1 implementation complete, plus phases 2-4 regression baselines passing
 
-**Plans:** 0 plans (created by /gsd-plan-phase)
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run `/gsd-plan-phase 5`)
+- [ ] 05-01-PLAN.md — Runtime evidence capture, WS handshake checkpoint, and audit closure
 
 **Requirements:**
 
