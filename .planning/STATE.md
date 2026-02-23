@@ -3,30 +3,30 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Code-diff gap closure through 04-05 with git-order parity preserved for checkout diff subscribe/update/revisit flows.
+**Current Focus:** Code-diff gap closure through 04-06 with explicit rename metadata and extension-aware highlight rendering.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 04 of 4 (Code Diffs)
-**Plan:** 05 of 06
-**Status:** In progress.
-**Last activity:** 2026-02-23 - Completed 04-05-PLAN.md
+**Plan:** 06 of 06
+**Status:** Phase complete.
+**Last activity:** 2026-02-23 - Completed 04-06-PLAN.md
 
 ```
-Progress: [███████████████████░] 96%
+Progress: [████████████████████] 100%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
 Phase 3:  █████ Complete (5/5)
-Phase 4:  ████████ In progress (5/6)
+Phase 4:  ██████████ Complete (6/6)
 ```
 
 ## Performance Metrics
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 23    |
-| Plans passed           | 22    |
+| Plans executed         | 24    |
+| Plans passed           | 23    |
 | Plans failed           | 1     |
 | Total requirements     | 11    |
 | Requirements complete  | 11    |
@@ -73,6 +73,9 @@ Phase 4:  ████████ In progress (5/6)
 | Guard diff-panel Playwright regression on active-thread availability | Avoids false negatives in empty local daemon bootstrap states while preserving coverage when thread context exists | 04-04 |
 | Keep computeCheckoutDiffSnapshot as an order-preserving forwarder of getCheckoutDiff().structured output | Eliminates server-side alphabetical normalization that broke git-order truths | 04-05 |
 | Assert subscribe/update/revisit diff ordering against git-derived expectations with non-alphabetic fixtures | Makes ordering regressions deterministic and catches any adapter/session path re-sorts | 04-05 |
+| Keep rename metadata explicit as optional `oldPath` across shared/server/web parsed diff contracts | Removes rename label inference from display strings and preserves deterministic `old -> new` rendering | 04-06 |
+| Derive diff2html language from renamed target file extension with plaintext fallback | Restores syntax-highlight fidelity without hardcoding `txt` for every file | 04-06 |
+| Keep active-thread guard in diff-panel browser regression while asserting rename/highlight behavior when thread exists | Avoids false negatives in empty daemon state without silently dropping active-thread coverage | 04-06 |
 
 ### Blockers
 
@@ -80,14 +83,15 @@ Phase 4:  ████████ In progress (5/6)
 | ------- | ------ | ------ |
 | Repo-wide `npm run typecheck` can OOM in this environment | Full monorepo typecheck is not reliable for verification in this shell | Ongoing environment issue; workspace-level typechecks and e2e coverage used for plan execution |
 | Bun-driven vite/vitest startup intermittently fails with `esbuild` EPIPE in this shell | Blocks full browser e2e execution via Bun scripts despite code-level completion | Ongoing through 03-05; typechecks pass, daemon/web e2e entrypoints remain environment-blocked |
+| Diff-panel browser regression requires active thread fixture to execute assertions | Targeted e2e can skip in empty daemon bootstrap state, reducing local verification strictness | Ongoing; seed an active thread fixture before running targeted diff-panel Playwright checks |
 
 ## Session Continuity
 
-**Last session:** 2026-02-23 22:33 UTC
-**Stopped at:** Completed 04-05-PLAN.md
+**Last session:** 2026-02-23 22:36 UTC
+**Stopped at:** Completed 04-06-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-23T22:33:54Z_
+_Last updated: 2026-02-23T22:36:59Z_
