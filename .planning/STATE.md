@@ -3,30 +3,30 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Phase 3 complete including create-thread baseBranch/command wiring gap closure; ready to begin Phase 4 diff panel work.
+**Current Focus:** Phase 4 started with server diff contract/order foundation complete; ready for thread-scoped diff store and panel wiring.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
-**Phase:** 03 of 4 (Project & Thread Management)
-**Plan:** 05 of 05
-**Status:** Phase complete.
-**Last activity:** 2026-02-23 - Completed 03-project-and-thread-management-05-PLAN.md
+**Phase:** 04 of 4 (Code Diffs)
+**Plan:** 01 of 04
+**Status:** In progress.
+**Last activity:** 2026-02-23 - Completed 04-01-PLAN.md
 
 ```
-Progress: [████████████████████] 100%
+Progress: [█████████████████░░░] 86%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
 Phase 3:  █████ Complete (5/5)
-Phase 4:  ░░░░░ Not Started
+Phase 4:  █░░░░ In progress (1/4)
 ```
 
 ## Performance Metrics
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 18    |
-| Plans passed           | 17    |
+| Plans executed         | 19    |
+| Plans passed           | 18    |
 | Plans failed           | 1     |
 | Total requirements     | 11    |
 | Requirements complete  | 10    |
@@ -62,6 +62,8 @@ Phase 4:  ░░░░░ Not Started
 | Lock thread sidebar UX with browser regression specs for create/switch/wrap and background status toast | Prevents regressions in high-friction multi-thread interaction flows | 03-04 |
 | Keep `thread_create` payload validation strict and typed with shared provider command schema | Ensures invalid baseBranch/command payloads surface explicit validation errors instead of being silently dropped | 03-05 |
 | Propagate command override into provider-scoped agent session config during thread creation | Keeps New Thread command intent intact from UI payload through lifecycle launch configuration | 03-05 |
+| Expose `thread.links.worktreePath` as nullable `worktreePath` in thread summaries | Ensures diff subscribers use true per-thread cwd and prevents cross-thread diff leakage | 04-01 |
+| Preserve `listCheckoutFileChanges` ordering in checkout diff payloads | Keeps file list sequence aligned with git diff output instead of alphabetical reshuffling | 04-01 |
 
 ### Blockers
 
@@ -72,11 +74,11 @@ Phase 4:  ░░░░░ Not Started
 
 ## Session Continuity
 
-**Last session:** 2026-02-23 15:42 UTC
-**Stopped at:** Completed 03-project-and-thread-management-05-PLAN.md
+**Last session:** 2026-02-23 20:43 UTC
+**Stopped at:** Completed 04-01-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-23T15:42:27Z_
+_Last updated: 2026-02-23T20:43:04Z_
