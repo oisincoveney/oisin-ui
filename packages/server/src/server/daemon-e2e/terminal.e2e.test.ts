@@ -18,6 +18,13 @@ import {
 
 const decoder = new TextDecoder();
 const STALE_STREAM_INPUT_WARNING = "Terminal stream not found for input";
+const silentClientLogger = {
+  trace() {},
+  debug() {},
+  info() {},
+  warn() {},
+  error() {},
+};
 
 function tmpCwd(): string {
   return mkdtempSync(path.join(tmpdir(), "daemon-terminal-e2e-"));
@@ -65,6 +72,7 @@ const shouldRun = !process.env.CI;
     const client = new DaemonClient({
       url: `ws://127.0.0.1:${port}/ws`,
       clientSessionKey,
+      logger: silentClientLogger as any,
     });
     await client.connect();
     await client.fetchAgents({
