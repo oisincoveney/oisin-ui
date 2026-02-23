@@ -28,9 +28,9 @@ function parsePortValue(value: string | undefined): number | null {
   return port;
 }
 
-function getDefaultListen(): string {
+function getDefaultListen(env: NodeJS.ProcessEnv): string {
   // Main HTTP server defaults to TCP
-  const portFromEnv = parsePortValue(process.env.PORT);
+  const portFromEnv = parsePortValue(env.PORT);
   const port = portFromEnv ?? DEFAULT_PORT;
   return `127.0.0.1:${port}`;
 }
@@ -71,7 +71,7 @@ export function loadConfig(
     options?.cli?.listen ??
     env.PASEO_LISTEN ??
     persisted.daemon?.listen ??
-    getDefaultListen();
+    getDefaultListen(env);
 
   const envCorsOrigins = env.PASEO_CORS_ORIGINS
     ? env.PASEO_CORS_ORIGINS.split(",").map((s) => s.trim())

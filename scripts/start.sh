@@ -3,7 +3,7 @@
 set -euo pipefail
 
 export PASEO_HOME="${PASEO_HOME:-/config}"
-export PASEO_LISTEN="${PASEO_LISTEN:-0.0.0.0:3000}"
+export PASEO_LISTEN="${PASEO_LISTEN:-0.0.0.0:6767}"
 export PASEO_CORS_ORIGINS="${PASEO_CORS_ORIGINS:-http://localhost:44285,http://127.0.0.1:44285,http://0.0.0.0:44285}"
 
 DAEMON_PORT="${PASEO_LISTEN##*:}"

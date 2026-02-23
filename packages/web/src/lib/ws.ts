@@ -31,12 +31,26 @@ type WrappedSessionMessage = {
   message: unknown;
 };
 
-const DEFAULT_DAEMON_PORT = "6767";
+const DEFAULT_DAEMON_PORT = 6767;
+
+function resolveDaemonPort(): string {
+  const configuredPort = import.meta.env.VITE_DAEMON_PORT;
+  if (!configuredPort) {
+    return String(DEFAULT_DAEMON_PORT);
+  }
+
+  const parsedPort = Number.parseInt(configuredPort, 10);
+  if (!Number.isFinite(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
+    return String(DEFAULT_DAEMON_PORT);
+  }
+
+  return String(parsedPort);
+}
 
 function resolveWsTarget(): { wsUrl: string; endpoint: string } {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const hostname = window.location.hostname;
-  const port = import.meta.env.VITE_DAEMON_PORT || DEFAULT_DAEMON_PORT;
+  const port = resolveDaemonPort();
 
   return {
     wsUrl: `${protocol}//${hostname}:${port}/ws?clientSessionKey=web-client`,
