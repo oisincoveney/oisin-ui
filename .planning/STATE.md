@@ -3,30 +3,30 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Phase 4 now has server contract/order + thread-scoped diff store wiring complete; ready for diff panel shells and rendering.
+**Current Focus:** Phase 4 now has diff panel shells and layout lifecycle locked; ready for diff2html rendering integration.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 04 of 4 (Code Diffs)
-**Plan:** 02 of 04
+**Plan:** 03 of 04
 **Status:** In progress.
-**Last activity:** 2026-02-23 - Completed 04-02-PLAN.md
+**Last activity:** 2026-02-23 - Completed 04-03-PLAN.md
 
 ```
-Progress: [██████████████████░░] 91%
+Progress: [███████████████████░] 95%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
 Phase 3:  █████ Complete (5/5)
-Phase 4:  ██░░░ In progress (2/4)
+Phase 4:  ███░░ In progress (3/4)
 ```
 
 ## Performance Metrics
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 20    |
-| Plans passed           | 19    |
+| Plans executed         | 21    |
+| Plans passed           | 20    |
 | Plans failed           | 1     |
 | Total requirements     | 11    |
 | Requirements complete  | 10    |
@@ -66,6 +66,8 @@ Phase 4:  ██░░░ In progress (2/4)
 | Preserve `listCheckoutFileChanges` ordering in checkout diff payloads | Keeps file list sequence aligned with git diff output instead of alphabetical reshuffling | 04-01 |
 | Keep checkout diff websocket lifecycle in dedicated diff external store keyed by active subscriptionId | Prevents cross-thread diff updates and keeps socket logic out of React components | 04-02 |
 | Bridge thread store active context into diff store during app bootstrap | Ensures diff subscriptions track active thread/worktree without component-owned websocket lifecycles | 04-02 |
+| Persist diff panel width through local storage while keeping width state in diff-store | Preserves user-selected split ratio across reloads without moving ownership out of diff store | 04-03 |
+| Close diff panel on active-thread transitions from app lifecycle | Guarantees thread switch resets panel visibility consistently for desktop and mobile | 04-03 |
 
 ### Blockers
 
@@ -76,11 +78,11 @@ Phase 4:  ██░░░ In progress (2/4)
 
 ## Session Continuity
 
-**Last session:** 2026-02-23 21:12 UTC
-**Stopped at:** Completed 04-02-PLAN.md
+**Last session:** 2026-02-23 21:44 UTC
+**Stopped at:** Completed 04-03-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-23T21:12:11Z_
+_Last updated: 2026-02-23T21:44:24Z_

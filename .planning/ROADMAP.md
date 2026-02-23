@@ -145,9 +145,9 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 
 **Plans:** 4 plans
 
-- [ ] 04-01-PLAN.md — Server diff contracts and git-order alignment
-- [ ] 04-02-PLAN.md — Thread-scoped diff external store and subscription lifecycle
-- [ ] 04-03-PLAN.md — Desktop/mobile diff panel shells with persisted resize behavior
+- [x] 04-01-PLAN.md — Server diff contracts and git-order alignment
+- [x] 04-02-PLAN.md — Thread-scoped diff external store and subscription lifecycle
+- [x] 04-03-PLAN.md — Desktop/mobile diff panel shells with persisted resize behavior
 - [ ] 04-04-PLAN.md — diff2html rendering, refresh flow, and browser regressions
 
 **Requirements:**
@@ -178,7 +178,7 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 | 1 - Foundation & Docker         | Complete (2026-02-21) | DOCK-01                                     | 10100%     |
 | 2 - Terminal I/O                | Complete (2026-02-23) | TERM-01, TERM-02, TERM-03, TERM-04          | 100%       |
 | 3 - Project & Thread Management | Complete (2026-02-23) | PROJ-01, PROJ-02, PROJ-03, PROJ-04, PROJ-05 | 100%       |
-| 4 - Code Diffs                  | Not Started           | DIFF-01                                     | 0%         |
+| 4 - Code Diffs                  | In progress (3/4)     | DIFF-01                                     | 75%        |
 
 **Overall:** 10/11 requirements complete (91%)
 
