@@ -12,6 +12,12 @@ import {
 import { TerminalView } from './terminal/terminal-view'
 import { TerminalStreamAdapter } from './terminal/terminal-stream'
 import { decodeBinaryMuxFrame } from './terminal/binary-mux'
+import {
+  clearUnreadForActiveThread,
+  getActiveThread,
+  switchRelativeThread,
+  useThreadStoreSnapshot,
+} from './thread/thread-store'
 
 type SessionMessage = {
   type: string
@@ -38,6 +44,9 @@ function randomId(prefix: string): string {
 function App() {
   const status = useConnectionStatus()
   const diagnostics = useConnectionDiagnostics()
+  const threadSnapshot = useThreadStoreSnapshot()
+  const activeThread = getActiveThread(threadSnapshot)
+  const activeThreadTerminalId = activeThread?.terminalId ?? null
   const [_, setTerminalId] = useState<string | null>(null)
   const [attachFailureReason, setAttachFailureReason] = useState<string | null>(null)
   const adapterRef = useRef<TerminalStreamAdapter | null>(null)
@@ -136,7 +145,16 @@ function App() {
         forceRefreshOnAttachRef.current = true
       }
       hadConnectedOnceRef.current = true
-      ensureDefaultTerminal()
+
+      if (terminalRef.current && activeThreadTerminalId) {
+        const forceRefresh = forceRefreshOnAttachRef.current
+        terminalIdRef.current = activeThreadTerminalId
+        setTerminalId(activeThreadTerminalId)
+        sendAttachRequest(activeThreadTerminalId, forceRefresh)
+        forceRefreshOnAttachRef.current = false
+      } else {
+        ensureDefaultTerminal()
+      }
       return
     }
 
@@ -150,7 +168,63 @@ function App() {
         terminalRef.current.options.cursorBlink = false
       }
     }
-  }, [status])
+  }, [status, activeThreadTerminalId])
+
+  useEffect(() => {
+    if (status !== 'connected') {
+      return
+    }
+
+    if (!terminalRef.current || !activeThreadTerminalId) {
+      return
+    }
+
+    if (terminalIdRef.current === activeThreadTerminalId && !pendingAttachRef.current) {
+      clearUnreadForActiveThread()
+      return
+    }
+
+    pendingEnsureRef.current = null
+    terminalIdRef.current = activeThreadTerminalId
+    setTerminalId(activeThreadTerminalId)
+    clearUnreadForActiveThread()
+    sendAttachRequest(activeThreadTerminalId, false)
+    scheduleScrollToBottom()
+  }, [status, activeThreadTerminalId])
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.metaKey) {
+        return
+      }
+
+      const target = event.target as HTMLElement | null
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        switchRelativeThread(-1)
+      }
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        switchRelativeThread(1)
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [])
 
   useEffect(() => {
     const unsubText = subscribeTextMessages((data) => {
@@ -196,9 +270,11 @@ function App() {
           setAttachFailureReason('Daemon did not return a terminal id during ensure')
           return
         }
-        terminalIdRef.current = terminal.id
-        setTerminalId(terminal.id)
-        sendAttachRequest(terminal.id, forceRefreshOnAttachRef.current)
+        const storeActiveThread = getActiveThread()
+        const targetTerminalId = storeActiveThread?.terminalId ?? terminal.id
+        terminalIdRef.current = targetTerminalId
+        setTerminalId(targetTerminalId)
+        sendAttachRequest(targetTerminalId, forceRefreshOnAttachRef.current)
         forceRefreshOnAttachRef.current = false
         return
       }
@@ -284,7 +360,13 @@ function App() {
     })
 
     if (status === 'connected') {
-      ensureDefaultTerminal()
+      if (activeThreadTerminalId) {
+        terminalIdRef.current = activeThreadTerminalId
+        setTerminalId(activeThreadTerminalId)
+        sendAttachRequest(activeThreadTerminalId, false)
+      } else {
+        ensureDefaultTerminal()
+      }
     }
   }
 
@@ -306,7 +388,7 @@ function App() {
   }
 
   return (
-    <main className="relative flex h-screen w-screen flex-col bg-background overflow-hidden">
+    <main className="relative flex h-full w-full flex-col overflow-hidden bg-background">
       <div className="flex-1 overflow-hidden relative">
         <TerminalView
           onTerminalReady={handleTerminalReady}
