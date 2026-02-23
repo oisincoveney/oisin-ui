@@ -4914,6 +4914,7 @@ export class Session {
         projectId: msg.projectId,
         title: msg.title,
         threadId: msg.threadId,
+        baseBranch: msg.baseBranch,
         launchConfig: msg.launchConfig,
       })
 

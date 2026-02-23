@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { AGENT_LIFECYCLE_STATUSES } from './agent-lifecycle.js'
 import { AgentProviderSchema } from '../server/agent/provider-manifest.js'
+import { ProviderCommandSchema } from '../server/agent/provider-launch-config.js'
 import type {
   AgentCapabilityFlags,
   AgentModelDefinition,
@@ -1030,31 +1031,11 @@ export const EnsureDefaultTerminalRequestSchema = z.object({
   requestId: z.string(),
 })
 
-const ThreadLaunchCommandDefaultSchema = z.object({
-  mode: z.literal('default'),
-})
-
-const ThreadLaunchCommandAppendSchema = z.object({
-  mode: z.literal('append'),
-  args: z.array(z.string()).optional(),
-})
-
-const ThreadLaunchCommandReplaceSchema = z.object({
-  mode: z.literal('replace'),
-  argv: z.array(z.string().min(1)).min(1),
-})
-
-const ThreadLaunchCommandOverrideSchema = z.discriminatedUnion('mode', [
-  ThreadLaunchCommandDefaultSchema,
-  ThreadLaunchCommandAppendSchema,
-  ThreadLaunchCommandReplaceSchema,
-])
-
 export const ThreadLaunchConfigSchema = z.object({
   provider: AgentProviderSchema,
   modeId: z.string().optional().nullable(),
-  commandOverride: ThreadLaunchCommandOverrideSchema.optional(),
-})
+  commandOverride: ProviderCommandSchema.optional(),
+}).strict()
 
 export const ProjectSummarySchema = z.object({
   projectId: z.string().trim().min(1),
@@ -1104,9 +1085,10 @@ export const ThreadCreateRequestSchema = z.object({
   projectId: z.string().trim().min(1),
   title: z.string().trim().min(1),
   threadId: z.string().trim().min(1).optional(),
+  baseBranch: z.string().trim().min(1).optional(),
   launchConfig: ThreadLaunchConfigSchema,
   requestId: z.string(),
-})
+}).strict()
 
 export const ThreadDeleteRequestSchema = z.object({
   type: z.literal('thread_delete_request'),

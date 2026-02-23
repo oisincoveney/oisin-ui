@@ -48,6 +48,7 @@ export type CreateThreadInput = {
   projectId: string;
   title: string;
   threadId?: string;
+  baseBranch?: string;
   launchConfig: ThreadLaunchConfig;
 };
 
@@ -112,8 +113,11 @@ export class ThreadLifecycleService {
     }
 
     const threadId = input.threadId?.trim() || this.createThreadIdFromTitle(input.title);
+    const requestedBaseBranch = input.baseBranch?.trim();
     const baseBranch =
-      project.defaultBaseBranch?.trim() || (await this.resolveCurrentBranch(project.repoRoot));
+      requestedBaseBranch && requestedBaseBranch.length > 0
+        ? requestedBaseBranch
+        : project.defaultBaseBranch?.trim() || (await this.resolveCurrentBranch(project.repoRoot));
     const branchName = this.buildBranchName(input.title, threadId);
 
     let worktreePath: string | null = null;
@@ -139,10 +143,19 @@ export class ThreadLifecycleService {
       terminalId = terminal.terminal.id;
       sessionKey = terminal.sessionKey;
 
+      const providerExtra = input.launchConfig.commandOverride
+        ? {
+            [input.launchConfig.provider]: {
+              commandOverride: input.launchConfig.commandOverride,
+            },
+          }
+        : undefined;
+
       const sessionConfig: AgentSessionConfig = {
         provider: input.launchConfig.provider,
         cwd: worktreePath,
         ...(input.launchConfig.modeId ? { modeId: input.launchConfig.modeId } : {}),
+        ...(providerExtra ? { extra: providerExtra as AgentSessionConfig["extra"] } : {}),
         title: input.title,
       };
       const agent = await this.agentManager.createAgent(sessionConfig, undefined, {
