@@ -154,6 +154,8 @@ const CHECKOUT_DIFF_FALLBACK_REFRESH_MS = 5_000
 const TERMINAL_STREAM_WINDOW_BYTES = 256 * 1024
 const TERMINAL_STREAM_MAX_PENDING_BYTES = 2 * 1024 * 1024
 const TERMINAL_STREAM_MAX_PENDING_CHUNKS = 2048
+const TERMINAL_STREAM_STALE_INPUT_TTL_MS = 60_000
+const TERMINAL_STREAM_MAX_STALE_TRACKED = 4096
 
 function deriveRemoteProjectKey(remoteUrl: string | null): string | null {
   if (!remoteUrl) {
@@ -271,6 +273,12 @@ type TerminalStreamPendingChunk = {
   startOffset: number
   endOffset: number
   replay: boolean
+}
+
+type DetachedTerminalStreamInfo = {
+  terminalId: string
+  detachedAt: number
+  replacedByStreamId: number | null
 }
 
 type FetchAgentsRequestMessage = Extract<SessionInboundMessage, { type: 'fetch_agents_request' }>
@@ -557,6 +565,7 @@ export class Session {
     }
   >()
   private readonly terminalStreamByTerminalId = new Map<string, number>()
+  private readonly detachedTerminalStreams = new Map<number, DetachedTerminalStreamInfo>()
   private nextTerminalStreamId = 1
   private readonly checkoutDiffSubscriptions = new Map<string, { targetKey: string }>()
   private readonly checkoutDiffTargets = new Map<string, CheckoutDiffWatchTarget>()
@@ -1554,7 +1563,40 @@ export class Session {
     if (frame.messageType === TerminalBinaryMessageType.InputUtf8) {
       const binding = this.terminalStreams.get(frame.streamId)
       if (!binding) {
-        this.sessionLogger.warn({ streamId: frame.streamId }, 'Terminal stream not found for input')
+        this.pruneDetachedTerminalStreams()
+        const stale = this.detachedTerminalStreams.get(frame.streamId)
+        if (stale) {
+          this.sessionLogger.warn(
+            {
+              streamId: frame.streamId,
+              terminalId: stale.terminalId,
+              currentStreamId:
+                this.terminalStreamByTerminalId.get(stale.terminalId) ?? stale.replacedByStreamId,
+              detachedAt: stale.detachedAt,
+              stale: true,
+            },
+            'Terminal stream not found for input'
+          )
+          return
+        }
+        this.sessionLogger.warn(
+          { streamId: frame.streamId, stale: false },
+          'Terminal stream not found for input'
+        )
+        return
+      }
+
+      const activeStreamId = this.terminalStreamByTerminalId.get(binding.terminalId)
+      if (activeStreamId !== frame.streamId) {
+        this.sessionLogger.warn(
+          {
+            streamId: frame.streamId,
+            terminalId: binding.terminalId,
+            activeStreamId,
+            stale: true,
+          },
+          'Terminal stream not found for input'
+        )
         return
       }
       if (!this.terminalManager) {
@@ -6681,6 +6723,9 @@ export class Session {
     }
     this.terminalStreams.set(streamId, binding)
     this.terminalStreamByTerminalId.set(effectiveTerminalId, streamId)
+    if (typeof existingStreamId === 'number') {
+      this.recordDetachedTerminalStream(existingStreamId, effectiveTerminalId, streamId)
+    }
 
     let rawSub
     try {
@@ -6852,6 +6897,7 @@ export class Session {
     if (this.terminalStreamByTerminalId.get(binding.terminalId) === streamId) {
       this.terminalStreamByTerminalId.delete(binding.terminalId)
     }
+    this.recordDetachedTerminalStream(streamId, binding.terminalId, null)
 
     if (options?.emitExit) {
       this.emit({
@@ -6863,6 +6909,35 @@ export class Session {
       })
     }
     return true
+  }
+
+  private pruneDetachedTerminalStreams(now = Date.now()): void {
+    for (const [streamId, info] of this.detachedTerminalStreams.entries()) {
+      if (now - info.detachedAt > TERMINAL_STREAM_STALE_INPUT_TTL_MS) {
+        this.detachedTerminalStreams.delete(streamId)
+      }
+    }
+
+    while (this.detachedTerminalStreams.size > TERMINAL_STREAM_MAX_STALE_TRACKED) {
+      const oldest = this.detachedTerminalStreams.keys().next().value
+      if (typeof oldest !== 'number') {
+        break
+      }
+      this.detachedTerminalStreams.delete(oldest)
+    }
+  }
+
+  private recordDetachedTerminalStream(
+    streamId: number,
+    terminalId: string,
+    replacedByStreamId: number | null
+  ): void {
+    this.pruneDetachedTerminalStreams()
+    this.detachedTerminalStreams.set(streamId, {
+      terminalId,
+      detachedAt: Date.now(),
+      replacedByStreamId,
+    })
   }
 
   private allocateTerminalStreamId(): number {
