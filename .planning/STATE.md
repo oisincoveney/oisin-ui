@@ -3,30 +3,30 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Roadmap implementation complete through DIFF-01 with thread-scoped diff rendering and refresh flow.
+**Current Focus:** Code-diff gap closure through 04-05 with git-order parity preserved for checkout diff subscribe/update/revisit flows.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 04 of 4 (Code Diffs)
-**Plan:** 04 of 04
-**Status:** Phase complete.
-**Last activity:** 2026-02-23 - Completed 04-04-PLAN.md
+**Plan:** 05 of 06
+**Status:** In progress.
+**Last activity:** 2026-02-23 - Completed 04-05-PLAN.md
 
 ```
-Progress: [████████████████████] 100%
+Progress: [███████████████████░] 96%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
 Phase 3:  █████ Complete (5/5)
-Phase 4:  ████ Complete (4/4)
+Phase 4:  ████████ In progress (5/6)
 ```
 
 ## Performance Metrics
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 22    |
-| Plans passed           | 21    |
+| Plans executed         | 23    |
+| Plans passed           | 22    |
 | Plans failed           | 1     |
 | Total requirements     | 11    |
 | Requirements complete  | 11    |
@@ -71,6 +71,8 @@ Phase 4:  ████ Complete (4/4)
 | Map ParsedDiffFile payloads into diff2html JSON input with adapter-level context and hunk limits | Keeps git-ordered server payload fidelity while controlling browser render cost | 04-04 |
 | Keep binary and too-large diff files summary-only in panel/sheet | Prevents broken hunk rendering for non-renderable payload states and preserves explicit UX | 04-04 |
 | Guard diff-panel Playwright regression on active-thread availability | Avoids false negatives in empty local daemon bootstrap states while preserving coverage when thread context exists | 04-04 |
+| Keep computeCheckoutDiffSnapshot as an order-preserving forwarder of getCheckoutDiff().structured output | Eliminates server-side alphabetical normalization that broke git-order truths | 04-05 |
+| Assert subscribe/update/revisit diff ordering against git-derived expectations with non-alphabetic fixtures | Makes ordering regressions deterministic and catches any adapter/session path re-sorts | 04-05 |
 
 ### Blockers
 
@@ -81,11 +83,11 @@ Phase 4:  ████ Complete (4/4)
 
 ## Session Continuity
 
-**Last session:** 2026-02-23 21:56 UTC
-**Stopped at:** Completed 04-04-PLAN.md
+**Last session:** 2026-02-23 22:33 UTC
+**Stopped at:** Completed 04-05-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-23T21:56:27Z_
+_Last updated: 2026-02-23T22:33:54Z_
