@@ -750,7 +750,6 @@ export class Session {
         displayName: project.displayName,
         repoRoot: project.repoRoot,
         ...(project.defaultBaseBranch ? { defaultBaseBranch: project.defaultBaseBranch } : {}),
-        activeThreadId: null,
       }))
     )
     return this.threadRegistry.listProjects()

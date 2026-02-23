@@ -87,7 +87,11 @@ async function defaultListTmuxSessions(tmuxSocketPath?: string): Promise<TmuxSes
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     const stderr = String((error as { stderr?: string }).stderr ?? "");
-    if (code === "ENOENT" || stderr.includes("no server running")) {
+    const isMissingSocket =
+      stderr.includes("no server running") ||
+      stderr.includes("No such file or directory") ||
+      stderr.includes("error connecting");
+    if (code === "ENOENT" || isMissingSocket) {
       return [];
     }
     throw error;

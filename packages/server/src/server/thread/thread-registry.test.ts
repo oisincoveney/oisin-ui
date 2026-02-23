@@ -80,6 +80,40 @@ describe("ThreadRegistry", () => {
     expect(entries).toContain("thread-registry.json");
   });
 
+  it("preserves existing project activeThreadId when syncing configured projects", async () => {
+    const registry = new ThreadRegistry(paseoHome);
+    await registry.load();
+    await registry.setProjects([
+      {
+        projectId: "proj-sync",
+        displayName: "Sync Repo",
+        repoRoot: path.join(paseoHome, "repo-sync"),
+        defaultBaseBranch: "main",
+        activeThreadId: null,
+      },
+    ]);
+
+    const thread = await registry.createThread({
+      projectId: "proj-sync",
+      threadId: "thread-active",
+      title: "Active Thread",
+      launchConfig: { provider: "opencode" },
+    });
+    await registry.switchThread("proj-sync", thread.threadId);
+
+    await registry.setProjects([
+      {
+        projectId: "proj-sync",
+        displayName: "Sync Repo",
+        repoRoot: path.join(paseoHome, "repo-sync"),
+        defaultBaseBranch: "main",
+      },
+    ]);
+
+    const project = await registry.getProject("proj-sync");
+    expect(project?.activeThreadId).toBe("thread-active");
+  });
+
   it("migrates legacy placeholder-only state to compatibility seed record", async () => {
     const legacyPath = path.join(paseoHome, "thread-registry.json");
     await writeFile(

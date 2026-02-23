@@ -352,9 +352,14 @@ export class ThreadRegistry {
 
     this.state.projects = projects.map((project) => {
       const existing = currentById.get(project.projectId);
+      const nextActiveThreadId =
+        project.activeThreadId === undefined
+          ? existing?.activeThreadId ?? null
+          : project.activeThreadId;
       return {
         ...project,
         repoRoot: path.resolve(project.repoRoot),
+        activeThreadId: nextActiveThreadId,
         createdAt: existing?.createdAt ?? nowIso,
         updatedAt: nowIso,
       };
@@ -517,7 +522,7 @@ export class ThreadRegistry {
 
   async flush(): Promise<void> {
     const validated = ThreadRegistryStateSchema.parse(normalizeState(this.state));
-    const tempPath = `${this.filePath}.tmp-${process.pid}-${Date.now()}`;
+    const tempPath = `${this.filePath}.tmp-${process.pid}-${Date.now()}-${randomUUID()}`;
     await writeFile(tempPath, JSON.stringify(validated, null, 2) + "\n", "utf8");
     await rename(tempPath, this.filePath);
   }
