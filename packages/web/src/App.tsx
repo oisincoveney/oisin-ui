@@ -1,6 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
+import { PanelRightOpen, RefreshCw } from 'lucide-react'
+import type { PanelSize } from 'react-resizable-panels'
+import { Button } from '@/components/ui/button'
 import { ConnectionOverlay } from './components/ConnectionOverlay'
+import { DiffMobileSheet } from './components/diff-mobile-sheet'
+import { DiffPanel } from './components/diff-panel'
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from './components/ui/resizable'
+import { useIsMobile } from './hooks/use-mobile'
+import {
+  getActiveDiffEntry,
+  refreshActiveDiffSnapshot,
+  setDiffPanelOpen,
+  setDiffPanelWidthPercent,
+  useDiffStoreSnapshot,
+} from './diff/diff-store'
 import {
   useConnectionDiagnostics,
   useConnectionStatus,
@@ -47,8 +61,15 @@ function App() {
   const status = useConnectionStatus()
   const diagnostics = useConnectionDiagnostics()
   const threadSnapshot = useThreadStoreSnapshot()
+  const diffSnapshot = useDiffStoreSnapshot()
+  const isMobile = useIsMobile()
   const activeThread = getActiveThread(threadSnapshot)
   const activeThreadTerminalId = activeThread?.terminalId ?? null
+  const activeDiffEntry = getActiveDiffEntry(diffSnapshot)
+  const diffFiles = activeDiffEntry?.files ?? []
+  const diffPanelOpen = diffSnapshot.panel.isOpen
+  const diffPanelWidth = diffSnapshot.panel.widthPercent
+  const previousActiveThreadKeyRef = useRef<string | null>(threadSnapshot.activeThreadKey)
   const [_, setTerminalId] = useState<string | null>(null)
   const [attachFailureReason, setAttachFailureReason] = useState<string | null>(null)
   const adapterRef = useRef<TerminalStreamAdapter | null>(null)
@@ -61,11 +82,23 @@ function App() {
   const hadConnectedOnceRef = useRef(false)
   const forceRefreshOnAttachRef = useRef(false)
   const pendingScrollToBottomRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const panelWidthStorageKey = 'paseo.diff-panel.width-percent'
 
   const clearPendingScroll = () => {
     if (pendingScrollToBottomRef.current !== null) {
       clearTimeout(pendingScrollToBottomRef.current)
       pendingScrollToBottomRef.current = null
+    }
+  }
+
+  const toggleDiffPanel = () => {
+    const nextOpen = !diffPanelOpen
+    setDiffPanelOpen(nextOpen)
+
+    if (nextOpen) {
+      setTimeout(() => {
+        terminalRef.current?.focus()
+      }, 0)
     }
   }
 
@@ -171,6 +204,41 @@ function App() {
       }
     }
   }, [status, activeThreadTerminalId])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const storedWidth = window.localStorage.getItem(panelWidthStorageKey)
+    if (!storedWidth) {
+      return
+    }
+
+    const parsedWidth = Number.parseFloat(storedWidth)
+    if (Number.isFinite(parsedWidth)) {
+      setDiffPanelWidthPercent(parsedWidth)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    window.localStorage.setItem(panelWidthStorageKey, String(diffPanelWidth))
+  }, [diffPanelWidth])
+
+  useEffect(() => {
+    const previousThreadKey = previousActiveThreadKeyRef.current
+    const nextThreadKey = threadSnapshot.activeThreadKey
+
+    if (previousThreadKey !== null && previousThreadKey !== nextThreadKey) {
+      setDiffPanelOpen(false)
+    }
+
+    previousActiveThreadKeyRef.current = nextThreadKey
+  }, [threadSnapshot.activeThreadKey])
 
   useEffect(() => {
     if (threadSnapshot.toasts.length === 0) {
@@ -406,13 +474,99 @@ function App() {
 
   return (
     <main className="relative flex h-full w-full flex-col overflow-hidden bg-background">
-      <div className="flex-1 overflow-hidden relative">
-        <TerminalView
-          onTerminalReady={handleTerminalReady}
-          onResize={handleResize}
-          className="w-full h-full"
-        />
+      <header className="flex h-11 items-center justify-between border-b border-border/60 px-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-foreground">{activeThread?.title ?? 'Terminal'}</p>
+          <p className="text-xs text-muted-foreground">{activeThread?.projectId ?? 'No active thread'}</p>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              refreshActiveDiffSnapshot()
+            }}
+            disabled={!diffSnapshot.activeTarget}
+            aria-label="Refresh diff"
+            title="Refresh diff"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant={diffPanelOpen ? 'secondary' : 'ghost'}
+            size="icon"
+            onClick={toggleDiffPanel}
+            disabled={!diffSnapshot.activeTarget}
+            aria-label={diffPanelOpen ? 'Close diff panel' : 'Open diff panel'}
+            title={diffPanelOpen ? 'Close diff panel' : 'Open diff panel'}
+          >
+            <PanelRightOpen className="h-4 w-4" />
+          </Button>
+        </div>
+      </header>
+
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        {!isMobile && diffPanelOpen ? (
+          <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+            <ResizablePanel defaultSize={100 - diffPanelWidth} minSize={40}>
+              <TerminalView
+                onTerminalReady={handleTerminalReady}
+                onResize={handleResize}
+                className="h-full w-full"
+              />
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel
+              defaultSize={diffPanelWidth}
+              minSize={30}
+              maxSize={60}
+              onResize={(size: PanelSize) => {
+                setDiffPanelWidthPercent(size.asPercentage)
+              }}
+            >
+              <DiffPanel
+                files={diffFiles}
+                loading={diffSnapshot.loading}
+                error={diffSnapshot.error}
+                onClose={() => {
+                  setDiffPanelOpen(false)
+                }}
+                onRefresh={() => {
+                  refreshActiveDiffSnapshot()
+                }}
+              />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : (
+          <TerminalView
+            onTerminalReady={handleTerminalReady}
+            onResize={handleResize}
+            className="h-full w-full"
+          />
+        )}
       </div>
+
+      <DiffMobileSheet
+        open={isMobile && diffPanelOpen}
+        onOpenChange={(open) => {
+          setDiffPanelOpen(open)
+          if (!open) {
+            setTimeout(() => {
+              terminalRef.current?.focus()
+            }, 0)
+          }
+        }}
+        files={diffFiles}
+        loading={diffSnapshot.loading}
+        error={diffSnapshot.error}
+        onRefresh={() => {
+          refreshActiveDiffSnapshot()
+        }}
+      />
+
       <ConnectionOverlay
         status={status}
         diagnostics={{
