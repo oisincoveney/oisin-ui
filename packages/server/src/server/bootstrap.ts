@@ -55,6 +55,8 @@ import {
   createConnectionOfferV2,
   encodeOfferToFragmentUrl,
 } from "./connection-offer.js";
+import { ThreadRegistry } from "./thread/thread-registry.js";
+import { ThreadSessionReaper } from "./thread/session-reaper.js";
 import { loadOrCreateDaemonKeyPair } from "./daemon-keypair.js";
 import { startRelayTransport, type RelayTransportController } from "./relay-transport.js";
 import { getOrCreateServerId } from "./server-id.js";
@@ -283,6 +285,14 @@ export async function createPaseoDaemon(
   const terminalManager = createTerminalManager({
     defaultTerminalAgentCommand: config.defaultTerminalAgentCommand,
     defaultTerminalCwd: config.defaultTerminalCwd,
+    tmuxSocketPath: config.tmuxSocketPath,
+  });
+  const threadRegistry = new ThreadRegistry(config.paseoHome, logger);
+  const threadSessionReaper = new ThreadSessionReaper({
+    threadRegistry,
+    paseoHome: config.paseoHome,
+    agentManager,
+    logger,
     tmuxSocketPath: config.tmuxSocketPath,
   });
 
@@ -515,75 +525,84 @@ export async function createPaseoDaemon(
   });
 
     const start = async () => {
-      // Start main HTTP server
-      await new Promise<void>((resolve, reject) => {
-      const onError = (err: Error) => {
-        httpServer.off("listening", onListening);
-        reject(err);
-      };
-      const onListening = () => {
-        httpServer.off("error", onError);
-        const logAndResolve = async () => {
-          if (listenTarget.type === "tcp") {
-            logger.info(
-              { host: listenTarget.host, port: listenTarget.port },
-              `Server listening on http://${listenTarget.host}:${listenTarget.port}`
-            );
+      await threadRegistry.load();
+      await threadSessionReaper.start();
 
-            const relayEnabled = config.relayEnabled ?? true;
-            const relayEndpoint = config.relayEndpoint ?? "relay.paseo.sh:443";
-            const relayPublicEndpoint = config.relayPublicEndpoint ?? relayEndpoint;
-            const appBaseUrl = config.appBaseUrl ?? "https://app.paseo.sh";
-
-            if (relayEnabled) {
-              const offer = await createConnectionOfferV2({
-                serverId,
-                daemonPublicKeyB64: daemonKeyPair.publicKeyB64,
-                relay: { endpoint: relayPublicEndpoint },
-              });
-
-              const url = encodeOfferToFragmentUrl({ offer, appBaseUrl });
-              logger.info({ url }, "pairing_offer");
-            }
-
-            if (relayEnabled) {
-              relayTransport?.stop().catch(() => undefined);
-              relayTransport = startRelayTransport({
-                logger,
-                attachSocket: (ws, metadata) => {
-                  if (!wsServer) {
-                    throw new Error("WebSocket server not initialized");
-                  }
-                  return wsServer.attachExternalSocket(ws, metadata);
-                },
-                relayEndpoint,
-                serverId,
-                daemonKeyPair: daemonKeyPair.keyPair,
-              });
-            }
-          } else {
-            logger.info({ path: listenTarget.path }, `Server listening on ${listenTarget.path}`);
-          }
+      try {
+        // Start main HTTP server
+        await new Promise<void>((resolve, reject) => {
+        const onError = (err: Error) => {
+          httpServer.off("listening", onListening);
+          reject(err);
         };
+        const onListening = () => {
+          httpServer.off("error", onError);
+          const logAndResolve = async () => {
+            if (listenTarget.type === "tcp") {
+              logger.info(
+                { host: listenTarget.host, port: listenTarget.port },
+                `Server listening on http://${listenTarget.host}:${listenTarget.port}`
+              );
 
-        logAndResolve().then(resolve, reject);
-      };
-      httpServer.once("error", onError);
-      httpServer.once("listening", onListening);
+              const relayEnabled = config.relayEnabled ?? true;
+              const relayEndpoint = config.relayEndpoint ?? "relay.paseo.sh:443";
+              const relayPublicEndpoint = config.relayPublicEndpoint ?? relayEndpoint;
+              const appBaseUrl = config.appBaseUrl ?? "https://app.paseo.sh";
 
-      if (listenTarget.type === "tcp") {
-        httpServer.listen(listenTarget.port, listenTarget.host);
-      } else {
-        // Remove stale socket file if it exists
-        if (existsSync(listenTarget.path)) {
-          unlinkSync(listenTarget.path);
+              if (relayEnabled) {
+                const offer = await createConnectionOfferV2({
+                  serverId,
+                  daemonPublicKeyB64: daemonKeyPair.publicKeyB64,
+                  relay: { endpoint: relayPublicEndpoint },
+                });
+
+                const url = encodeOfferToFragmentUrl({ offer, appBaseUrl });
+                logger.info({ url }, "pairing_offer");
+              }
+
+              if (relayEnabled) {
+                relayTransport?.stop().catch(() => undefined);
+                relayTransport = startRelayTransport({
+                  logger,
+                  attachSocket: (ws, metadata) => {
+                    if (!wsServer) {
+                      throw new Error("WebSocket server not initialized");
+                    }
+                    return wsServer.attachExternalSocket(ws, metadata);
+                  },
+                  relayEndpoint,
+                  serverId,
+                  daemonKeyPair: daemonKeyPair.keyPair,
+                });
+              }
+            } else {
+              logger.info({ path: listenTarget.path }, `Server listening on ${listenTarget.path}`);
+            }
+          };
+
+          logAndResolve().then(resolve, reject);
+        };
+        httpServer.once("error", onError);
+        httpServer.once("listening", onListening);
+
+        if (listenTarget.type === "tcp") {
+          httpServer.listen(listenTarget.port, listenTarget.host);
+        } else {
+          // Remove stale socket file if it exists
+          if (existsSync(listenTarget.path)) {
+            unlinkSync(listenTarget.path);
+          }
+          httpServer.listen(listenTarget.path);
         }
-        httpServer.listen(listenTarget.path);
+        });
+      } catch (error) {
+        await threadSessionReaper.stop();
+        throw error;
       }
-      });
     };
 
     const stop = async () => {
+      await threadSessionReaper.stop();
       await closeAllAgents(logger, agentManager);
       await agentManager.flush().catch(() => undefined);
       detachAgentStoragePersistence();
