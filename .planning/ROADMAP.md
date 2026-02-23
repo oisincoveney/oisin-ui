@@ -61,8 +61,8 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 - [x] 02-03-PLAN.md — reconnect recovery, resize sync, and reliability coverage
 - [x] 02-04-PLAN.md — concurrent ensure bootstrap race closure
 - [x] 02-05-PLAN.md — ws endpoint alignment, attach diagnostics, and browser interactivity smoke gate
-- [ ] 02-06-PLAN.md — reconnect attach stream-id invalidation and input gating hardening
-- [ ] 02-07-PLAN.md — reconnect/refresh plus reconnect+resize stale-stream regression gate
+- [x] 02-06-PLAN.md — reconnect attach stream-id invalidation and input gating hardening
+- [x] 02-07-PLAN.md — reconnect/refresh plus reconnect+resize stale-stream regression gate
 
 **Requirements:**
 
