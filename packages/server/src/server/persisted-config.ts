@@ -82,6 +82,23 @@ const FeatureVoiceModeSchema = z
   })
   .strict();
 
+const ConfiguredProjectRepositorySchema = z
+  .object({
+    projectId: z.string().trim().min(1),
+    displayName: z.string().trim().min(1),
+    repoRoot: z.string().min(1).refine((value) => path.isAbsolute(value), {
+      message: "repoRoot must be an absolute path",
+    }),
+    defaultBaseBranch: z.string().trim().min(1).optional(),
+  })
+  .strict();
+
+const ProjectsConfigSchema = z
+  .object({
+    repositories: z.array(ConfiguredProjectRepositorySchema).default([]),
+  })
+  .strict();
+
 export const PersistedConfigSchema = z
   .object({
     // v1 schema marker
@@ -137,12 +154,14 @@ export const PersistedConfigSchema = z
       })
       .strict()
       .optional(),
+    projects: ProjectsConfigSchema.optional(),
 
     log: LogConfigSchema.optional(),
   })
   .strict();
 
 export type PersistedConfig = z.infer<typeof PersistedConfigSchema>;
+export type ConfiguredProjectRepository = z.infer<typeof ConfiguredProjectRepositorySchema>;
 
 const CONFIG_FILENAME = "config.json";
 const DEFAULT_PERSISTED_CONFIG: PersistedConfig = PersistedConfigSchema.parse({
@@ -158,6 +177,9 @@ const DEFAULT_PERSISTED_CONFIG: PersistedConfig = PersistedConfigSchema.parse({
   },
   app: {
     baseUrl: "https://app.paseo.sh",
+  },
+  projects: {
+    repositories: [],
   },
 });
 
@@ -200,6 +222,15 @@ function stripDeprecatedLocalSpeechConfigFields(parsed: unknown): unknown {
   providersRecord.local = localRecord;
   root.providers = providersRecord;
   return root;
+}
+
+function normalizeProjectsConfig(parsed: PersistedConfig): PersistedConfig {
+  return {
+    ...parsed,
+    projects: {
+      repositories: parsed.projects?.repositories ?? [],
+    },
+  };
 }
 
 export function loadPersistedConfig(
@@ -246,7 +277,7 @@ export function loadPersistedConfig(
   }
 
   log?.info(`Loaded from ${configPath}`);
-  return result.data;
+  return normalizeProjectsConfig(result.data);
 }
 
 export function savePersistedConfig(

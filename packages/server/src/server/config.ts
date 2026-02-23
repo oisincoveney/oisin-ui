@@ -2,7 +2,10 @@ import path from "node:path";
 import { z } from "zod";
 
 import type { PaseoDaemonConfig } from "./bootstrap.js";
-import { loadPersistedConfig } from "./persisted-config.js";
+import {
+  loadPersistedConfig,
+  type ConfiguredProjectRepository,
+} from "./persisted-config.js";
 import type { AgentProvider } from "./agent/agent-sdk-types.js";
 import { AgentProviderSchema } from "./agent/provider-manifest.js";
 import { resolveSpeechConfig } from "./speech/speech-config-resolver.js";
@@ -42,6 +45,19 @@ export type CliConfigOverrides = Partial<{
   allowedHosts: AllowedHostsConfig;
 }>;
 
+function normalizeConfiguredProjects(
+  repositories: ConfiguredProjectRepository[] | undefined
+): ConfiguredProjectRepository[] {
+  return (repositories ?? []).map((repository) => ({
+    projectId: repository.projectId,
+    displayName: repository.displayName,
+    repoRoot: path.resolve(repository.repoRoot),
+    ...(repository.defaultBaseBranch
+      ? { defaultBaseBranch: repository.defaultBaseBranch }
+      : {}),
+  }));
+}
+
 const OptionalVoiceLlmProviderSchema = z
   .union([z.string(), z.null(), z.undefined()])
   .transform((value): string | null => (typeof value === "string" ? value.trim().toLowerCase() : null))
@@ -61,6 +77,7 @@ export function loadConfig(
 ): PaseoDaemonConfig {
   const env = options?.env ?? process.env;
   const persisted = loadPersistedConfig(paseoHome);
+  const configuredProjects = normalizeConfiguredProjects(persisted.projects?.repositories);
 
   // PASEO_LISTEN can be:
   // - host:port (TCP)
@@ -118,8 +135,9 @@ export function loadConfig(
   const voiceLlmProviderExplicit =
     envVoiceLlmProvider !== null || persistedVoiceLlmProvider !== null;
   const voiceLlmModel = persisted.features?.voiceMode?.llm?.model ?? null;
+  const defaultShellPath = (env.SHELL?.trim() || "/bin/bash").split(/\s+/)[0] ?? "/bin/bash";
   const defaultTerminalAgentCommand =
-    env.PASEO_DEFAULT_TERMINAL_AGENT_COMMAND?.trim() || "opencode";
+    env.PASEO_DEFAULT_TERMINAL_AGENT_COMMAND?.trim() || `${defaultShellPath} -i`;
   const defaultTerminalCwd = path.resolve(env.PASEO_DEFAULT_TERMINAL_CWD ?? process.cwd());
 
   return {
@@ -146,5 +164,6 @@ export function loadConfig(
     agentProviderSettings: persisted.agents?.providers,
     defaultTerminalAgentCommand,
     defaultTerminalCwd,
+    configuredProjects,
   };
 }

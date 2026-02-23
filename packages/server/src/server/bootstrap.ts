@@ -71,6 +71,7 @@ import {
   type VoiceMcpSocketBridgeManager,
 } from "./voice-mcp-bridge.js";
 import { resolveVoiceMcpBridgeFromRuntime } from "./voice-mcp-bridge-command.js";
+import type { ConfiguredProjectRepository } from "./persisted-config.js";
 
 type AgentMcpTransportMap = Map<string, StreamableHTTPServerTransport>;
 
@@ -123,6 +124,7 @@ export type PaseoDaemonConfig = {
   agentProviderSettings?: AgentProviderRuntimeSettingsMap;
   defaultTerminalAgentCommand?: string;
   defaultTerminalCwd?: string;
+  configuredProjects?: ConfiguredProjectRepository[];
   tmuxSocketPath?: string;
 };
 
