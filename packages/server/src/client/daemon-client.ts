@@ -2693,7 +2693,7 @@ export class DaemonClient {
   }
 
   async deleteThread(
-    input: { projectId: string; threadId: string },
+    input: { projectId: string; threadId: string; forceDirtyDelete?: boolean },
     requestId?: string
   ): Promise<ThreadDeletePayload> {
     return this.sendCorrelatedSessionRequest({

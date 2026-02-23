@@ -1112,6 +1112,7 @@ export const ThreadDeleteRequestSchema = z.object({
   type: z.literal('thread_delete_request'),
   projectId: z.string().trim().min(1),
   threadId: z.string().trim().min(1),
+  forceDirtyDelete: z.boolean().optional(),
   requestId: z.string(),
 })
 

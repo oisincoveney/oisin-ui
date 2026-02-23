@@ -31,6 +31,12 @@ import {
   type DirectorySuggestionsRequest,
   type ProjectCheckoutLitePayload,
   type ProjectPlacementPayload,
+  type ProjectListRequest,
+  type ProjectAddRequest,
+  type ThreadListRequest,
+  type ThreadCreateRequest,
+  type ThreadDeleteRequest,
+  type ThreadSwitchRequest,
 } from './messages.js'
 import type { TerminalManager, TerminalsChangedEvent } from '../terminal/terminal-manager.js'
 import type { TerminalSession } from '../terminal/terminal.js'
@@ -111,6 +117,12 @@ import {
   isPaseoOwnedWorktreeCwd,
   resolvePaseoWorktreeRootForCwd,
 } from '../utils/worktree.js'
+import { loadPersistedConfig, savePersistedConfig } from './persisted-config.js'
+import { ThreadRegistry, type ThreadRecord, type ProjectRecord } from './thread/thread-registry.js'
+import {
+  ThreadLifecycleDirtyWorktreeError,
+  ThreadLifecycleService,
+} from './thread/thread-lifecycle.js'
 import { createAgentWorktree, runAsyncWorktreeBootstrap } from './worktree-bootstrap.js'
 import {
   getCheckoutDiff,
@@ -583,6 +595,8 @@ export class Session {
   private readonly removeVoiceMcpSocketForAgent?: (agentId: string) => Promise<void>
   private readonly getSpeechReadiness?: () => SpeechReadinessSnapshot
   private readonly agentProviderRuntimeSettings: AgentProviderRuntimeSettingsMap | undefined
+  private readonly threadRegistry: ThreadRegistry
+  private readonly threadLifecycle: ThreadLifecycleService
   private voiceModeAgentId: string | null = null
   private voiceModeBaseConfig: VoiceModeBaseConfig | null = null
 
@@ -646,6 +660,14 @@ export class Session {
       clientId: this.clientId,
       sessionId: this.sessionId,
     })
+    this.threadRegistry = new ThreadRegistry(this.paseoHome, this.sessionLogger)
+    this.threadLifecycle = new ThreadLifecycleService({
+      threadRegistry: this.threadRegistry,
+      terminalManager: this.terminalManager,
+      agentManager: this.agentManager,
+      paseoHome: this.paseoHome,
+      logger: this.sessionLogger,
+    })
     this.providerRegistry = buildProviderRegistry(this.sessionLogger, {
       runtimeSettings: this.agentProviderRuntimeSettings,
     })
@@ -670,6 +692,7 @@ export class Session {
 
     // Initialize agent MCP client asynchronously
     void this.initializeAgentMcp()
+    void this.initializeThreadRegistry()
     this.subscribeToAgentEvents()
 
     this.sessionLogger.trace('Session created')
@@ -693,6 +716,171 @@ export class Session {
    */
   public async sendInitialState(): Promise<void> {
     // No unsolicited agent list hydration. Callers must use fetch_agents_request.
+  }
+
+  private async initializeThreadRegistry(): Promise<void> {
+    try {
+      await this.threadRegistry.load()
+      await this.syncConfiguredProjectsIntoThreadRegistry()
+    } catch (error) {
+      this.sessionLogger.warn({ err: error }, 'Failed to initialize thread registry')
+    }
+  }
+
+  private loadConfiguredProjectsFromPersistedConfig(): Array<{
+    projectId: string
+    displayName: string
+    repoRoot: string
+    defaultBaseBranch?: string
+  }> {
+    const persisted = loadPersistedConfig(this.paseoHome)
+    return (persisted.projects?.repositories ?? []).map((repository) => ({
+      projectId: repository.projectId,
+      displayName: repository.displayName,
+      repoRoot: resolve(repository.repoRoot),
+      ...(repository.defaultBaseBranch ? { defaultBaseBranch: repository.defaultBaseBranch } : {}),
+    }))
+  }
+
+  private async syncConfiguredProjectsIntoThreadRegistry(): Promise<ProjectRecord[]> {
+    const configured = this.loadConfiguredProjectsFromPersistedConfig()
+    await this.threadRegistry.setProjects(
+      configured.map((project) => ({
+        projectId: project.projectId,
+        displayName: project.displayName,
+        repoRoot: project.repoRoot,
+        ...(project.defaultBaseBranch ? { defaultBaseBranch: project.defaultBaseBranch } : {}),
+        activeThreadId: null,
+      }))
+    )
+    return this.threadRegistry.listProjects()
+  }
+
+  private toProjectSummary(project: ProjectRecord): {
+    projectId: string
+    displayName: string
+    repoRoot: string
+    defaultBaseBranch?: string | null
+    activeThreadId?: string | null
+  } {
+    return {
+      projectId: project.projectId,
+      displayName: project.displayName,
+      repoRoot: project.repoRoot,
+      defaultBaseBranch: project.defaultBaseBranch ?? null,
+      activeThreadId: project.activeThreadId ?? null,
+    }
+  }
+
+  private toThreadSummary(thread: ThreadRecord): {
+    projectId: string
+    threadId: string
+    title: string
+    status: 'running' | 'idle' | 'error' | 'closed' | 'unknown'
+    unreadCount: number
+    terminalId: string | null
+    agentId: string | null
+    updatedAt: string
+    lastOutputAt: string | null
+    lastStatusAt: string | null
+  } {
+    return {
+      projectId: thread.projectId,
+      threadId: thread.threadId,
+      title: thread.title,
+      status: thread.status,
+      unreadCount: thread.unreadCount,
+      terminalId: thread.links.terminalId ?? null,
+      agentId: thread.links.agentId ?? null,
+      updatedAt: thread.updatedAt,
+      lastOutputAt: thread.lastOutputAt ?? null,
+      lastStatusAt: thread.lastStatusAt ?? null,
+    }
+  }
+
+  private mapAgentLifecycleToThreadStatus(status: ManagedAgent['lifecycle']): ThreadRecord['status'] {
+    if (status === 'running') {
+      return 'running'
+    }
+    if (status === 'idle') {
+      return 'idle'
+    }
+    if (status === 'error') {
+      return 'error'
+    }
+    if (status === 'closed') {
+      return 'closed'
+    }
+    return 'unknown'
+  }
+
+  private emitThreadStatusUpdated(thread: ThreadRecord): void {
+    this.emit({
+      type: 'thread_status_updated',
+      payload: {
+        projectId: thread.projectId,
+        threadId: thread.threadId,
+        status: thread.status,
+        lastStatusAt: thread.lastStatusAt ?? null,
+      },
+    })
+  }
+
+  private emitThreadUnreadUpdated(thread: ThreadRecord): void {
+    this.emit({
+      type: 'thread_unread_updated',
+      payload: {
+        projectId: thread.projectId,
+        threadId: thread.threadId,
+        unreadCount: thread.unreadCount,
+        lastOutputAt: thread.lastOutputAt ?? null,
+      },
+    })
+  }
+
+  private async handleThreadAgentStateEvent(agent: ManagedAgent): Promise<void> {
+    const thread = await this.threadRegistry.findThreadByAgentId(agent.id)
+    if (!thread) {
+      return
+    }
+    const status = this.mapAgentLifecycleToThreadStatus(agent.lifecycle)
+    await this.threadRegistry.updateThreadStatus({
+      projectId: thread.projectId,
+      threadId: thread.threadId,
+      status,
+    })
+    const updated = await this.threadRegistry.getThread(thread.projectId, thread.threadId)
+    if (!updated) {
+      return
+    }
+    this.emitThreadStatusUpdated(updated)
+  }
+
+  private async handleThreadAgentStreamEvent(
+    agentId: string,
+    event: AgentStreamEvent
+  ): Promise<void> {
+    if (event.type !== 'timeline' || event.item.type === 'user_message') {
+      return
+    }
+
+    const thread = await this.threadRegistry.findThreadByAgentId(agentId)
+    if (!thread) {
+      return
+    }
+
+    await this.threadRegistry.updateThreadStatus({
+      projectId: thread.projectId,
+      threadId: thread.threadId,
+      status: thread.status,
+      outputAt: new Date().toISOString(),
+      incrementUnread: true,
+    })
+    const updated = await this.threadRegistry.getThread(thread.projectId, thread.threadId)
+    if (!updated) {
+      return
+    }
+    this.emitThreadUnreadUpdated(updated)
   }
 
   /**
@@ -850,11 +1038,14 @@ export class Session {
     }
 
     this.unsubscribeAgentEvents = this.agentManager.subscribe(
-      (event) => {
+      async (event) => {
         if (event.type === 'agent_state') {
+          await this.handleThreadAgentStateEvent(event.agent)
           void this.forwardAgentUpdate(event.agent)
           return
         }
+
+        await this.handleThreadAgentStreamEvent(event.agentId, event.event)
 
         if (
           this.isVoiceMode &&
@@ -1408,6 +1599,30 @@ export class Session {
 
         case 'paseo_worktree_archive_request':
           await this.handlePaseoWorktreeArchiveRequest(msg)
+          break
+
+        case 'project_list_request':
+          await this.handleProjectListRequest(msg)
+          break
+
+        case 'project_add_request':
+          await this.handleProjectAddRequest(msg)
+          break
+
+        case 'thread_list_request':
+          await this.handleThreadListRequest(msg)
+          break
+
+        case 'thread_create_request':
+          await this.handleThreadCreateRequest(msg)
+          break
+
+        case 'thread_delete_request':
+          await this.handleThreadDeleteRequest(msg)
+          break
+
+        case 'thread_switch_request':
+          await this.handleThreadSwitchRequest(msg)
           break
 
         case 'file_explorer_request':
@@ -4571,6 +4786,230 @@ export class Session {
           removedAgents: [],
           error: this.toCheckoutError(error),
           requestId,
+        },
+      })
+    }
+  }
+
+  private createUniqueProjectId(displayName: string, existingIds: Set<string>): string {
+    const base = slugify(displayName) || 'project'
+    let candidate = base
+    let suffix = 2
+    while (existingIds.has(candidate)) {
+      candidate = `${base}-${suffix}`
+      suffix += 1
+    }
+    return candidate
+  }
+
+  private async handleProjectListRequest(msg: ProjectListRequest): Promise<void> {
+    try {
+      const projects = await this.syncConfiguredProjectsIntoThreadRegistry()
+      this.emit({
+        type: 'project_list_response',
+        payload: {
+          requestId: msg.requestId,
+          projects: projects.map((project) => this.toProjectSummary(project)),
+          error: null,
+        },
+      })
+    } catch (error) {
+      this.emit({
+        type: 'project_list_response',
+        payload: {
+          requestId: msg.requestId,
+          projects: [],
+          error: error instanceof Error ? error.message : String(error),
+        },
+      })
+    }
+  }
+
+  private async handleProjectAddRequest(msg: ProjectAddRequest): Promise<void> {
+    try {
+      const persisted = loadPersistedConfig(this.paseoHome)
+      const repositories = [...(persisted.projects?.repositories ?? [])]
+      const existingIds = new Set(repositories.map((repository) => repository.projectId))
+      const projectId = msg.project.projectId?.trim().length
+        ? msg.project.projectId.trim()
+        : this.createUniqueProjectId(msg.project.displayName, existingIds)
+
+      if (existingIds.has(projectId)) {
+        throw new Error(`Project already exists: ${projectId}`)
+      }
+
+      repositories.push({
+        projectId,
+        displayName: msg.project.displayName,
+        repoRoot: resolve(msg.project.repoRoot),
+        ...(msg.project.defaultBaseBranch
+          ? { defaultBaseBranch: msg.project.defaultBaseBranch }
+          : {}),
+      })
+
+      savePersistedConfig(this.paseoHome, {
+        ...persisted,
+        projects: {
+          repositories,
+        },
+      })
+
+      const projects = await this.syncConfiguredProjectsIntoThreadRegistry()
+      const project = projects.find((entry) => entry.projectId === projectId) ?? null
+
+      this.emit({
+        type: 'project_add_response',
+        payload: {
+          requestId: msg.requestId,
+          accepted: Boolean(project),
+          project: project ? this.toProjectSummary(project) : null,
+          error: project ? null : `Failed to create project ${projectId}`,
+        },
+      })
+    } catch (error) {
+      this.emit({
+        type: 'project_add_response',
+        payload: {
+          requestId: msg.requestId,
+          accepted: false,
+          project: null,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      })
+    }
+  }
+
+  private async handleThreadListRequest(msg: ThreadListRequest): Promise<void> {
+    try {
+      await this.syncConfiguredProjectsIntoThreadRegistry()
+      const project = await this.threadRegistry.getProject(msg.projectId)
+      const threads = await this.threadRegistry.listThreads(msg.projectId)
+      this.emit({
+        type: 'thread_list_response',
+        payload: {
+          requestId: msg.requestId,
+          projectId: msg.projectId,
+          threads: threads.map((thread) => this.toThreadSummary(thread)),
+          activeThreadId: project?.activeThreadId ?? null,
+          error: null,
+        },
+      })
+    } catch (error) {
+      this.emit({
+        type: 'thread_list_response',
+        payload: {
+          requestId: msg.requestId,
+          projectId: msg.projectId,
+          threads: [],
+          activeThreadId: null,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      })
+    }
+  }
+
+  private async handleThreadCreateRequest(msg: ThreadCreateRequest): Promise<void> {
+    try {
+      await this.syncConfiguredProjectsIntoThreadRegistry()
+      const created = await this.threadLifecycle.createThread({
+        projectId: msg.projectId,
+        title: msg.title,
+        threadId: msg.threadId,
+        launchConfig: msg.launchConfig,
+      })
+
+      const project = await this.threadRegistry.getProject(msg.projectId)
+      this.emit({
+        type: 'thread_create_response',
+        payload: {
+          requestId: msg.requestId,
+          accepted: true,
+          thread: this.toThreadSummary(created.thread),
+          project: project ? this.toProjectSummary(project) : null,
+          error: null,
+        },
+      })
+      this.emitThreadStatusUpdated(created.thread)
+      this.emitThreadUnreadUpdated(created.thread)
+    } catch (error) {
+      this.emit({
+        type: 'thread_create_response',
+        payload: {
+          requestId: msg.requestId,
+          accepted: false,
+          thread: null,
+          project: null,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      })
+    }
+  }
+
+  private async handleThreadDeleteRequest(msg: ThreadDeleteRequest): Promise<void> {
+    try {
+      await this.threadLifecycle.deleteThread({
+        projectId: msg.projectId,
+        threadId: msg.threadId,
+        forceDirtyDelete: msg.forceDirtyDelete,
+      })
+      this.emit({
+        type: 'thread_delete_response',
+        payload: {
+          requestId: msg.requestId,
+          accepted: true,
+          projectId: msg.projectId,
+          threadId: msg.threadId,
+          error: null,
+        },
+      })
+    } catch (error) {
+      const message =
+        error instanceof ThreadLifecycleDirtyWorktreeError
+          ? 'Thread has uncommitted changes. Retry with forceDirtyDelete=true.'
+          : error instanceof Error
+            ? error.message
+            : String(error)
+      this.emit({
+        type: 'thread_delete_response',
+        payload: {
+          requestId: msg.requestId,
+          accepted: false,
+          projectId: msg.projectId,
+          threadId: msg.threadId,
+          error: message,
+        },
+      })
+    }
+  }
+
+  private async handleThreadSwitchRequest(msg: ThreadSwitchRequest): Promise<void> {
+    try {
+      const thread = await this.threadLifecycle.switchThread({
+        projectId: msg.projectId,
+        threadId: msg.threadId,
+      })
+      this.emit({
+        type: 'thread_switch_response',
+        payload: {
+          requestId: msg.requestId,
+          accepted: true,
+          projectId: msg.projectId,
+          threadId: msg.threadId,
+          thread: this.toThreadSummary(thread),
+          error: null,
+        },
+      })
+      this.emitThreadUnreadUpdated(thread)
+    } catch (error) {
+      this.emit({
+        type: 'thread_switch_response',
+        payload: {
+          requestId: msg.requestId,
+          accepted: false,
+          projectId: msg.projectId,
+          threadId: msg.threadId,
+          thread: null,
+          error: error instanceof Error ? error.message : String(error),
         },
       })
     }
