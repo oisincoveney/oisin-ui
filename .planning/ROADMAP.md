@@ -143,6 +143,13 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 
 **Dependencies:** Phase 3 (threads with git worktrees)
 
+**Plans:** 4 plans
+
+- [ ] 04-01-PLAN.md — Server diff contracts and git-order alignment
+- [ ] 04-02-PLAN.md — Thread-scoped diff external store and subscription lifecycle
+- [ ] 04-03-PLAN.md — Desktop/mobile diff panel shells with persisted resize behavior
+- [ ] 04-04-PLAN.md — diff2html rendering, refresh flow, and browser regressions
+
 **Requirements:**
 
 - DIFF-01: User can view uncommitted code changes per thread with syntax highlighting
