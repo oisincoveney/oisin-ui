@@ -777,6 +777,7 @@ export class Session {
     title: string
     status: 'running' | 'idle' | 'error' | 'closed' | 'unknown'
     unreadCount: number
+    worktreePath: string | null
     terminalId: string | null
     agentId: string | null
     updatedAt: string
@@ -789,6 +790,7 @@ export class Session {
       title: thread.title,
       status: thread.status,
       unreadCount: thread.unreadCount,
+      worktreePath: thread.links.worktreePath ?? null,
       terminalId: thread.links.terminalId ?? null,
       agentId: thread.links.agentId ?? null,
       updatedAt: thread.updatedAt,
