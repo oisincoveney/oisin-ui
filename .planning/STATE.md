@@ -9,9 +9,9 @@
 ## Current Position
 
 **Phase:** 02 of 4 (Terminal I/O)
-**Plan:** 03 of 03
+**Plan:** 04 of 04
 **Status:** Phase complete.
-**Last activity:** 2026-02-22 - Completed 02-terminal-i-03-PLAN.md
+**Last activity:** 2026-02-22 - Completed 02-terminal-i-04-PLAN.md
 
 ```
 Progress: [████████████████████] 100%
@@ -25,8 +25,8 @@ Phase 4:  ░░░░░ Not Started
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 9     |
-| Plans passed           | 9     |
+| Plans executed         | 10    |
+| Plans passed           | 10    |
 | Plans failed           | 0     |
 | Total requirements     | 11    |
 | Requirements complete  | 9     |
@@ -43,6 +43,7 @@ Phase 4:  ░░░░░ Not Started
 | Use redraw-first reconnect flow with resume fallback | Guarantees terminal correctness after socket drops and stale offsets | 02-03 |
 | Keep overlay pointer events disabled while disconnected | Preserve terminal text selection/copy during reconnect windows | 02-03 |
 | Debounce resize propagation while fitting immediately in UI | Avoid tmux jitter while keeping streamed output uninterrupted | 02-03 |
+| Correlate default terminal ensure by requestId + single-flight server ensure | Prevent bootstrap races from churning terminal IDs and breaking attach/input routing | 02-04 |
 
 ### Blockers
 
@@ -52,11 +53,11 @@ Phase 4:  ░░░░░ Not Started
 
 ## Session Continuity
 
-**Last session:** 2026-02-22 20:58 PST
-**Stopped at:** Completed 02-terminal-i-03-PLAN.md
+**Last session:** 2026-02-22 17:36 PST
+**Stopped at:** Completed 02-terminal-i-04-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-22T04:58:22Z_
+_Last updated: 2026-02-23T01:36:55Z_
