@@ -961,6 +961,7 @@ function buildPlaceholderParsedDiffFile(
 ): ParsedDiffFile {
   return {
     path: change.path,
+    ...(change.oldPath ? { oldPath: change.oldPath } : {}),
     isNew: change.isNew,
     isDeleted: change.isDeleted,
     additions: options.stat?.additions ?? 0,
@@ -1208,6 +1209,7 @@ export async function getCheckoutDiff(
         structured.push({
           ...parsedFile,
           path: change.path,
+          ...(change.oldPath ? { oldPath: change.oldPath } : {}),
           isNew: change.isNew,
           isDeleted: change.isDeleted,
           status: "ok",
@@ -1217,6 +1219,7 @@ export async function getCheckoutDiff(
 
       structured.push({
         path: change.path,
+        ...(change.oldPath ? { oldPath: change.oldPath } : {}),
         isNew: change.isNew,
         isDeleted: change.isDeleted,
         additions: stat?.additions ?? 0,
@@ -1279,6 +1282,7 @@ export async function getCheckoutDiff(
     structured.push({
       ...parsedFile,
       path: change.path,
+      ...(change.oldPath ? { oldPath: change.oldPath } : {}),
       isNew: change.isNew,
       isDeleted: change.isDeleted,
       status: "ok",

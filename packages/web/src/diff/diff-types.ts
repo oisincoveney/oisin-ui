@@ -26,6 +26,7 @@ export type ParsedDiffHunk = {
 
 export type ParsedDiffFile = {
   path: string
+  oldPath?: string
   isNew: boolean
   isDeleted: boolean
   additions: number

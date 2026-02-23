@@ -22,6 +22,7 @@ export interface DiffHunk {
 
 export interface ParsedDiffFile {
   path: string;
+  oldPath?: string;
   isNew: boolean;
   isDeleted: boolean;
   additions: number;
