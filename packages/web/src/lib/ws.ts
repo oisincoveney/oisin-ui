@@ -24,10 +24,12 @@ type WrappedSessionMessage = {
   message: unknown;
 };
 
+const DEFAULT_DAEMON_PORT = "6767";
+
 function getWsUrl(): string {
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const hostname = window.location.hostname;
-  const port = import.meta.env.VITE_DAEMON_PORT || "3000";
+  const port = import.meta.env.VITE_DAEMON_PORT || DEFAULT_DAEMON_PORT;
 
   return `${protocol}//${hostname}:${port}/ws?clientSessionKey=web-client`;
 }

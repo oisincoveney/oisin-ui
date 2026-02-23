@@ -4,7 +4,15 @@ set -euo pipefail
 
 export PASEO_HOME="${PASEO_HOME:-/config}"
 export PASEO_LISTEN="${PASEO_LISTEN:-0.0.0.0:3000}"
-export PASEO_CORS_ORIGINS="${PASEO_CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://0.0.0.0:5173}"
+export PASEO_CORS_ORIGINS="${PASEO_CORS_ORIGINS:-http://localhost:44285,http://127.0.0.1:44285,http://0.0.0.0:44285}"
+
+DAEMON_PORT="${PASEO_LISTEN##*:}"
+if [[ ! "$DAEMON_PORT" =~ ^[0-9]+$ ]]; then
+  echo "PASEO_LISTEN must end with a TCP port, got: $PASEO_LISTEN" >&2
+  exit 1
+fi
+
+export VITE_DAEMON_PORT="$DAEMON_PORT"
 
 cd /workspace
 
@@ -16,7 +24,7 @@ echo "Starting daemon and web server..."
 bun run dev:server &
 DAEMON_PID=$!
 
-bun run --filter @oisin/web dev -- --host 0.0.0.0 --port 5173 &
+bun run --filter @oisin/web dev -- --host 0.0.0.0 --port 44285 &
 WEB_PID=$!
 
 cleanup() {
