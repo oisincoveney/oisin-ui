@@ -101,10 +101,10 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 
 **Plans:** 4 plans
 
-- [ ] 03-01-PLAN.md — Canonical project registry, thread persistence foundation, and contract migration
-- [ ] 03-02-PLAN.md — Server thread lifecycle orchestration (create/switch/delete + cleanup)
-- [ ] 03-03-PLAN.md — Shadcn sidebar, thread dialogs, and external thread store switching UX
-- [ ] 03-04-PLAN.md — Session reaper and end-to-end regression coverage for thread management
+- [x] 03-01-PLAN.md — Canonical project registry, thread persistence foundation, and contract migration
+- [x] 03-02-PLAN.md — Server thread lifecycle orchestration (create/switch/delete + cleanup)
+- [x] 03-03-PLAN.md — Shadcn sidebar, thread dialogs, and external thread store switching UX
+- [x] 03-04-PLAN.md — Session reaper and end-to-end regression coverage for thread management
 
 **Requirements:**
 
@@ -169,10 +169,10 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 | ------------------------------- | --------------------- | ------------------------------------------- | ---------- |
 | 1 - Foundation & Docker         | Complete (2026-02-21) | DOCK-01                                     | 10100%     |
 | 2 - Terminal I/O                | Complete (2026-02-23) | TERM-01, TERM-02, TERM-03, TERM-04          | 100%       |
-| 3 - Project & Thread Management | Not Started           | PROJ-01, PROJ-02, PROJ-03, PROJ-04, PROJ-05 | 0%         |
+| 3 - Project & Thread Management | Complete (2026-02-23) | PROJ-01, PROJ-02, PROJ-03, PROJ-04, PROJ-05 | 100%       |
 | 4 - Code Diffs                  | Not Started           | DIFF-01                                     | 0%         |
 
-**Overall:** 5/11 requirements complete (45%)
+**Overall:** 10/11 requirements complete (91%)
 
 ## Coverage Map
 
@@ -183,11 +183,11 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 | TERM-02     | Phase 2 | Complete |
 | TERM-03     | Phase 2 | Complete |
 | TERM-04     | Phase 2 | Complete |
-| PROJ-01     | Phase 3 | Pending  |
-| PROJ-02     | Phase 3 | Pending  |
-| PROJ-03     | Phase 3 | Pending  |
-| PROJ-04     | Phase 3 | Pending  |
-| PROJ-05     | Phase 3 | Pending  |
+| PROJ-01     | Phase 3 | Complete |
+| PROJ-02     | Phase 3 | Complete |
+| PROJ-03     | Phase 3 | Complete |
+| PROJ-04     | Phase 3 | Complete |
+| PROJ-05     | Phase 3 | Complete |
 | DIFF-01     | Phase 4 | Pending  |
 
 **Mapped:** 11/11 ✓

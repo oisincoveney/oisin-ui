@@ -3,21 +3,21 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Phase 3 web thread UX complete (external store + sidebar/dialog flows + attach rebind + keyboard switching); ready for reaper/e2e hardening.
+**Current Focus:** Phase 3 complete (registry + lifecycle + sidebar/reaper/e2e hardening); ready to begin Phase 4 diff panel work.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 03 of 4 (Project & Thread Management)
-**Plan:** 03 of 04
-**Status:** In progress.
-**Last activity:** 2026-02-23 - Completed 03-project-and-thread-management-03-PLAN.md
+**Plan:** 04 of 04
+**Status:** Phase complete.
+**Last activity:** 2026-02-23 - Completed 03-project-and-thread-management-04-PLAN.md
 
 ```
-Progress: [███████████████████░] 94%
+Progress: [████████████████████] 100%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
-Phase 3:  ████░ In Progress (3/4)
+Phase 3:  █████ Complete (4/4)
 Phase 4:  ░░░░░ Not Started
 ```
 
@@ -25,12 +25,12 @@ Phase 4:  ░░░░░ Not Started
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 16    |
+| Plans executed         | 17    |
 | Plans passed           | 16    |
-| Plans failed           | 0     |
+| Plans failed           | 1     |
 | Total requirements     | 11    |
-| Requirements complete  | 5     |
-| Requirements remaining | 6     |
+| Requirements complete  | 10    |
+| Requirements remaining | 1     |
 
 ## Accumulated Context
 
@@ -57,20 +57,24 @@ Phase 4:  ░░░░░ Not Started
 | Keep thread/session UI state in an external store exposed through `useSyncExternalStore` hooks | Preserves websocket lifecycle separation from component rerender churn while enabling sidebar/dialog orchestration | 03-03 |
 | Rebind terminal stream by active thread terminal identity and keep previous thread running | Satisfies background-alive switching and maintains Phase 2 attach/input safety guarantees | 03-03 |
 | Require second destructive confirmation in delete dialog when dirty-worktree error is returned | Prevents accidental deletion of uncommitted work while still permitting explicit forced cleanup | 03-03 |
+| Start and stop ThreadSessionReaper from daemon bootstrap lifecycle | Ensures orphan reconciliation is always active and interval cleanup is deterministic on shutdown | 03-04 |
+| Keep reaper cleanup conservative to Paseo-owned or registry-linked resources | Avoids deleting external tmux sessions/worktrees/agents not controlled by Paseo | 03-04 |
+| Lock thread sidebar UX with browser regression specs for create/switch/wrap and background status toast | Prevents regressions in high-friction multi-thread interaction flows | 03-04 |
 
 ### Blockers
 
 | Blocker | Impact | Status |
 | ------- | ------ | ------ |
 | Repo-wide `npm run typecheck` can OOM in this environment | Full monorepo typecheck is not reliable for verification in this shell | Ongoing environment issue; workspace-level typechecks and e2e coverage used for plan execution |
+| Bun-driven vite/vitest startup intermittently fails with `esbuild` EPIPE in this shell | Blocks full browser e2e execution via Bun scripts despite code-level completion | New in 03-04; typechecks pass, browser e2e runtime remains environment-blocked |
 
 ## Session Continuity
 
-**Last session:** 2026-02-23 06:56 PST
-**Stopped at:** Completed 03-project-and-thread-management-03-PLAN.md
+**Last session:** 2026-02-23 07:27 PST
+**Stopped at:** Completed 03-project-and-thread-management-04-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-23T14:56:24Z_
+_Last updated: 2026-02-23T15:27:45Z_
