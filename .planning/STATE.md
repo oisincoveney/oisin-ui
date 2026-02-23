@@ -3,21 +3,21 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Phase 3 project/thread identity foundation complete (canonical project registry + persisted thread registry + RPC contracts); ready for lifecycle orchestration.
+**Current Focus:** Phase 3 server lifecycle orchestration complete (transactional create/switch/delete + deterministic tmux identity + dirty-delete guardrails); ready for sidebar/store integration.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 03 of 4 (Project & Thread Management)
-**Plan:** 01 of 04
+**Plan:** 02 of 04
 **Status:** In progress.
-**Last activity:** 2026-02-23 - Completed 03-project-and-thread-management-01-PLAN.md
+**Last activity:** 2026-02-23 - Completed 03-project-and-thread-management-02-PLAN.md
 
 ```
-Progress: [████████████████░░░░] 82%
+Progress: [██████████████████░░] 88%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
-Phase 3:  ██░░░░ In Progress (1/4)
+Phase 3:  ███░░░ In Progress (2/4)
 Phase 4:  ░░░░░ Not Started
 ```
 
@@ -25,8 +25,8 @@ Phase 4:  ░░░░░ Not Started
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 14    |
-| Plans passed           | 14    |
+| Plans executed         | 15    |
+| Plans passed           | 15    |
 | Plans failed           | 0     |
 | Total requirements     | 11    |
 | Requirements complete  | 5     |
@@ -52,6 +52,8 @@ Phase 4:  ░░░░░ Not Started
 | Use `projects.repositories` in persisted daemon config as canonical configured project source | Guarantees deterministic sidebar project source across restarts and avoids transient agent-derived drift | 03-01 |
 | Persist thread identity in `$PASEO_HOME/thread-registry.json` with atomic temp-write + rename | Ensures durable project/thread metadata and minimizes corruption risk on write interruption | 03-01 |
 | Keep legacy ensure-default terminal placeholder fields while adding additive concrete identity fields | Preserves existing client bootstrap compatibility during Phase 3 contract migration | 03-01 |
+| Centralize thread create/switch/delete in a dedicated lifecycle service | Keeps rollback and cleanup behavior deterministic and testable across session handlers | 03-02 |
+| Require explicit `forceDirtyDelete=true` when deleting dirty thread worktrees | Prevents accidental data loss while still allowing intentional destructive cleanup | 03-02 |
 
 ### Blockers
 
@@ -61,11 +63,11 @@ Phase 4:  ░░░░░ Not Started
 
 ## Session Continuity
 
-**Last session:** 2026-02-23 06:42 PST
-**Stopped at:** Completed 03-project-and-thread-management-01-PLAN.md
+**Last session:** 2026-02-23 06:54 PST
+**Stopped at:** Completed 03-project-and-thread-management-02-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-23T14:42:33Z_
+_Last updated: 2026-02-23T14:54:18Z_
