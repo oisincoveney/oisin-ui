@@ -16,11 +16,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Project & Thread Management
 
-- [ ] **PROJ-01**: User can see all projects in a sidebar pulled from configured git repos
-- [ ] **PROJ-02**: User can create multiple threads per project, each with its own git worktree
-- [ ] **PROJ-03**: User can create and delete threads (worktree + tmux session lifecycle)
-- [ ] **PROJ-04**: User can switch between active threads with a click
-- [ ] **PROJ-05**: User can select which CLI agent to run per thread (OpenCode, Claude Code, etc.)
+- [x] **PROJ-01**: User can see all projects in a sidebar pulled from configured git repos
+- [x] **PROJ-02**: User can create multiple threads per project, each with its own git worktree
+- [x] **PROJ-03**: User can create and delete threads (worktree + tmux session lifecycle)
+- [x] **PROJ-04**: User can switch between active threads with a click
+- [x] **PROJ-05**: User can select which CLI agent to run per thread (OpenCode, Claude Code, etc.)
 
 ### Code Review
 
@@ -76,11 +76,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TERM-02 | Phase 2: Terminal I/O | Complete |
 | TERM-03 | Phase 2: Terminal I/O | Complete |
 | TERM-04 | Phase 2: Terminal I/O | Complete |
-| PROJ-01 | Phase 3: Project & Thread Management | Pending |
-| PROJ-02 | Phase 3: Project & Thread Management | Pending |
-| PROJ-03 | Phase 3: Project & Thread Management | Pending |
-| PROJ-04 | Phase 3: Project & Thread Management | Pending |
-| PROJ-05 | Phase 3: Project & Thread Management | Pending |
+| PROJ-01 | Phase 3: Project & Thread Management | Complete |
+| PROJ-02 | Phase 3: Project & Thread Management | Complete |
+| PROJ-03 | Phase 3: Project & Thread Management | Complete |
+| PROJ-04 | Phase 3: Project & Thread Management | Complete |
+| PROJ-05 | Phase 3: Project & Thread Management | Complete |
 | DIFF-01 | Phase 4: Code Diffs | Pending |
 
 **Coverage:**
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-21*
-*Last updated: 2026-02-23 after phase 2 verification*
+*Last updated: 2026-02-23 after phase 3 verification*
