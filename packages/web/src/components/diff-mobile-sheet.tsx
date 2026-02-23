@@ -1,6 +1,7 @@
-import { ChevronLeft, FileCode2, RefreshCw } from 'lucide-react'
+import { ChevronLeft, RefreshCw } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { ParsedDiffFile } from '@/diff/diff-types'
+import { DiffFileSection } from '@/components/diff-file-section'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
@@ -11,19 +12,31 @@ type DiffMobileSheetProps = {
   files: ParsedDiffFile[]
   loading: boolean
   error: string | null
+  updatedAt?: string | null
   onOpenChange: (open: boolean) => void
   onRefresh: () => void
   refreshAction?: ReactNode
 }
 
-function formatStatus(file: ParsedDiffFile): string | null {
-  if (file.status === 'binary') {
-    return 'binary'
+function formatUpdatedAt(updatedAt: string | null | undefined): string {
+  if (!updatedAt) {
+    return 'Waiting for diff snapshot'
   }
-  if (file.status === 'too_large') {
-    return 'large'
+
+  const parsed = Date.parse(updatedAt)
+  if (!Number.isFinite(parsed)) {
+    return 'Updated just now'
   }
-  return null
+
+  const deltaMs = Date.now() - parsed
+  const deltaSeconds = Math.max(0, Math.floor(deltaMs / 1000))
+  if (deltaSeconds < 5) {
+    return 'Updated just now'
+  }
+  if (deltaSeconds < 60) {
+    return `Updated ${deltaSeconds}s ago`
+  }
+  return `Updated ${Math.floor(deltaSeconds / 60)}m ago`
 }
 
 export function DiffMobileSheet({
@@ -31,6 +44,7 @@ export function DiffMobileSheet({
   files,
   loading,
   error,
+  updatedAt,
   onOpenChange,
   onRefresh,
   refreshAction,
@@ -52,6 +66,7 @@ export function DiffMobileSheet({
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Code Diff</p>
                 <SheetTitle className="text-sm font-medium">{files.length} changed files</SheetTitle>
+                <p className="text-xs text-muted-foreground">{formatUpdatedAt(updatedAt)}</p>
               </div>
             </div>
             {refreshAction ?? (
@@ -59,11 +74,13 @@ export function DiffMobileSheet({
                 type="button"
                 variant="ghost"
                 size="icon"
+                data-testid="diff-refresh-button-mobile"
                 onClick={onRefresh}
+                disabled={loading}
                 aria-label="Refresh diff"
                 title="Refresh diff"
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className={loading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
               </Button>
             )}
           </div>
@@ -73,34 +90,13 @@ export function DiffMobileSheet({
 
         <ScrollArea className="h-full">
           <div className="space-y-2 p-3">
-            {loading ? <p className="text-sm text-muted-foreground">Refreshing changes...</p> : null}
+            {loading ? <p className="text-sm text-muted-foreground">Refreshing changes from active thread...</p> : null}
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
             {files.length === 0 ? (
               <p className="text-sm text-muted-foreground">No uncommitted changes in this thread.</p>
             ) : (
-              files.map((file) => {
-                const statusLabel = formatStatus(file)
-                return (
-                  <article
-                    key={file.path}
-                    className="rounded-md border border-border/70 bg-background/70 px-3 py-2"
-                  >
-                    <div className="flex items-start gap-2">
-                      <FileCode2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-foreground">{file.path}</p>
-                        <p className="text-xs text-muted-foreground">
-                          <span className="text-emerald-500">+{file.additions}</span>
-                          <span className="mx-2 text-border">/</span>
-                          <span className="text-rose-500">-{file.deletions}</span>
-                          {statusLabel ? <span className="ml-2 uppercase tracking-wide">{statusLabel}</span> : null}
-                        </p>
-                      </div>
-                    </div>
-                  </article>
-                )
-              })
+              files.map((file) => <DiffFileSection key={file.path} file={file} />)
             )}
           </div>
         </ScrollArea>
