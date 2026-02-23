@@ -79,11 +79,8 @@ function App() {
 
   const sendAttachRequest = (terminalId: string, forceRefresh: boolean) => {
     setAttachFailureReason(null)
-    adapterRef.current?.setAttached(false)
-    adapterRef.current?.setStreamId(0)
-    adapterRef.current?.clearPendingInput()
-
     const nextResumeOffset = forceRefresh ? 0 : (adapterRef.current?.getOffset() ?? 0)
+    adapterRef.current?.resetForStreamRollover({ resetOffset: forceRefresh })
     const requestId = randomId('attach')
     const dimensions = getTerminalDimensions()
     pendingAttachRef.current = {
@@ -148,9 +145,7 @@ function App() {
       forceRefreshOnAttachRef.current = hadConnectedOnceRef.current
       pendingEnsureRef.current = null
       pendingAttachRef.current = null
-      adapterRef.current?.setAttached(false)
-      adapterRef.current?.setStreamId(0)
-      adapterRef.current?.clearPendingInput()
+      adapterRef.current?.resetForStreamRollover()
       if (terminalRef.current) {
         terminalRef.current.options.cursorBlink = false
       }
@@ -174,7 +169,7 @@ function App() {
           return
         }
 
-        adapter.setAttached(false)
+        adapter.resetForStreamRollover()
 
         if (statusRef.current !== 'connected' || pendingAttachRef.current) {
           return
@@ -249,9 +244,7 @@ function App() {
         return
       }
 
-      adapter.setStreamId(msg.payload.streamId)
-      adapter.setAttached(true)
-      adapter.setOffset(replayedFrom)
+      adapter.confirmAttachedStream(msg.payload.streamId, { offset: replayedFrom })
       if (terminalRef.current) {
         terminalRef.current.options.cursorBlink = true
       }

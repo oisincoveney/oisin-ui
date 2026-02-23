@@ -18,12 +18,12 @@ type TerminalStreamAdapterOptions = {
 
 export class TerminalStreamAdapter {
   offset = 0;
-  attached = false;
+  inputEnabled = false;
   transportConnected = false;
   decoder = new TextDecoder();
   encoder = new TextEncoder();
   terminal: Terminal;
-  streamId: number;
+  streamId: number | null;
   sendBinary: (data: Uint8Array) => void;
   private readonly onChunkApplied?: (event: TerminalStreamChunkEvent) => void;
 
@@ -41,7 +41,7 @@ export class TerminalStreamAdapter {
 
   handleFrame(frame: BinaryMuxFrame) {
     if (frame.channel !== BinaryMuxChannel.Terminal) return;
-    if (frame.streamId !== this.streamId) return;
+    if (this.streamId === null || frame.streamId !== this.streamId) return;
 
     if (frame.messageType === TerminalBinaryMessageType.OutputUtf8 && frame.payload) {
       const text = this.decoder.decode(frame.payload);
@@ -58,7 +58,7 @@ export class TerminalStreamAdapter {
   }
 
   public sendInput(text: string) {
-    if (!this.attached || !this.transportConnected) return;
+    if (!this.inputEnabled || !this.transportConnected || this.streamId === null) return;
 
     const payload = this.encoder.encode(text);
     const frame = encodeBinaryMuxFrame({
@@ -72,7 +72,7 @@ export class TerminalStreamAdapter {
   }
 
   private sendAck(ackOffset: number) {
-    if (!this.attached) return;
+    if (!this.inputEnabled || !this.transportConnected || this.streamId === null) return;
 
     const frame = encodeBinaryMuxFrame({
       channel: BinaryMuxChannel.Terminal,
@@ -83,20 +83,44 @@ export class TerminalStreamAdapter {
     this.sendBinary(frame);
   }
 
+  public setInputEnabled(enabled: boolean) {
+    this.inputEnabled = enabled;
+  }
+
   public setAttached(attached: boolean) {
-    this.attached = attached;
+    this.setInputEnabled(attached);
   }
 
   public setTransportConnected(connected: boolean) {
     this.transportConnected = connected;
+    if (!connected) {
+      this.inputEnabled = false;
+    }
   }
 
   public clearPendingInput() {
     // Input is intentionally not buffered across disconnects.
   }
 
-  public setStreamId(streamId: number) {
+  public setStreamId(streamId: number | null) {
     this.streamId = streamId;
+  }
+
+  public resetForStreamRollover(options?: { resetOffset?: boolean }) {
+    this.setInputEnabled(false);
+    this.setStreamId(null);
+    this.clearPendingInput();
+    if (options?.resetOffset) {
+      this.setOffset(0);
+    }
+  }
+
+  public confirmAttachedStream(streamId: number, options?: { offset?: number }) {
+    this.setStreamId(streamId);
+    if (typeof options?.offset === 'number') {
+      this.setOffset(options.offset);
+    }
+    this.setInputEnabled(true);
   }
 
   public getOffset() {
