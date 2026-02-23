@@ -67,6 +67,42 @@ async function waitForCheckoutDiffUpdate(
   });
 }
 
+function getGitOrderedDiffPaths(cwd: string): string[] {
+  const tracked = execSync("git diff --name-status HEAD", {
+    cwd,
+    stdio: "pipe",
+  })
+    .toString()
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const parts = line.split("\t");
+      const status = (parts[0] ?? "").trim();
+      if (status.startsWith("R") || status.startsWith("C")) {
+        return parts[2] ?? "";
+      }
+      return parts[1] ?? "";
+    })
+    .filter(Boolean);
+
+  const untracked = execSync("git ls-files --others --exclude-standard", {
+    cwd,
+    stdio: "pipe",
+  })
+    .toString()
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return [...tracked, ...untracked];
+}
+
+function expectNonAlphabeticOrder(paths: string[]): void {
+  const alphabetical = [...paths].sort((a, b) => a.localeCompare(b));
+  expect(paths).not.toEqual(alphabetical);
+}
+
 describe("daemon E2E checkout diff subscriptions", () => {
   let ctx: DaemonTestContext;
 
@@ -79,13 +115,20 @@ describe("daemon E2E checkout diff subscriptions", () => {
   }, 60000);
 
   test(
-    "pushes file-level checkout diff updates in git diff order",
+    "preserves git file order across initial subscribe, updates, and re-subscribe",
     async () => {
       const cwd = tmpCwd();
 
       try {
         initGitRepo(cwd);
-        commitFile(cwd, "tracked-first.txt", "base\n");
+        commitFile(cwd, "z-tracked-base.txt", "base\n");
+        commitFile(cwd, "y-tracked-second.txt", "second\n");
+
+        writeFileSync(path.join(cwd, "z-tracked-base.txt"), "tracked change\n");
+        writeFileSync(path.join(cwd, "a-untracked-first.txt"), "untracked change\n");
+
+        const expectedInitialPaths = getGitOrderedDiffPaths(cwd);
+        expectNonAlphabeticOrder(expectedInitialPaths);
 
         const subscriptionId = "checkout-diff-e2e-subscription";
         const initial = await ctx.client.subscribeCheckoutDiff(
@@ -95,30 +138,33 @@ describe("daemon E2E checkout diff subscriptions", () => {
         );
 
         expect(initial.error).toBeNull();
-        expect(initial.files).toEqual([]);
+        expect(initial.files.map((file) => file.path)).toEqual(expectedInitialPaths);
 
-        writeFileSync(path.join(cwd, "tracked-first.txt"), "tracked change\n");
-        writeFileSync(path.join(cwd, "untracked-second.txt"), "untracked change\n");
+        writeFileSync(path.join(cwd, "y-tracked-second.txt"), "second change\n");
 
-        const update = await waitForCheckoutDiffUpdate(
-          ctx,
-          subscriptionId,
-          (payload) => {
-            const paths = payload.files.map((file) => file.path);
-            return (
-              paths.includes("tracked-first.txt") &&
-              paths.includes("untracked-second.txt")
-            );
-          }
-        );
+        const expectedUpdatePaths = getGitOrderedDiffPaths(cwd);
+        expectNonAlphabeticOrder(expectedUpdatePaths);
+
+        const update = await waitForCheckoutDiffUpdate(ctx, subscriptionId, (payload) => {
+          const paths = payload.files.map((file) => file.path);
+          return JSON.stringify(paths) === JSON.stringify(expectedUpdatePaths);
+        });
 
         expect(update.error).toBeNull();
-        expect(update.files.map((file) => file.path)).toEqual([
-          "tracked-first.txt",
-          "untracked-second.txt",
-        ]);
+        expect(update.files.map((file) => file.path)).toEqual(expectedUpdatePaths);
 
         ctx.client.unsubscribeCheckoutDiff(subscriptionId);
+
+        const revisit = await ctx.client.subscribeCheckoutDiff(
+          cwd,
+          { mode: "uncommitted" },
+          { subscriptionId: "checkout-diff-e2e-subscription-revisit" }
+        );
+
+        expect(revisit.error).toBeNull();
+        expect(revisit.files.map((file) => file.path)).toEqual(expectedUpdatePaths);
+
+        ctx.client.unsubscribeCheckoutDiff("checkout-diff-e2e-subscription-revisit");
       } finally {
         rmSync(cwd, { recursive: true, force: true });
       }
