@@ -89,6 +89,13 @@ export function createTerminalManager(options: TerminalManagerOptions = {}): Ter
   const defaultShellPath = (process.env.SHELL?.trim() || "/bin/bash").split(/\s+/)[0] ?? "/bin/bash";
   const defaultShellCommand = `${defaultShellPath} -i`;
   const defaultTerminalName = "Terminal 1";
+  let ensureDefaultTerminalInFlight: Promise<{
+    terminal: TerminalSession;
+    threadId: "active";
+    threadScope: "phase2-active-thread-placeholder";
+    sessionKey: string;
+    cwd: string;
+  }> | null = null;
 
   function assertAbsolutePath(cwd: string): void {
     if (!cwd.startsWith("/")) {
@@ -320,32 +327,47 @@ export function createTerminalManager(options: TerminalManagerOptions = {}): Ter
       sessionKey: string;
       cwd: string;
     }> {
-      let terminal = defaultTerminalId ? terminalsById.get(defaultTerminalId) : undefined;
-      if (!terminal) {
-        const inheritedEnv = resolveDefaultEnvForCwd(defaultTerminalCwd);
-        terminal = await createManagedTerminal({
-          cwd: defaultTerminalCwd,
-          name: defaultTerminalName,
-          ...(inheritedEnv ? { env: inheritedEnv } : {}),
-          sessionName: deriveDefaultSessionKey(defaultTerminalCwd),
-          agentCommand: defaultTerminalAgentCommand,
-          tmuxSocketPath: options.tmuxSocketPath,
-        });
-        const terminals = terminalsByCwd.get(defaultTerminalCwd) ?? [];
-        terminals.unshift(terminal);
-        terminalsByCwd.set(defaultTerminalCwd, terminals);
-        defaultTerminalId = terminal.id;
-        emitTerminalsChanged({ cwd: defaultTerminalCwd });
+      if (ensureDefaultTerminalInFlight) {
+        return ensureDefaultTerminalInFlight;
       }
-      const sessionKey =
-        sessionNameByTerminalId.get(terminal.id) ?? deriveDefaultSessionKey(defaultTerminalCwd);
-      return {
-        terminal,
-        threadId: "active",
-        threadScope: "phase2-active-thread-placeholder",
-        sessionKey,
-        cwd: defaultTerminalCwd,
-      };
+
+      const inFlight = (async () => {
+        let terminal = defaultTerminalId ? terminalsById.get(defaultTerminalId) : undefined;
+        if (!terminal) {
+          const inheritedEnv = resolveDefaultEnvForCwd(defaultTerminalCwd);
+          terminal = await createManagedTerminal({
+            cwd: defaultTerminalCwd,
+            name: defaultTerminalName,
+            ...(inheritedEnv ? { env: inheritedEnv } : {}),
+            sessionName: deriveDefaultSessionKey(defaultTerminalCwd),
+            agentCommand: defaultTerminalAgentCommand,
+            tmuxSocketPath: options.tmuxSocketPath,
+          });
+          const terminals = terminalsByCwd.get(defaultTerminalCwd) ?? [];
+          terminals.unshift(terminal);
+          terminalsByCwd.set(defaultTerminalCwd, terminals);
+          defaultTerminalId = terminal.id;
+          emitTerminalsChanged({ cwd: defaultTerminalCwd });
+        }
+        const sessionKey =
+          sessionNameByTerminalId.get(terminal.id) ?? deriveDefaultSessionKey(defaultTerminalCwd);
+        return {
+          terminal,
+          threadId: "active" as const,
+          threadScope: "phase2-active-thread-placeholder" as const,
+          sessionKey,
+          cwd: defaultTerminalCwd,
+        };
+      })();
+
+      ensureDefaultTerminalInFlight = inFlight;
+      try {
+        return await inFlight;
+      } finally {
+        if (ensureDefaultTerminalInFlight === inFlight) {
+          ensureDefaultTerminalInFlight = null;
+        }
+      }
     },
   };
 }

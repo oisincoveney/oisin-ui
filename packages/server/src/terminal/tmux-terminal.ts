@@ -8,7 +8,6 @@ import {
   type Cell,
   type ClientMessage,
   type CreateTerminalOptions,
-  type Pos,
   type ServerMessage,
   type TerminalRawChunk,
   type TerminalRawSubscriptionResult,

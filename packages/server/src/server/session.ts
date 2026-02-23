@@ -540,6 +540,7 @@ export class Session {
   } | null = null
   private readonly MOBILE_BACKGROUND_STREAM_GRACE_MS = 60_000
   private readonly terminalManager: TerminalManager | null
+  private readonly knownDefaultTerminalIds = new Set<string>()
   private readonly subscribedTerminalDirectories = new Set<string>()
   private unsubscribeTerminalsChanged: (() => void) | null = null
   private terminalSubscriptions: Map<string, () => void> = new Map()
@@ -1483,7 +1484,7 @@ export class Session {
           break
 
         case 'terminal_input':
-          this.handleTerminalInput(msg)
+          await this.handleTerminalInput(msg)
           break
 
         case 'kill_terminal_request':
@@ -6334,6 +6335,7 @@ export class Session {
 
     try {
       const ensured = await this.terminalManager.ensureDefaultTerminal()
+      this.rememberKnownDefaultTerminal(ensured.terminal.id)
       this.ensureTerminalExitSubscription(ensured.terminal)
       // Phase 2 handoff marker: `threadId: "active"` is a placeholder identity.
       // Replace with real project/thread lifecycle IDs in Phase 3 (PROJ-02 / PROJ-04).
@@ -6367,6 +6369,49 @@ export class Session {
           requestId: msg.requestId,
         },
       })
+    }
+  }
+
+  private rememberKnownDefaultTerminal(terminalId: string): void {
+    if (!terminalId) {
+      return
+    }
+    if (this.knownDefaultTerminalIds.size >= 16) {
+      const oldest = this.knownDefaultTerminalIds.values().next().value
+      if (oldest) {
+        this.knownDefaultTerminalIds.delete(oldest)
+      }
+    }
+    this.knownDefaultTerminalIds.add(terminalId)
+  }
+
+  private async resolveTerminalSessionWithDefaultFallback(
+    terminalId: string
+  ): Promise<TerminalSession | undefined> {
+    if (!this.terminalManager) {
+      return undefined
+    }
+
+    const existing = this.terminalManager.getTerminal(terminalId)
+    if (existing) {
+      return existing
+    }
+
+    if (!this.knownDefaultTerminalIds.has(terminalId)) {
+      return undefined
+    }
+
+    try {
+      const ensured = await this.terminalManager.ensureDefaultTerminal()
+      this.rememberKnownDefaultTerminal(ensured.terminal.id)
+      this.ensureTerminalExitSubscription(ensured.terminal)
+      return ensured.terminal
+    } catch (error) {
+      this.sessionLogger.warn(
+        { err: error, terminalId },
+        'Failed to resolve stale default terminal id via ensureDefaultTerminal'
+      )
+      return undefined
     }
   }
 
@@ -6479,12 +6524,12 @@ export class Session {
     }
   }
 
-  private handleTerminalInput(msg: TerminalInput): void {
+  private async handleTerminalInput(msg: TerminalInput): Promise<void> {
     if (!this.terminalManager) {
       return
     }
 
-    const session = this.terminalManager.getTerminal(msg.terminalId)
+    const session = await this.resolveTerminalSessionWithDefaultFallback(msg.terminalId)
     if (!session) {
       this.sessionLogger.warn({ terminalId: msg.terminalId }, 'Terminal not found for input')
       return
@@ -6584,7 +6629,7 @@ export class Session {
       return
     }
 
-    const session = this.terminalManager.getTerminal(msg.terminalId)
+    const session = await this.resolveTerminalSessionWithDefaultFallback(msg.terminalId)
     if (!session) {
       this.emit({
         type: 'attach_terminal_stream_response',
@@ -6611,7 +6656,8 @@ export class Session {
       })
     }
 
-    const existingStreamId = this.terminalStreamByTerminalId.get(msg.terminalId)
+    const effectiveTerminalId = session.id
+    const existingStreamId = this.terminalStreamByTerminalId.get(effectiveTerminalId)
     if (typeof existingStreamId === 'number') {
       this.detachTerminalStream(existingStreamId, { emitExit: false })
     }
@@ -6626,7 +6672,7 @@ export class Session {
       pendingChunks: TerminalStreamPendingChunk[]
       pendingBytes: number
     } = {
-      terminalId: msg.terminalId,
+      terminalId: effectiveTerminalId,
       unsubscribe: () => {},
       lastOutputOffset: initialOffset,
       lastAckOffset: initialOffset,
@@ -6634,7 +6680,7 @@ export class Session {
       pendingBytes: 0,
     }
     this.terminalStreams.set(streamId, binding)
-    this.terminalStreamByTerminalId.set(msg.terminalId, streamId)
+    this.terminalStreamByTerminalId.set(effectiveTerminalId, streamId)
 
     let rawSub
     try {
@@ -6655,7 +6701,7 @@ export class Session {
       )
     } catch (error) {
       this.terminalStreams.delete(streamId)
-      this.terminalStreamByTerminalId.delete(msg.terminalId)
+      this.terminalStreamByTerminalId.delete(effectiveTerminalId)
       throw error
     }
 
@@ -6667,10 +6713,10 @@ export class Session {
     this.flushPendingTerminalStreamChunks(streamId, binding)
 
     this.emit({
-      type: 'attach_terminal_stream_response',
-      payload: {
-        terminalId: msg.terminalId,
-        streamId,
+        type: 'attach_terminal_stream_response',
+        payload: {
+          terminalId: effectiveTerminalId,
+          streamId,
         replayedFrom: rawSub.replayedFrom,
         currentOffset: rawSub.currentOffset,
         earliestAvailableOffset: rawSub.earliestAvailableOffset,
