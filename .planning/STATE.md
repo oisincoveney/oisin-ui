@@ -3,21 +3,21 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Phase 3 server lifecycle orchestration complete (transactional create/switch/delete + deterministic tmux identity + dirty-delete guardrails); ready for sidebar/store integration.
+**Current Focus:** Phase 3 web thread UX complete (external store + sidebar/dialog flows + attach rebind + keyboard switching); ready for reaper/e2e hardening.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 03 of 4 (Project & Thread Management)
-**Plan:** 02 of 04
+**Plan:** 03 of 04
 **Status:** In progress.
-**Last activity:** 2026-02-23 - Completed 03-project-and-thread-management-02-PLAN.md
+**Last activity:** 2026-02-23 - Completed 03-project-and-thread-management-03-PLAN.md
 
 ```
-Progress: [██████████████████░░] 88%
+Progress: [███████████████████░] 94%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
-Phase 3:  ███░░░ In Progress (2/4)
+Phase 3:  ████░ In Progress (3/4)
 Phase 4:  ░░░░░ Not Started
 ```
 
@@ -25,8 +25,8 @@ Phase 4:  ░░░░░ Not Started
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 15    |
-| Plans passed           | 15    |
+| Plans executed         | 16    |
+| Plans passed           | 16    |
 | Plans failed           | 0     |
 | Total requirements     | 11    |
 | Requirements complete  | 5     |
@@ -54,6 +54,9 @@ Phase 4:  ░░░░░ Not Started
 | Keep legacy ensure-default terminal placeholder fields while adding additive concrete identity fields | Preserves existing client bootstrap compatibility during Phase 3 contract migration | 03-01 |
 | Centralize thread create/switch/delete in a dedicated lifecycle service | Keeps rollback and cleanup behavior deterministic and testable across session handlers | 03-02 |
 | Require explicit `forceDirtyDelete=true` when deleting dirty thread worktrees | Prevents accidental data loss while still allowing intentional destructive cleanup | 03-02 |
+| Keep thread/session UI state in an external store exposed through `useSyncExternalStore` hooks | Preserves websocket lifecycle separation from component rerender churn while enabling sidebar/dialog orchestration | 03-03 |
+| Rebind terminal stream by active thread terminal identity and keep previous thread running | Satisfies background-alive switching and maintains Phase 2 attach/input safety guarantees | 03-03 |
+| Require second destructive confirmation in delete dialog when dirty-worktree error is returned | Prevents accidental deletion of uncommitted work while still permitting explicit forced cleanup | 03-03 |
 
 ### Blockers
 
@@ -63,11 +66,11 @@ Phase 4:  ░░░░░ Not Started
 
 ## Session Continuity
 
-**Last session:** 2026-02-23 06:54 PST
-**Stopped at:** Completed 03-project-and-thread-management-02-PLAN.md
+**Last session:** 2026-02-23 06:56 PST
+**Stopped at:** Completed 03-project-and-thread-management-03-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-23T14:54:18Z_
+_Last updated: 2026-02-23T14:56:24Z_
