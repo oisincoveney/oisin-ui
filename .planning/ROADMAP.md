@@ -2,12 +2,12 @@
 
 **Created:** 2026-02-21
 **Depth:** Standard
-**Phases:** 4
-**Coverage:** 11/11 v1 requirements mapped
+**Phases:** 5
+**Coverage:** 10/11 v1 requirements fully satisfied (1 partial)
 
 ## Overview
 
-Oisin UI delivers a self-hosted web terminal for managing AI coding agents across projects and threads. The roadmap follows a strict dependency chain: Docker + daemon foundation → terminal I/O (the core product) → multi-project thread management → code diffs. Each phase produces a usable increment — after Phase 2, you have a working terminal-in-a-browser; after Phase 3, the multi-thread agent workflow; after Phase 4, a complete local development tool.
+Oisin UI delivers a self-hosted web terminal for managing AI coding agents across projects and threads. The roadmap follows a strict dependency chain: Docker + daemon foundation → terminal I/O (the core product) → multi-project thread management → code diffs → milestone gap closure. Each phase produces a usable increment — after Phase 2, you have a working terminal-in-a-browser; after Phase 3, the multi-thread agent workflow; after Phase 4, the complete feature set; after Phase 5, milestone verification is fully closed.
 
 ## Phases
 
@@ -173,22 +173,56 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 
 ---
 
+### Phase 5: Docker Runtime Verification Closure
+
+**Goal:** Close the DOCK-01 runtime verification gate so milestone v1 can be marked complete.
+
+**Dependencies:** Phase 1 implementation complete, plus phases 2-4 regression baselines passing
+
+**Plans:** 0 plans (created by /gsd-plan-phase)
+
+Plans:
+- [ ] TBD (run `/gsd-plan-phase 5`)
+
+**Requirements:**
+
+- DOCK-01: Application runs in a single Docker container (daemon + web UI + tmux)
+
+**Gap Closure:** Closes audit gap from `.planning/v1-v1-MILESTONE-AUDIT.md` (DOCK-01 partial/human_needed)
+
+**Success Criteria:**
+
+1. `docker compose up --build` starts daemon + web UI successfully inside one container
+2. Browser connects to daemon (WebSocket handshake succeeds) from Docker-served app URL
+3. Controlled stop leaves no orphaned child processes
+
+**Key Work:**
+
+- Plan and execute explicit Docker runtime verification steps for DOCK-01
+- Capture verification evidence and update phase verification status from `human_needed` to `passed`
+- Re-run milestone audit to confirm no remaining blockers
+
+**Research Flags:** None — operational verification only.
+
+---
+
 ## Progress
 
 | Phase                           | Status                | Requirements                                | Completion |
 | ------------------------------- | --------------------- | ------------------------------------------- | ---------- |
-| 1 - Foundation & Docker         | Complete (2026-02-21) | DOCK-01                                     | 10100%     |
-| 2 - Terminal I/O                | Complete (2026-02-23) | TERM-01, TERM-02, TERM-03, TERM-04          | 100%       |
+| 1 - Foundation & Docker         | Complete (2026-02-21) | DOCK-01                                     | 100%       |
+| 2 - Terminal I/O                | Complete (2026-02-23) | TERM-01, TERM-02, TERM-03, TERM-04         | 100%       |
 | 3 - Project & Thread Management | Complete (2026-02-23) | PROJ-01, PROJ-02, PROJ-03, PROJ-04, PROJ-05 | 100%       |
 | 4 - Code Diffs                  | Complete (2026-02-23) | DIFF-01                                     | 100%       |
+| 5 - Docker Runtime Verification Closure | Planned          | DOCK-01                                     | 0%         |
 
-**Overall:** 11/11 requirements complete (100%)
+**Overall:** 10/11 requirements fully satisfied (DOCK-01 partial pending phase 5)
 
 ## Coverage Map
 
 | Requirement | Phase   | Status   |
 | ----------- | ------- | -------- |
-| DOCK-01     | Phase 1 | Complete |
+| DOCK-01     | Phase 1 + Phase 5 | Partial (closure planned) |
 | TERM-01     | Phase 2 | Complete |
 | TERM-02     | Phase 2 | Complete |
 | TERM-03     | Phase 2 | Complete |
