@@ -105,7 +105,7 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 - [x] 03-02-PLAN.md — Server thread lifecycle orchestration (create/switch/delete + cleanup)
 - [x] 03-03-PLAN.md — Shadcn sidebar, thread dialogs, and external thread store switching UX
 - [x] 03-04-PLAN.md — Session reaper and end-to-end regression coverage for thread management
-- [ ] 03-05-PLAN.md — Gap closure: wire create-thread base branch + command override end-to-end
+- [x] 03-05-PLAN.md — Gap closure: wire create-thread base branch + command override end-to-end
 
 **Requirements:**
 

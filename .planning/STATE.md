@@ -3,21 +3,21 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Phase 3 complete (registry + lifecycle + sidebar/reaper/e2e hardening); ready to begin Phase 4 diff panel work.
+**Current Focus:** Phase 3 complete including create-thread baseBranch/command wiring gap closure; ready to begin Phase 4 diff panel work.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 03 of 4 (Project & Thread Management)
-**Plan:** 04 of 04
+**Plan:** 05 of 05
 **Status:** Phase complete.
-**Last activity:** 2026-02-23 - Completed 03-project-and-thread-management-04-PLAN.md
+**Last activity:** 2026-02-23 - Completed 03-project-and-thread-management-05-PLAN.md
 
 ```
 Progress: [████████████████████] 100%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
-Phase 3:  █████ Complete (4/4)
+Phase 3:  █████ Complete (5/5)
 Phase 4:  ░░░░░ Not Started
 ```
 
@@ -25,8 +25,8 @@ Phase 4:  ░░░░░ Not Started
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 17    |
-| Plans passed           | 16    |
+| Plans executed         | 18    |
+| Plans passed           | 17    |
 | Plans failed           | 1     |
 | Total requirements     | 11    |
 | Requirements complete  | 10    |
@@ -60,21 +60,23 @@ Phase 4:  ░░░░░ Not Started
 | Start and stop ThreadSessionReaper from daemon bootstrap lifecycle | Ensures orphan reconciliation is always active and interval cleanup is deterministic on shutdown | 03-04 |
 | Keep reaper cleanup conservative to Paseo-owned or registry-linked resources | Avoids deleting external tmux sessions/worktrees/agents not controlled by Paseo | 03-04 |
 | Lock thread sidebar UX with browser regression specs for create/switch/wrap and background status toast | Prevents regressions in high-friction multi-thread interaction flows | 03-04 |
+| Keep `thread_create` payload validation strict and typed with shared provider command schema | Ensures invalid baseBranch/command payloads surface explicit validation errors instead of being silently dropped | 03-05 |
+| Propagate command override into provider-scoped agent session config during thread creation | Keeps New Thread command intent intact from UI payload through lifecycle launch configuration | 03-05 |
 
 ### Blockers
 
 | Blocker | Impact | Status |
 | ------- | ------ | ------ |
 | Repo-wide `npm run typecheck` can OOM in this environment | Full monorepo typecheck is not reliable for verification in this shell | Ongoing environment issue; workspace-level typechecks and e2e coverage used for plan execution |
-| Bun-driven vite/vitest startup intermittently fails with `esbuild` EPIPE in this shell | Blocks full browser e2e execution via Bun scripts despite code-level completion | New in 03-04; typechecks pass, browser e2e runtime remains environment-blocked |
+| Bun-driven vite/vitest startup intermittently fails with `esbuild` EPIPE in this shell | Blocks full browser e2e execution via Bun scripts despite code-level completion | Ongoing through 03-05; typechecks pass, daemon/web e2e entrypoints remain environment-blocked |
 
 ## Session Continuity
 
-**Last session:** 2026-02-23 07:27 PST
-**Stopped at:** Completed 03-project-and-thread-management-04-PLAN.md
+**Last session:** 2026-02-23 15:42 UTC
+**Stopped at:** Completed 03-project-and-thread-management-05-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-23T15:27:45Z_
+_Last updated: 2026-02-23T15:42:27Z_
