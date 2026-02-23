@@ -54,7 +54,7 @@ export function DiffFileSection({ file }: DiffFileSectionProps) {
     setHtml(null)
     setShowAllHunks(false)
     setOpen(false)
-  }, [file.path])
+  }, [file.path, file.oldPath])
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>

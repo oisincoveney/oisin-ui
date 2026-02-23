@@ -33,6 +33,69 @@ type Diff2HtmlFile = {
   blocks: Diff2HtmlBlock[]
 }
 
+const EXTENSION_LANGUAGE_MAP: Record<string, string> = {
+  cjs: 'javascript',
+  cts: 'typescript',
+  js: 'javascript',
+  jsx: 'javascript',
+  mjs: 'javascript',
+  mts: 'typescript',
+  ts: 'typescript',
+  tsx: 'typescript',
+  py: 'python',
+  rb: 'ruby',
+  rs: 'rust',
+  go: 'go',
+  java: 'java',
+  kt: 'kotlin',
+  swift: 'swift',
+  php: 'php',
+  cs: 'csharp',
+  cpp: 'cpp',
+  cc: 'cpp',
+  cxx: 'cpp',
+  c: 'c',
+  h: 'c',
+  hpp: 'cpp',
+  hxx: 'cpp',
+  json: 'json',
+  yml: 'yaml',
+  yaml: 'yaml',
+  md: 'markdown',
+  sh: 'bash',
+  bash: 'bash',
+  zsh: 'bash',
+  css: 'css',
+  scss: 'scss',
+  less: 'less',
+  html: 'xml',
+  xml: 'xml',
+  vue: 'xml',
+  svelte: 'xml',
+  sql: 'sql',
+  toml: 'ini',
+  ini: 'ini',
+  dockerfile: 'dockerfile',
+}
+
+function getLanguageFromPath(path: string): string {
+  const fileName = path.split('/').pop()?.toLowerCase() ?? ''
+  if (!fileName) {
+    return 'plaintext'
+  }
+
+  if (fileName === 'dockerfile') {
+    return 'dockerfile'
+  }
+
+  const extension = fileName.split('.').pop()
+  if (!extension || extension === fileName) {
+    return 'plaintext'
+  }
+
+  return EXTENSION_LANGUAGE_MAP[extension] ?? 'plaintext'
+}
+
 function normalizeLineContent(line: ParsedDiffLine): string {
   if (line.tokens && line.tokens.length > 0) {
     return line.tokens.map((token) => token.text).join('')
@@ -127,10 +190,12 @@ function toDiff2HtmlBlock(hunk: ParsedDiffHunk): Diff2HtmlBlock {
 
 function getRenameFromPath(path: string): { oldPath: string; newPath: string } | null {
   const arrowToken = ' -> '
-  if (!path.includes(arrowToken)) {
+  const arrowIndex = path.indexOf(arrowToken)
+  if (arrowIndex < 0) {
     return null
   }
-  const [oldPath, newPath] = path.split(arrowToken)
+  const oldPath = path.slice(0, arrowIndex)
+  const newPath = path.slice(arrowIndex + arrowToken.length)
   if (!oldPath || !newPath) {
     return null
   }
@@ -138,7 +203,7 @@ function getRenameFromPath(path: string): { oldPath: string; newPath: string } |
 }
 
 function getRenamePaths(file: ParsedDiffFile): { oldPath: string; newPath: string } {
-  const maybeOldPath = (file as ParsedDiffFile & { oldPath?: string }).oldPath
+  const maybeOldPath = file.oldPath
   if (typeof maybeOldPath === 'string' && maybeOldPath.length > 0 && maybeOldPath !== file.path) {
     return {
       oldPath: maybeOldPath,
@@ -167,6 +232,7 @@ export function getDiffFileDisplayPath(file: ParsedDiffFile): string {
 
 export function toDiff2Html(file: ParsedDiffFile, options?: { contextLines?: number; hunkLimit?: number }): string {
   const { oldPath, newPath } = getRenamePaths(file)
+  const language = getLanguageFromPath(newPath)
   const contextLines = options?.contextLines ?? DEFAULT_CONTEXT_LINES
   const rawHunks = typeof options?.hunkLimit === 'number' ? file.hunks.slice(0, options.hunkLimit) : file.hunks
   const hunks = rawHunks.map((hunk) => trimHunkContext(hunk, contextLines))
@@ -175,7 +241,7 @@ export function toDiff2Html(file: ParsedDiffFile, options?: { contextLines?: num
     isGitDiff: true,
     oldName: oldPath,
     newName: newPath,
-    language: 'txt',
+    language,
     isCombined: false,
     addedLines: file.additions,
     deletedLines: file.deletions,
