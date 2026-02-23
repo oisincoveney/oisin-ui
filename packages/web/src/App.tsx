@@ -35,6 +35,7 @@ function App() {
   const terminalRef = useRef<Terminal | null>(null)
   const terminalIdRef = useRef<string | null>(null)
   const pendingAttachRef = useRef<PendingAttach | null>(null)
+  const pendingEnsureRequestIdRef = useRef<string | null>(null)
   const hadConnectedOnceRef = useRef(false)
   const forceRefreshOnAttachRef = useRef(false)
   const pendingScrollToBottomRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -92,6 +93,22 @@ function App() {
     })
   }
 
+  const ensureDefaultTerminal = () => {
+    if (status !== 'connected' || !terminalRef.current) {
+      return
+    }
+    if (pendingEnsureRequestIdRef.current) {
+      return
+    }
+
+    const requestId = randomId('ensure-default')
+    pendingEnsureRequestIdRef.current = requestId
+    sendWsMessage({
+      type: 'ensure_default_terminal_request',
+      requestId,
+    })
+  }
+
   useEffect(() => {
     adapterRef.current?.setTransportConnected(status === 'connected')
 
@@ -100,16 +117,13 @@ function App() {
         forceRefreshOnAttachRef.current = true
       }
       hadConnectedOnceRef.current = true
-
-      sendWsMessage({
-        type: 'ensure_default_terminal_request',
-        requestId: randomId('ensure-default'),
-      })
+      ensureDefaultTerminal()
       return
     }
 
     if (status === 'disconnected' || status === 'reconnecting') {
       forceRefreshOnAttachRef.current = hadConnectedOnceRef.current
+      pendingEnsureRequestIdRef.current = null
       pendingAttachRef.current = null
       adapterRef.current?.setAttached(false)
       adapterRef.current?.clearPendingInput()
@@ -123,6 +137,11 @@ function App() {
     const unsubText = subscribeTextMessages((data) => {
       const msg = data as SessionMessage
       if (msg.type === 'ensure_default_terminal_response') {
+        if (msg.payload?.requestId !== pendingEnsureRequestIdRef.current) {
+          return
+        }
+        pendingEnsureRequestIdRef.current = null
+
         const terminal = msg.payload?.terminal
         if (!terminal?.id) {
           return
@@ -206,10 +225,7 @@ function App() {
     })
 
     if (status === 'connected') {
-      sendWsMessage({
-        type: 'ensure_default_terminal_request',
-        requestId: randomId('ensure-default-ready'),
-      })
+      ensureDefaultTerminal()
     }
   }
 
