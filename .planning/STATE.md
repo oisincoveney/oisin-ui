@@ -3,30 +3,30 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Phase 4 started with server diff contract/order foundation complete; ready for thread-scoped diff store and panel wiring.
+**Current Focus:** Phase 4 now has server contract/order + thread-scoped diff store wiring complete; ready for diff panel shells and rendering.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 04 of 4 (Code Diffs)
-**Plan:** 01 of 04
+**Plan:** 02 of 04
 **Status:** In progress.
-**Last activity:** 2026-02-23 - Completed 04-01-PLAN.md
+**Last activity:** 2026-02-23 - Completed 04-02-PLAN.md
 
 ```
-Progress: [█████████████████░░░] 86%
+Progress: [██████████████████░░] 91%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
 Phase 3:  █████ Complete (5/5)
-Phase 4:  █░░░░ In progress (1/4)
+Phase 4:  ██░░░ In progress (2/4)
 ```
 
 ## Performance Metrics
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 19    |
-| Plans passed           | 18    |
+| Plans executed         | 20    |
+| Plans passed           | 19    |
 | Plans failed           | 1     |
 | Total requirements     | 11    |
 | Requirements complete  | 10    |
@@ -64,6 +64,8 @@ Phase 4:  █░░░░ In progress (1/4)
 | Propagate command override into provider-scoped agent session config during thread creation | Keeps New Thread command intent intact from UI payload through lifecycle launch configuration | 03-05 |
 | Expose `thread.links.worktreePath` as nullable `worktreePath` in thread summaries | Ensures diff subscribers use true per-thread cwd and prevents cross-thread diff leakage | 04-01 |
 | Preserve `listCheckoutFileChanges` ordering in checkout diff payloads | Keeps file list sequence aligned with git diff output instead of alphabetical reshuffling | 04-01 |
+| Keep checkout diff websocket lifecycle in dedicated diff external store keyed by active subscriptionId | Prevents cross-thread diff updates and keeps socket logic out of React components | 04-02 |
+| Bridge thread store active context into diff store during app bootstrap | Ensures diff subscriptions track active thread/worktree without component-owned websocket lifecycles | 04-02 |
 
 ### Blockers
 
@@ -74,11 +76,11 @@ Phase 4:  █░░░░ In progress (1/4)
 
 ## Session Continuity
 
-**Last session:** 2026-02-23 20:43 UTC
-**Stopped at:** Completed 04-01-PLAN.md
+**Last session:** 2026-02-23 21:12 UTC
+**Stopped at:** Completed 04-02-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-23T20:43:51Z_
+_Last updated: 2026-02-23T21:12:11Z_
