@@ -4079,10 +4079,6 @@ export class Session {
         { paseoHome: this.paseoHome }
       )
       const files = [...(diffResult.structured ?? [])]
-      files.sort((a, b) => {
-        if (a.path === b.path) return 0
-        return a.path < b.path ? -1 : 1
-      })
       return {
         cwd,
         files,
