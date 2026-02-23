@@ -223,9 +223,12 @@ test("thread sidebar supports create flow inline errors, active highlight, and C
 
   await page.getByRole("button", { name: "Create new thread" }).click();
   await page.getByLabel("Thread Name").fill("thread-alpha");
+  await page.getByLabel("Command").selectOption("append");
+  await page.getByLabel("Arguments").fill("--model test-model");
   await page.getByLabel("Base Branch").fill("definitely-not-a-branch");
   await page.getByRole("button", { name: "Create Thread" }).click();
   await expect(page.locator("[role='dialog']")).toContainText(/branch|error|failed/i);
+  await expect(page.locator("[data-sonner-toast]")).toHaveCount(0);
 
   await page.getByLabel("Base Branch").fill("main");
   await page.getByRole("button", { name: "Create Thread" }).click();
@@ -237,6 +240,8 @@ test("thread sidebar supports create flow inline errors, active highlight, and C
 
   await page.getByRole("button", { name: "Create new thread" }).click();
   await page.getByLabel("Thread Name").fill("thread-beta");
+  await page.getByLabel("Command").selectOption("replace");
+  await page.getByLabel("Command + arguments").fill("opencode --model test-model");
   await page.getByLabel("Base Branch").fill("main");
   await page.getByRole("button", { name: "Create Thread" }).click();
   await expect(page.getByRole("dialog", { name: "Create New Thread" })).toHaveCount(0);

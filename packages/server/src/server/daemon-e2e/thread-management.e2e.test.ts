@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { execFileSync, execSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -21,6 +21,11 @@ function createRepoRoot(prefix: string): string {
   writeFileSync(path.join(repoRoot, "README.md"), "# thread test\n");
   execSync("git add README.md", { cwd: repoRoot, stdio: "pipe" });
   execSync("git commit -m 'initial'", { cwd: repoRoot, stdio: "pipe" });
+  execSync("git checkout -b release-base", { cwd: repoRoot, stdio: "pipe" });
+  writeFileSync(path.join(repoRoot, "release-only.txt"), "release-branch\n");
+  execSync("git add release-only.txt", { cwd: repoRoot, stdio: "pipe" });
+  execSync("git commit -m 'release branch seed'", { cwd: repoRoot, stdio: "pipe" });
+  execSync("git checkout main", { cwd: repoRoot, stdio: "pipe" });
   return repoRoot;
 }
 
@@ -88,12 +93,38 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
       const createA = await ctx.client.createThread({
         projectId,
         title: "Thread Alpha",
-        launchConfig: { provider: "opencode" },
+        baseBranch: "release-base",
+        launchConfig: {
+          provider: "opencode",
+          commandOverride: {
+            mode: "append",
+            args: ["--model", "test-model"],
+          },
+        },
       });
       expect(createA.accepted).toBe(true);
       expect(createA.thread?.terminalId).toBeTruthy();
       expect(createA.thread?.agentId).toBeTruthy();
       const threadA = createA.thread!;
+
+      const threadAWorktree = readThreadWorktreePath(
+        path.join(ctx.daemon.paseoHome, "thread-registry.json"),
+        projectId,
+        threadA.threadId
+      );
+      expect(threadAWorktree).toBeTruthy();
+      expect(existsSync(path.join(threadAWorktree!, "release-only.txt"))).toBe(true);
+
+      const threadAConfig = readStoredAgentConfig(ctx.daemon.paseoHome, threadA.agentId!);
+      expect(threadAConfig).toBeTruthy();
+      expect(threadAConfig?.extra).toMatchObject({
+        opencode: {
+          commandOverride: {
+            mode: "append",
+            args: ["--model", "test-model"],
+          },
+        },
+      });
 
       const createB = await ctx.client.createThread({
         projectId,
@@ -280,4 +311,30 @@ function readThreadWorktreePath(
     return null;
   }
   return worktreePath;
+}
+
+function readStoredAgentConfig(
+  paseoHome: string,
+  agentId: string
+): { extra?: Record<string, unknown> } | null {
+  const agentsRoot = path.join(paseoHome, "agents");
+  if (!existsSync(agentsRoot)) {
+    return null;
+  }
+
+  for (const entry of readdirSync(agentsRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    const candidate = path.join(agentsRoot, entry.name, `${agentId}.json`);
+    if (!existsSync(candidate)) {
+      continue;
+    }
+    const parsed = JSON.parse(readFileSync(candidate, "utf8")) as {
+      config?: { extra?: Record<string, unknown> };
+    };
+    return parsed.config ?? null;
+  }
+
+  return null;
 }

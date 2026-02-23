@@ -2677,6 +2677,7 @@ export class DaemonClient {
       projectId: string
       title: string
       threadId?: string
+      baseBranch?: string
       launchConfig: ThreadLaunchConfig
     },
     requestId?: string
