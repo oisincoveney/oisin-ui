@@ -119,6 +119,16 @@ export type PaseoWorktreeOwnership = {
   worktreePath?: string;
 };
 
+export class DirtyWorktreeError extends Error {
+  readonly statusEntries: string[];
+
+  constructor(worktreePath: string, statusEntries: string[]) {
+    super(`Worktree has uncommitted changes: ${worktreePath}`);
+    this.name = "DirtyWorktreeError";
+    this.statusEntries = [...statusEntries];
+  }
+}
+
 interface CreateWorktreeOptions {
   branchName: string;
   cwd: string;
@@ -875,6 +885,42 @@ export async function deletePaseoWorktree({
   if (existsSync(resolvedWorktree)) {
     rmSync(resolvedWorktree, { recursive: true, force: true });
   }
+}
+
+export async function getWorktreePorcelainStatus(worktreePath: string): Promise<string[]> {
+  const { stdout } = await execAsync("git status --porcelain=v1", {
+    cwd: worktreePath,
+    env: READ_ONLY_GIT_ENV,
+  });
+  return stdout
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => line.length > 0);
+}
+
+export async function hasDirtyWorktree(worktreePath: string): Promise<boolean> {
+  const status = await getWorktreePorcelainStatus(worktreePath);
+  return status.length > 0;
+}
+
+export async function deletePaseoWorktreeChecked(options: {
+  cwd: string;
+  worktreePath: string;
+  paseoHome?: string;
+  allowDirty?: boolean;
+}): Promise<void> {
+  if (!options.allowDirty) {
+    const statusEntries = await getWorktreePorcelainStatus(options.worktreePath);
+    if (statusEntries.length > 0) {
+      throw new DirtyWorktreeError(options.worktreePath, statusEntries);
+    }
+  }
+
+  await deletePaseoWorktree({
+    cwd: options.cwd,
+    worktreePath: options.worktreePath,
+    paseoHome: options.paseoHome,
+  });
 }
 
 

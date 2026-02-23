@@ -311,6 +311,40 @@ export class ThreadRegistry {
     return normalizeState(JSON.parse(JSON.stringify(this.state)) as ThreadRegistryState);
   }
 
+  async listProjects(): Promise<ProjectRecord[]> {
+    await this.load();
+    return this.getSnapshot().projects;
+  }
+
+  async getProject(projectId: string): Promise<ProjectRecord | null> {
+    await this.load();
+    return this.state.projects.find((project) => project.projectId === projectId) ?? null;
+  }
+
+  async listThreads(projectId: string): Promise<ThreadRecord[]> {
+    await this.load();
+    return this.state.threads.filter((thread) => thread.projectId === projectId);
+  }
+
+  async getThread(projectId: string, threadId: string): Promise<ThreadRecord | null> {
+    await this.load();
+    return (
+      this.state.threads.find(
+        (thread) => thread.projectId === projectId && thread.threadId === threadId
+      ) ?? null
+    );
+  }
+
+  async findThreadByAgentId(agentId: string): Promise<ThreadRecord | null> {
+    await this.load();
+    return this.state.threads.find((thread) => thread.links.agentId === agentId) ?? null;
+  }
+
+  async findThreadByTerminalId(terminalId: string): Promise<ThreadRecord | null> {
+    await this.load();
+    return this.state.threads.find((thread) => thread.links.terminalId === terminalId) ?? null;
+  }
+
   async setProjects(projects: Array<Omit<ProjectRecord, "createdAt" | "updatedAt">>): Promise<void> {
     await this.load();
     const nowIso = new Date().toISOString();
@@ -336,6 +370,7 @@ export class ThreadRegistry {
     title: string;
     launchConfig: ThreadLaunchConfig;
     links?: ThreadLinks;
+    status?: ThreadStatus;
   }): Promise<ThreadRecord> {
     await this.load();
     const thread = createThreadRecord(input);

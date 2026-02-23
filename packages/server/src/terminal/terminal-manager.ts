@@ -1,4 +1,5 @@
 import { resolve, sep, basename } from "node:path";
+import { execFileSync } from "node:child_process";
 import { createTmuxTerminalSession } from "./tmux-terminal.js";
 import type { TerminalSession } from "./terminal.js";
 
@@ -35,6 +36,21 @@ export interface TerminalManager {
     sessionKey: string;
     cwd: string;
   }>;
+  deriveThreadSessionKey(projectId: string, threadId: string): string;
+  ensureThreadTerminal(options: {
+    projectId: string;
+    threadId: string;
+    cwd: string;
+    name?: string;
+    env?: Record<string, string>;
+    tmuxSocketPath?: string;
+  }): Promise<{
+    terminal: TerminalSession;
+    sessionKey: string;
+    cwd: string;
+  }>;
+  getTerminalBySessionKey(sessionKey: string): TerminalSession | undefined;
+  killTerminalsBySessionKey(sessionKey: string): void;
 }
 
 type TerminalManagerOptions = {
@@ -54,6 +70,13 @@ function sanitizeTmuxSegment(value: string): string {
   return sanitized.length > 0 ? sanitized : "project";
 }
 
+function truncateSegment(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return value.slice(0, maxLength).replace(/-+$/g, "") || value.slice(0, maxLength);
+}
+
 function shortHash(value: string): string {
   let hash = 0;
   for (let index = 0; index < value.length; index += 1) {
@@ -71,6 +94,25 @@ function deriveSessionKeyForCwd(cwd: string): string {
 
 function deriveDefaultSessionKey(cwd: string): string {
   return `${deriveSessionKeyForCwd(cwd)}-active`;
+}
+
+function deriveThreadSessionKey(projectId: string, threadId: string): string {
+  const projectSegment = truncateSegment(sanitizeTmuxSegment(projectId), 24);
+  const threadSegment = truncateSegment(sanitizeTmuxSegment(threadId), 24);
+  const hash = shortHash(`${projectId}:${threadId}`);
+  return `oisin-${projectSegment}-${threadSegment}-${hash}`;
+}
+
+function killTmuxSessionByName(sessionName: string, socketPath?: string): void {
+  const tmuxArgs = socketPath ? ["-S", socketPath, "kill-session", "-t", sessionName] : ["kill-session", "-t", sessionName];
+  try {
+    execFileSync("tmux", tmuxArgs, {
+      encoding: "utf8",
+      stdio: ["ignore", "ignore", "ignore"],
+    });
+  } catch {
+    // no-op
+  }
 }
 
 export function createTerminalManager(options: TerminalManagerOptions = {}): TerminalManager {
@@ -237,6 +279,20 @@ export function createTerminalManager(options: TerminalManagerOptions = {}): Ter
     }
   }
 
+  function findLiveTerminalBySessionKey(sessionKey: string): TerminalSession | undefined {
+    for (const [terminalId, sessionName] of sessionNameByTerminalId.entries()) {
+      if (sessionName !== sessionKey) {
+        continue;
+      }
+      const terminal = terminalsById.get(terminalId);
+      if (terminal) {
+        return terminal;
+      }
+      sessionNameByTerminalId.delete(terminalId);
+    }
+    return undefined;
+  }
+
   return {
     async getTerminals(cwd: string): Promise<TerminalSession[]> {
       assertAbsolutePath(cwd);
@@ -368,6 +424,72 @@ export function createTerminalManager(options: TerminalManagerOptions = {}): Ter
           ensureDefaultTerminalInFlight = null;
         }
       }
+    },
+
+    deriveThreadSessionKey(projectId: string, threadId: string): string {
+      return deriveThreadSessionKey(projectId, threadId);
+    },
+
+    async ensureThreadTerminal(options: {
+      projectId: string;
+      threadId: string;
+      cwd: string;
+      name?: string;
+      env?: Record<string, string>;
+      tmuxSocketPath?: string;
+    }): Promise<{
+      terminal: TerminalSession;
+      sessionKey: string;
+      cwd: string;
+    }> {
+      assertAbsolutePath(options.cwd);
+      const resolvedCwd = resolve(options.cwd);
+      const sessionKey = deriveThreadSessionKey(options.projectId, options.threadId);
+      const existing = findLiveTerminalBySessionKey(sessionKey);
+      if (existing) {
+        return {
+          terminal: existing,
+          sessionKey,
+          cwd: existing.cwd,
+        };
+      }
+
+      const inheritedEnv = resolveDefaultEnvForCwd(resolvedCwd);
+      const mergedEnv = inheritedEnv || options.env ? { ...inheritedEnv, ...options.env } : undefined;
+      const terminal = await createManagedTerminal({
+        cwd: resolvedCwd,
+        name: options.name ?? "Terminal 1",
+        ...(mergedEnv ? { env: mergedEnv } : {}),
+        sessionName: sessionKey,
+        agentCommand: defaultShellCommand,
+        tmuxSocketPath: options.tmuxSocketPath,
+      });
+      const terminals = terminalsByCwd.get(resolvedCwd) ?? [];
+      terminals.unshift(terminal);
+      terminalsByCwd.set(resolvedCwd, terminals);
+      emitTerminalsChanged({ cwd: resolvedCwd });
+      return {
+        terminal,
+        sessionKey,
+        cwd: resolvedCwd,
+      };
+    },
+
+    getTerminalBySessionKey(sessionKey: string): TerminalSession | undefined {
+      return findLiveTerminalBySessionKey(sessionKey);
+    },
+
+    killTerminalsBySessionKey(sessionKey: string): void {
+      const idsToKill: string[] = [];
+      for (const [terminalId, mappedSessionName] of sessionNameByTerminalId.entries()) {
+        if (mappedSessionName === sessionKey) {
+          idsToKill.push(terminalId);
+        }
+      }
+      for (const terminalId of idsToKill) {
+        removeSessionById(terminalId, { kill: true });
+      }
+      killTmuxSessionByName(sessionKey, options.tmuxSocketPath);
     },
   };
 }
