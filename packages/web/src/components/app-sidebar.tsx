@@ -1,4 +1,5 @@
 import { ChevronDown, Circle, Plus } from 'lucide-react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Sidebar,
@@ -14,6 +15,8 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { switchToThread, useThreadStoreSnapshot } from '@/thread/thread-store'
 import { cn } from '@/lib/utils'
+import { ThreadCreateDialog } from '@/components/thread-create-dialog'
+import { ThreadDeleteDialog } from '@/components/thread-delete-dialog'
 
 function statusTone(status: string): string {
   switch (status) {
@@ -61,88 +64,159 @@ function formatRelativeTime(isoTime: string | null | undefined): string {
 
 export function AppSidebar() {
   const snapshot = useThreadStoreSnapshot()
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [createProjectId, setCreateProjectId] = useState<string | null>(null)
+  const [deleteDialogTarget, setDeleteDialogTarget] = useState<{
+    projectId: string
+    threadId: string
+    title: string
+  } | null>(null)
 
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Threads</p>
-            <p className="text-sm font-semibold text-foreground">Projects</p>
+    <>
+      <Sidebar>
+        <SidebarHeader>
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Threads</p>
+              <p className="text-sm font-semibold text-foreground">Projects</p>
+            </div>
+            <Button
+              size="sm"
+              className="h-8"
+              aria-label="Create new thread"
+              onClick={() => {
+                setCreateProjectId(snapshot.projects[0]?.projectId ?? null)
+                setCreateDialogOpen(true)
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Thread
+            </Button>
           </div>
-          <Button size="sm" className="h-8" aria-label="Create new thread">
-            <Plus className="h-3.5 w-3.5" />
-            New Thread
-          </Button>
-        </div>
-      </SidebarHeader>
+        </SidebarHeader>
 
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Configured Projects</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {snapshot.projects.map((project) => {
-                const threads = snapshot.threadsByProjectId[project.projectId] ?? []
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Configured Projects</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {snapshot.projects.map((project) => {
+                  const threads = snapshot.threadsByProjectId[project.projectId] ?? []
 
-                return (
-                  <SidebarMenuItem key={project.projectId}>
-                    <Collapsible defaultOpen>
-                      <CollapsibleTrigger
-                        className={cn(
-                          'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm font-medium',
-                          'text-foreground/90 hover:bg-accent/60 hover:text-accent-foreground'
-                        )}
-                      >
-                        <span className="truncate">{project.displayName}</span>
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <span>{threads.length}</span>
-                          <ChevronDown className="h-3.5 w-3.5" />
-                        </span>
-                      </CollapsibleTrigger>
+                  return (
+                    <SidebarMenuItem key={project.projectId}>
+                      <Collapsible defaultOpen>
+                        <CollapsibleTrigger
+                          className={cn(
+                            'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm font-medium',
+                            'text-foreground/90 hover:bg-accent/60 hover:text-accent-foreground'
+                          )}
+                        >
+                          <span className="truncate">{project.displayName}</span>
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <span>{threads.length}</span>
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </span>
+                        </CollapsibleTrigger>
 
-                      <CollapsibleContent className="pt-1">
-                        <SidebarMenu className="space-y-1 pl-2">
-                          {threads.map((thread) => {
-                            const threadKey = `${project.projectId}:${thread.threadId}`
-                            const isActive = snapshot.activeThreadKey === threadKey
+                        <CollapsibleContent className="pt-1">
+                          <div className="mb-1 pl-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-full justify-start text-xs"
+                              onClick={() => {
+                                setCreateProjectId(project.projectId)
+                                setCreateDialogOpen(true)
+                              }}
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                              New Thread
+                            </Button>
+                          </div>
 
-                            return (
-                              <SidebarMenuItem key={thread.threadId}>
-                                <SidebarMenuButton
-                                  isActive={isActive}
-                                  onClick={() => {
-                                    switchToThread(project.projectId, thread.threadId)
-                                  }}
-                                  className="items-start"
-                                >
-                                  <div className="flex min-w-0 flex-1 flex-col">
-                                    <div className="flex items-center gap-2">
-                                      <span className="truncate">{thread.title}</span>
-                                      {thread.unreadCount > 0 ? (
-                                        <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-primary" />
-                                      ) : null}
-                                    </div>
-                                    <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                                      <Circle className={cn('h-2.5 w-2.5 fill-current stroke-current', statusTone(thread.status))} />
-                                      <span>{thread.status}</span>
-                                      <span>{formatRelativeTime(thread.lastOutputAt ?? thread.updatedAt)}</span>
-                                    </div>
+                          <SidebarMenu className="space-y-1 pl-2">
+                            {threads.map((thread) => {
+                              const threadKey = `${project.projectId}:${thread.threadId}`
+                              const isActive = snapshot.activeThreadKey === threadKey
+
+                              return (
+                                <SidebarMenuItem key={thread.threadId}>
+                                  <div className="group flex items-start gap-1">
+                                    <SidebarMenuButton
+                                      isActive={isActive}
+                                      onClick={() => {
+                                        switchToThread(project.projectId, thread.threadId)
+                                      }}
+                                      className="items-start"
+                                    >
+                                      <div className="flex min-w-0 flex-1 flex-col">
+                                        <div className="flex items-center gap-2">
+                                          <span className="truncate">{thread.title}</span>
+                                          {thread.unreadCount > 0 ? (
+                                            <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-primary" />
+                                          ) : null}
+                                        </div>
+                                        <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                                          <Circle className={cn('h-2.5 w-2.5 fill-current stroke-current', statusTone(thread.status))} />
+                                          <span>{thread.status}</span>
+                                          <span>{formatRelativeTime(thread.lastOutputAt ?? thread.updatedAt)}</span>
+                                        </div>
+                                      </div>
+                                    </SidebarMenuButton>
+
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="mt-1 h-6 w-6 opacity-0 group-hover:opacity-100"
+                                      onClick={() => {
+                                        setDeleteDialogTarget({
+                                          projectId: project.projectId,
+                                          threadId: thread.threadId,
+                                          title: thread.title,
+                                        })
+                                      }}
+                                      aria-label={`Delete ${thread.title}`}
+                                      title={`Delete ${thread.title}`}
+                                    >
+                                      <span className="text-xs">x</span>
+                                    </Button>
                                   </div>
-                                </SidebarMenuButton>
-                              </SidebarMenuItem>
-                            )
-                          })}
-                        </SidebarMenu>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+                                </SidebarMenuItem>
+                              )
+                            })}
+                          </SidebarMenu>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+      </Sidebar>
+
+      <ThreadCreateDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        initialProjectId={createProjectId}
+      />
+
+      {deleteDialogTarget ? (
+        <ThreadDeleteDialog
+          open
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) {
+              setDeleteDialogTarget(null)
+            }
+          }}
+          projectId={deleteDialogTarget.projectId}
+          threadId={deleteDialogTarget.threadId}
+          threadTitle={deleteDialogTarget.title}
+        />
+      ) : null}
+    </>
   )
 }
