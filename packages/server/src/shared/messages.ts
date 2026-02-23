@@ -1030,6 +1030,98 @@ export const EnsureDefaultTerminalRequestSchema = z.object({
   requestId: z.string(),
 })
 
+const ThreadLaunchCommandDefaultSchema = z.object({
+  mode: z.literal('default'),
+})
+
+const ThreadLaunchCommandAppendSchema = z.object({
+  mode: z.literal('append'),
+  args: z.array(z.string()).optional(),
+})
+
+const ThreadLaunchCommandReplaceSchema = z.object({
+  mode: z.literal('replace'),
+  argv: z.array(z.string().min(1)).min(1),
+})
+
+const ThreadLaunchCommandOverrideSchema = z.discriminatedUnion('mode', [
+  ThreadLaunchCommandDefaultSchema,
+  ThreadLaunchCommandAppendSchema,
+  ThreadLaunchCommandReplaceSchema,
+])
+
+export const ThreadLaunchConfigSchema = z.object({
+  provider: AgentProviderSchema,
+  modeId: z.string().optional().nullable(),
+  commandOverride: ThreadLaunchCommandOverrideSchema.optional(),
+})
+
+export const ProjectSummarySchema = z.object({
+  projectId: z.string().trim().min(1),
+  displayName: z.string().trim().min(1),
+  repoRoot: z.string().trim().min(1),
+  defaultBaseBranch: z.string().trim().min(1).optional().nullable(),
+  activeThreadId: z.string().trim().min(1).optional().nullable(),
+})
+
+export const ThreadSummarySchema = z.object({
+  projectId: z.string().trim().min(1),
+  threadId: z.string().trim().min(1),
+  title: z.string().trim().min(1),
+  status: z.enum(['running', 'idle', 'error', 'closed', 'unknown']),
+  unreadCount: z.number().int().nonnegative(),
+  terminalId: z.string().trim().min(1).optional().nullable(),
+  agentId: z.string().trim().min(1).optional().nullable(),
+  updatedAt: z.string(),
+  lastOutputAt: z.string().optional().nullable(),
+  lastStatusAt: z.string().optional().nullable(),
+})
+
+export const ProjectListRequestSchema = z.object({
+  type: z.literal('project_list_request'),
+  requestId: z.string(),
+})
+
+export const ProjectAddRequestSchema = z.object({
+  type: z.literal('project_add_request'),
+  requestId: z.string(),
+  project: z.object({
+    projectId: z.string().trim().min(1).optional(),
+    displayName: z.string().trim().min(1),
+    repoRoot: z.string().trim().min(1),
+    defaultBaseBranch: z.string().trim().min(1).optional(),
+  }),
+})
+
+export const ThreadListRequestSchema = z.object({
+  type: z.literal('thread_list_request'),
+  projectId: z.string().trim().min(1),
+  requestId: z.string(),
+})
+
+export const ThreadCreateRequestSchema = z.object({
+  type: z.literal('thread_create_request'),
+  projectId: z.string().trim().min(1),
+  title: z.string().trim().min(1),
+  threadId: z.string().trim().min(1).optional(),
+  launchConfig: ThreadLaunchConfigSchema,
+  requestId: z.string(),
+})
+
+export const ThreadDeleteRequestSchema = z.object({
+  type: z.literal('thread_delete_request'),
+  projectId: z.string().trim().min(1),
+  threadId: z.string().trim().min(1),
+  requestId: z.string(),
+})
+
+export const ThreadSwitchRequestSchema = z.object({
+  type: z.literal('thread_switch_request'),
+  projectId: z.string().trim().min(1),
+  threadId: z.string().trim().min(1),
+  requestId: z.string(),
+})
+
 export const DetachTerminalStreamRequestSchema = z.object({
   type: z.literal('detach_terminal_stream_request'),
   streamId: z.number().int().nonnegative(),
@@ -1099,6 +1191,12 @@ export const SessionInboundMessageSchema = z.discriminatedUnion('type', [
   AttachTerminalStreamRequestSchema,
   DetachTerminalStreamRequestSchema,
   EnsureDefaultTerminalRequestSchema,
+  ProjectListRequestSchema,
+  ProjectAddRequestSchema,
+  ThreadListRequestSchema,
+  ThreadCreateRequestSchema,
+  ThreadDeleteRequestSchema,
+  ThreadSwitchRequestSchema,
 ])
 
 export type SessionInboundMessage = z.infer<typeof SessionInboundMessageSchema>
@@ -1989,10 +2087,96 @@ export const EnsureDefaultTerminalResponseSchema = z.object({
     terminal: TerminalInfoSchema.nullable(),
     threadId: z.literal('active'),
     threadScope: z.literal('phase2-active-thread-placeholder'),
+    projectId: z.string().nullable().optional(),
+    resolvedThreadId: z.string().nullable().optional(),
     sessionKey: z.string().nullable(),
     cwd: z.string().nullable(),
     error: z.string().nullable(),
     requestId: z.string(),
+  }),
+})
+
+export const ProjectListResponseSchema = z.object({
+  type: z.literal('project_list_response'),
+  payload: z.object({
+    requestId: z.string(),
+    projects: z.array(ProjectSummarySchema),
+    error: z.string().nullable(),
+  }),
+})
+
+export const ProjectAddResponseSchema = z.object({
+  type: z.literal('project_add_response'),
+  payload: z.object({
+    requestId: z.string(),
+    accepted: z.boolean(),
+    project: ProjectSummarySchema.nullable(),
+    error: z.string().nullable(),
+  }),
+})
+
+export const ThreadListResponseSchema = z.object({
+  type: z.literal('thread_list_response'),
+  payload: z.object({
+    requestId: z.string(),
+    projectId: z.string(),
+    threads: z.array(ThreadSummarySchema),
+    activeThreadId: z.string().nullable().optional(),
+    error: z.string().nullable(),
+  }),
+})
+
+export const ThreadCreateResponseSchema = z.object({
+  type: z.literal('thread_create_response'),
+  payload: z.object({
+    requestId: z.string(),
+    accepted: z.boolean(),
+    thread: ThreadSummarySchema.nullable(),
+    project: ProjectSummarySchema.nullable().optional(),
+    error: z.string().nullable(),
+  }),
+})
+
+export const ThreadDeleteResponseSchema = z.object({
+  type: z.literal('thread_delete_response'),
+  payload: z.object({
+    requestId: z.string(),
+    accepted: z.boolean(),
+    projectId: z.string(),
+    threadId: z.string(),
+    error: z.string().nullable(),
+  }),
+})
+
+export const ThreadSwitchResponseSchema = z.object({
+  type: z.literal('thread_switch_response'),
+  payload: z.object({
+    requestId: z.string(),
+    accepted: z.boolean(),
+    projectId: z.string(),
+    threadId: z.string(),
+    thread: ThreadSummarySchema.nullable().optional(),
+    error: z.string().nullable(),
+  }),
+})
+
+export const ThreadStatusUpdatedSchema = z.object({
+  type: z.literal('thread_status_updated'),
+  payload: z.object({
+    projectId: z.string(),
+    threadId: z.string(),
+    status: ThreadSummarySchema.shape.status,
+    lastStatusAt: z.string().nullable().optional(),
+  }),
+})
+
+export const ThreadUnreadUpdatedSchema = z.object({
+  type: z.literal('thread_unread_updated'),
+  payload: z.object({
+    projectId: z.string(),
+    threadId: z.string(),
+    unreadCount: z.number().int().nonnegative(),
+    lastOutputAt: z.string().nullable().optional(),
   }),
 })
 
@@ -2075,6 +2259,14 @@ export const SessionOutboundMessageSchema = z.discriminatedUnion('type', [
   AttachTerminalStreamResponseSchema,
   DetachTerminalStreamResponseSchema,
   EnsureDefaultTerminalResponseSchema,
+  ProjectListResponseSchema,
+  ProjectAddResponseSchema,
+  ThreadListResponseSchema,
+  ThreadCreateResponseSchema,
+  ThreadDeleteResponseSchema,
+  ThreadSwitchResponseSchema,
+  ThreadStatusUpdatedSchema,
+  ThreadUnreadUpdatedSchema,
   TerminalStreamExitSchema,
 ])
 
@@ -2206,6 +2398,23 @@ export type AttachTerminalStreamRequest = z.infer<typeof AttachTerminalStreamReq
 export type EnsureDefaultTerminalRequest = z.infer<typeof EnsureDefaultTerminalRequestSchema>
 export type AttachTerminalStreamResponse = z.infer<typeof AttachTerminalStreamResponseSchema>
 export type EnsureDefaultTerminalResponse = z.infer<typeof EnsureDefaultTerminalResponseSchema>
+export type ProjectListRequest = z.infer<typeof ProjectListRequestSchema>
+export type ProjectAddRequest = z.infer<typeof ProjectAddRequestSchema>
+export type ThreadListRequest = z.infer<typeof ThreadListRequestSchema>
+export type ThreadCreateRequest = z.infer<typeof ThreadCreateRequestSchema>
+export type ThreadDeleteRequest = z.infer<typeof ThreadDeleteRequestSchema>
+export type ThreadSwitchRequest = z.infer<typeof ThreadSwitchRequestSchema>
+export type ProjectListResponse = z.infer<typeof ProjectListResponseSchema>
+export type ProjectAddResponse = z.infer<typeof ProjectAddResponseSchema>
+export type ThreadListResponse = z.infer<typeof ThreadListResponseSchema>
+export type ThreadCreateResponse = z.infer<typeof ThreadCreateResponseSchema>
+export type ThreadDeleteResponse = z.infer<typeof ThreadDeleteResponseSchema>
+export type ThreadSwitchResponse = z.infer<typeof ThreadSwitchResponseSchema>
+export type ThreadStatusUpdated = z.infer<typeof ThreadStatusUpdatedSchema>
+export type ThreadUnreadUpdated = z.infer<typeof ThreadUnreadUpdatedSchema>
+export type ProjectSummary = z.infer<typeof ProjectSummarySchema>
+export type ThreadSummary = z.infer<typeof ThreadSummarySchema>
+export type ThreadLaunchConfig = z.infer<typeof ThreadLaunchConfigSchema>
 export type DetachTerminalStreamRequest = z.infer<typeof DetachTerminalStreamRequestSchema>
 export type DetachTerminalStreamResponse = z.infer<typeof DetachTerminalStreamResponseSchema>
 export type TerminalStreamExit = z.infer<typeof TerminalStreamExitSchema>

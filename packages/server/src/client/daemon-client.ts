@@ -42,6 +42,15 @@ import type {
   KillTerminalResponse,
   AttachTerminalStreamResponse,
   EnsureDefaultTerminalResponse,
+  ProjectListResponse,
+  ProjectAddResponse,
+  ThreadListResponse,
+  ThreadCreateResponse,
+  ThreadDeleteResponse,
+  ThreadSwitchResponse,
+  ThreadStatusUpdated,
+  ThreadUnreadUpdated,
+  ThreadLaunchConfig,
   DetachTerminalStreamResponse,
   TerminalInput,
   SessionInboundMessage,
@@ -232,6 +241,14 @@ type TerminalOutputPayload = TerminalOutput['payload']
 type KillTerminalPayload = KillTerminalResponse['payload']
 type AttachTerminalStreamPayload = AttachTerminalStreamResponse['payload']
 type EnsureDefaultTerminalPayload = EnsureDefaultTerminalResponse['payload']
+type ProjectListPayload = ProjectListResponse['payload']
+type ProjectAddPayload = ProjectAddResponse['payload']
+type ThreadListPayload = ThreadListResponse['payload']
+type ThreadCreatePayload = ThreadCreateResponse['payload']
+type ThreadDeletePayload = ThreadDeleteResponse['payload']
+type ThreadSwitchPayload = ThreadSwitchResponse['payload']
+type ThreadStatusUpdatedPayload = ThreadStatusUpdated['payload']
+type ThreadUnreadUpdatedPayload = ThreadUnreadUpdated['payload']
 type DetachTerminalStreamPayload = DetachTerminalStreamResponse['payload']
 export type FetchAgentTimelinePayload = FetchAgentTimelineResponseMessage['payload']
 
@@ -2606,6 +2623,121 @@ export class DaemonClient {
       timeout,
       { skipQueue: true }
     )
+  }
+
+  // ============================================================================
+  // Project / Thread RPCs
+  // ============================================================================
+
+  async listProjects(options?: { requestId?: string }): Promise<ProjectListPayload> {
+    return this.sendCorrelatedSessionRequest({
+      requestId: options?.requestId,
+      message: {
+        type: 'project_list_request',
+      },
+      responseType: 'project_list_response',
+      timeout: 10000,
+    })
+  }
+
+  async addProject(
+    project: {
+      projectId?: string
+      displayName: string
+      repoRoot: string
+      defaultBaseBranch?: string
+    },
+    requestId?: string
+  ): Promise<ProjectAddPayload> {
+    return this.sendCorrelatedSessionRequest({
+      requestId,
+      message: {
+        type: 'project_add_request',
+        project,
+      },
+      responseType: 'project_add_response',
+      timeout: 10000,
+    })
+  }
+
+  async listThreads(projectId: string, requestId?: string): Promise<ThreadListPayload> {
+    return this.sendCorrelatedSessionRequest({
+      requestId,
+      message: {
+        type: 'thread_list_request',
+        projectId,
+      },
+      responseType: 'thread_list_response',
+      timeout: 10000,
+    })
+  }
+
+  async createThread(
+    input: {
+      projectId: string
+      title: string
+      threadId?: string
+      launchConfig: ThreadLaunchConfig
+    },
+    requestId?: string
+  ): Promise<ThreadCreatePayload> {
+    return this.sendCorrelatedSessionRequest({
+      requestId,
+      message: {
+        type: 'thread_create_request',
+        ...input,
+      },
+      responseType: 'thread_create_response',
+      timeout: 15000,
+    })
+  }
+
+  async deleteThread(
+    input: { projectId: string; threadId: string },
+    requestId?: string
+  ): Promise<ThreadDeletePayload> {
+    return this.sendCorrelatedSessionRequest({
+      requestId,
+      message: {
+        type: 'thread_delete_request',
+        ...input,
+      },
+      responseType: 'thread_delete_response',
+      timeout: 15000,
+    })
+  }
+
+  async switchThread(
+    input: { projectId: string; threadId: string },
+    requestId?: string
+  ): Promise<ThreadSwitchPayload> {
+    return this.sendCorrelatedSessionRequest({
+      requestId,
+      message: {
+        type: 'thread_switch_request',
+        ...input,
+      },
+      responseType: 'thread_switch_response',
+      timeout: 10000,
+    })
+  }
+
+  onThreadStatusUpdated(handler: (payload: ThreadStatusUpdatedPayload) => void): () => void {
+    return this.on('thread_status_updated', (message) => {
+      if (message.type !== 'thread_status_updated') {
+        return
+      }
+      handler(message.payload)
+    })
+  }
+
+  onThreadUnreadUpdated(handler: (payload: ThreadUnreadUpdatedPayload) => void): () => void {
+    return this.on('thread_unread_updated', (message) => {
+      if (message.type !== 'thread_unread_updated') {
+        return
+      }
+      handler(message.payload)
+    })
   }
 
   // ============================================================================
