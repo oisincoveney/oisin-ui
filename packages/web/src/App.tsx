@@ -23,6 +23,12 @@ type PendingAttach = {
   terminalId: string
   resumeOffset: number
   forceRefresh: boolean
+  cycleId: number
+}
+
+type PendingEnsure = {
+  requestId: string
+  cycleId: number
 }
 
 function randomId(prefix: string): string {
@@ -38,7 +44,9 @@ function App() {
   const terminalRef = useRef<Terminal | null>(null)
   const terminalIdRef = useRef<string | null>(null)
   const pendingAttachRef = useRef<PendingAttach | null>(null)
-  const pendingEnsureRequestIdRef = useRef<string | null>(null)
+  const pendingEnsureRef = useRef<PendingEnsure | null>(null)
+  const statusRef = useRef(status)
+  const attachCycleRef = useRef(0)
   const hadConnectedOnceRef = useRef(false)
   const forceRefreshOnAttachRef = useRef(false)
   const pendingScrollToBottomRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -71,6 +79,10 @@ function App() {
 
   const sendAttachRequest = (terminalId: string, forceRefresh: boolean) => {
     setAttachFailureReason(null)
+    adapterRef.current?.setAttached(false)
+    adapterRef.current?.setStreamId(0)
+    adapterRef.current?.clearPendingInput()
+
     const nextResumeOffset = forceRefresh ? 0 : (adapterRef.current?.getOffset() ?? 0)
     const requestId = randomId('attach')
     const dimensions = getTerminalDimensions()
@@ -79,6 +91,7 @@ function App() {
       terminalId,
       resumeOffset: nextResumeOffset,
       forceRefresh,
+      cycleId: attachCycleRef.current,
     }
 
     if (forceRefresh) {
@@ -101,13 +114,16 @@ function App() {
     if (status !== 'connected' || !terminalRef.current) {
       return
     }
-    if (pendingEnsureRequestIdRef.current) {
+    if (pendingEnsureRef.current) {
       return
     }
 
     const requestId = randomId('ensure-default')
     setAttachFailureReason(null)
-    pendingEnsureRequestIdRef.current = requestId
+    pendingEnsureRef.current = {
+      requestId,
+      cycleId: attachCycleRef.current,
+    }
     sendWsMessage({
       type: 'ensure_default_terminal_request',
       requestId,
@@ -115,6 +131,7 @@ function App() {
   }
 
   useEffect(() => {
+    statusRef.current = status
     adapterRef.current?.setTransportConnected(status === 'connected')
 
     if (status === 'connected') {
@@ -127,10 +144,12 @@ function App() {
     }
 
     if (status === 'disconnected' || status === 'reconnecting') {
+      attachCycleRef.current += 1
       forceRefreshOnAttachRef.current = hadConnectedOnceRef.current
-      pendingEnsureRequestIdRef.current = null
+      pendingEnsureRef.current = null
       pendingAttachRef.current = null
       adapterRef.current?.setAttached(false)
+      adapterRef.current?.setStreamId(0)
       adapterRef.current?.clearPendingInput()
       if (terminalRef.current) {
         terminalRef.current.options.cursorBlink = false
@@ -141,11 +160,41 @@ function App() {
   useEffect(() => {
     const unsubText = subscribeTextMessages((data) => {
       const msg = data as SessionMessage
-      if (msg.type === 'ensure_default_terminal_response') {
-        if (msg.payload?.requestId !== pendingEnsureRequestIdRef.current) {
+
+      if (msg.type === 'terminal_stream_exit') {
+        const terminalId = msg.payload?.terminalId
+        const streamId = msg.payload?.streamId
+        const adapter = adapterRef.current
+
+        if (!terminalId || terminalId !== terminalIdRef.current || !adapter) {
           return
         }
-        pendingEnsureRequestIdRef.current = null
+
+        if (typeof streamId === 'number' && streamId !== adapter.streamId) {
+          return
+        }
+
+        adapter.setAttached(false)
+
+        if (statusRef.current !== 'connected' || pendingAttachRef.current) {
+          return
+        }
+
+        setAttachFailureReason('Terminal stream ended; reattaching…')
+        sendAttachRequest(terminalId, true)
+        return
+      }
+
+      if (msg.type === 'ensure_default_terminal_response') {
+        const pendingEnsure = pendingEnsureRef.current
+        if (
+          !pendingEnsure ||
+          msg.payload?.requestId !== pendingEnsure.requestId ||
+          pendingEnsure.cycleId !== attachCycleRef.current
+        ) {
+          return
+        }
+        pendingEnsureRef.current = null
 
         const terminal = msg.payload?.terminal
         if (!terminal?.id) {
@@ -164,7 +213,11 @@ function App() {
       }
 
       const pendingAttach = pendingAttachRef.current
-      if (!pendingAttach || pendingAttach.requestId !== msg.payload?.requestId) {
+      if (
+        !pendingAttach ||
+        pendingAttach.requestId !== msg.payload?.requestId ||
+        pendingAttach.cycleId !== attachCycleRef.current
+      ) {
         return
       }
       pendingAttachRef.current = null
