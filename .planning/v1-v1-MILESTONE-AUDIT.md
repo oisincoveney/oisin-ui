@@ -1,6 +1,6 @@
 ---
 milestone: v1
-audited: 2026-02-24T18:24:03Z
+audited: 2026-02-24T22:08:19Z
 status: passed
 scores:
   requirements: 11/11
@@ -32,14 +32,14 @@ tech_debt:
 ## Overall Status
 
 - **Result:** passed
-- **Reason:** all v1 requirements are satisfied, including DOCK-01 runtime closure with WS 101 and clean stop proofs
-- **Report Date:** 2026-02-24T18:24:03Z
+- **Reason:** all v1 requirements are satisfied, including DOCK-01 runtime closure with tmux-live proof, browser-origin WS 101 provenance, and clean stop/no-orphan proofs
+- **Report Date:** 2026-02-24T22:08:19Z
 
 ## Requirements Coverage
 
 | Requirement | Owner Phase | Coverage | Notes |
 | --- | --- | --- | --- |
-| DOCK-01 | 01-foundation-and-docker + 05-docker-runtime-verification-closure | satisfied | Runtime verification now passes with `HTTP 101 seen: yes` and `no-orphan-processes-detected`. See `.planning/phases/01-foundation-and-docker/01-foundation-and-docker-VERIFICATION.md`, `.planning/phases/05-docker-runtime-verification-closure/05-docker-runtime-verification-closure-VERIFICATION.md`, and phase-05 evidence artifacts. |
+| DOCK-01 | 01-foundation-and-docker + 05-docker-runtime-verification-closure | satisfied | Runtime verification now passes with tmux-live evidence (`{tmux: server}` + `tmux-session-running`), browser-origin handshake provenance (`source: browser`, `page_url: http://localhost:44285`, `HTTP 101 seen: yes`), and clean stop evidence (`no-orphan-processes-detected`). See `.planning/phases/01-foundation-and-docker/01-foundation-and-docker-VERIFICATION.md`, `.planning/phases/05-docker-runtime-verification-closure/05-docker-runtime-verification-closure-VERIFICATION.md`, and phase-05 evidence artifacts. |
 | TERM-01 | 02-terminal-i | satisfied | Verified passed in phase 02. |
 | TERM-02 | 02-terminal-i | satisfied | Verified passed in phase 02. |
 | TERM-03 | 02-terminal-i | satisfied | Verified passed in phase 02. |
@@ -110,4 +110,4 @@ None.
 
 - **Milestone v1 status:** `passed`
 - **Blockers:** 0
-- **Interpretation:** v1 definition of done is closed; DOCK-01 runtime verification is now satisfied and no critical requirement blockers remain.
+- **Interpretation:** v1 definition of done is closed; DOCK-01 runtime verification is satisfied with corrected tmux-live and browser-origin provenance, and no critical requirement blockers remain.
