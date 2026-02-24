@@ -136,3 +136,11 @@ oisin-ui-1  | [02:13:41.955] [32mINFO[39m: [36mServer listening on http://0.0
 oisin-ui-1  | [02:13:41.956] [32mINFO[39m: [36mpairing_offer[39m [90m{"module":"bootstrap","url":"https://app.paseo.sh/#offer=eyJ2IjoyLCJzZXJ2ZXJJZCI6InNydl9uRmUwcDNQQWx4SjUiLCJkYWVtb25QdWJsaWNLZXlCNjQiOiJxM0pmai9scHFUOFlpNktkcGl2KzNGNWxWZmFkQm5IejhWMDdhRXBmeG1VPSIsInJlbGF5Ijp7ImVuZHBvaW50IjoicmVsYXkucGFzZW8uc2g6NDQzIn19"}[39m
 oisin-ui-1  | [02:13:42.366] [34mDEBUG[39m: [36mrelay_control_open_waiting_for_ready[39m [90m{"module":"relay-transport","url":"wss://relay.paseo.sh/ws?serverId=srv_nFe0p3PAlxJ5&role=server&v=2","connectionId":1}[39m
 oisin-ui-1  | [02:13:42.428] [32mINFO[39m: [36mrelay_control_connected[39m [90m{"module":"relay-transport","url":"wss://relay.paseo.sh/ws?serverId=srv_nFe0p3PAlxJ5&role=server&v=2","connectionId":1}[39m
+oisin-ui-1  | [02:29:24.438] [33mWARN[39m: [36mrelay_control_disconnected[39m [90m{"module":"relay-transport","code":1006,"reason":"","url":"wss://relay.paseo.sh/ws?serverId=srv_nFe0p3PAlxJ5&role=server&v=2","connectionId":1}[39m
+oisin-ui-1  | [02:29:25.954] [34mDEBUG[39m: [36mrelay_control_open_waiting_for_ready[39m [90m{"module":"relay-transport","url":"wss://relay.paseo.sh/ws?serverId=srv_nFe0p3PAlxJ5&role=server&v=2","connectionId":2}[39m
+oisin-ui-1  | [02:29:25.998] [32mINFO[39m: [36mrelay_control_connected[39m [90m{"module":"relay-transport","url":"wss://relay.paseo.sh/ws?serverId=srv_nFe0p3PAlxJ5&role=server&v=2","connectionId":2}[39m
+oisin-ui-1  | [DaemonRunner] Received SIGTERM. Stopping worker...
+oisin-ui-1  | [02:58:30.620] [32mINFO[39m: [36mSIGTERM received, shutting down gracefully... (press Ctrl+C again to force exit)[39m
+oisin-ui-1  | [02:58:30.682] [32mINFO[39m: [36mServer closed[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 0). Supervisor shutting down.
+[Koisin-ui-1 exited with code 143

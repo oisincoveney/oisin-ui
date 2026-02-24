@@ -3,34 +3,35 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** All roadmap phases complete and verified (Phase 4 passed after gap closure 04-05/04-06).
+**Current Focus:** Phase 5 runtime-verification closure is active after 05-01 checkpoint failure on WS/stop criteria.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
-**Phase:** 04 of 4 (Code Diffs)
-**Plan:** 06 of 06
-**Status:** Phase complete.
-**Last activity:** 2026-02-23 - Phase 4 re-verified passed (15/15) after gap closures.
+**Phase:** 05 of 5 (Docker Runtime Verification Closure)
+**Plan:** 01 of 02
+**Status:** In progress (blocked at failed human checkpoint).
+**Last activity:** 2026-02-24 - 05-01 checkpoint failed (no WS 101, orphans detected).
 
 ```
-Progress: [████████████████████] 100%
+Progress: [███████████████████░] 96%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
 Phase 3:  █████ Complete (5/5)
 Phase 4:  ██████████ Complete (6/6)
+Phase 5:  █████░░░░░ In progress (0/2 passed)
 ```
 
 ## Performance Metrics
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 24    |
+| Plans executed         | 25    |
 | Plans passed           | 23    |
-| Plans failed           | 1     |
+| Plans failed           | 2     |
 | Total requirements     | 11    |
-| Requirements complete  | 11    |
-| Requirements remaining | 0     |
+| Requirements complete  | 10    |
+| Requirements remaining | 1     |
 
 ## Accumulated Context
 
@@ -76,6 +77,7 @@ Phase 4:  ██████████ Complete (6/6)
 | Keep rename metadata explicit as optional `oldPath` across shared/server/web parsed diff contracts | Removes rename label inference from display strings and preserves deterministic `old -> new` rendering | 04-06 |
 | Derive diff2html language from renamed target file extension with plaintext fallback | Restores syntax-highlight fidelity without hardcoding `txt` for every file | 04-06 |
 | Keep active-thread guard in diff-panel browser regression while asserting rename/highlight behavior when thread exists | Avoids false negatives in empty daemon state without silently dropping active-thread coverage | 04-06 |
+| Block 05-02 verification-doc closure unless 05-01 records WS HTTP 101 and clean post-stop orphan result | Prevents falsifying DOCK-01 pass state when runtime checkpoint evidence fails | 05-01 |
 
 ### Blockers
 
@@ -84,14 +86,16 @@ Phase 4:  ██████████ Complete (6/6)
 | Repo-wide `npm run typecheck` can OOM in this environment | Full monorepo typecheck is not reliable for verification in this shell | Ongoing environment issue; workspace-level typechecks and e2e coverage used for plan execution |
 | Bun-driven vite/vitest startup intermittently fails with `esbuild` EPIPE in this shell | Blocks full browser e2e execution via Bun scripts despite code-level completion | Ongoing through 03-05; typechecks pass, daemon/web e2e entrypoints remain environment-blocked |
 | Diff-panel browser regression requires active thread fixture to execute assertions | Targeted e2e can skip in empty daemon bootstrap state, reducing local verification strictness | Ongoing; seed an active thread fixture before running targeted diff-panel Playwright checks |
+| 05-01 checkpoint evidence shows WS connection refusal (`ERR_CONNECTION_REFUSED`, close `1006`) and no `101 Switching Protocols` | DOCK-01 cannot be marked passed; 05-02 docs/audit closure must remain blocked | Open - diagnose daemon reachability from Docker-served web client and rerun checkpoint |
+| Post-stop host process check returned `orphans-found` | Controlled-stop criterion failed; runtime teardown cleanup needs remediation before closure | Open - rerun stop flow after runtime fix and require `no-orphan-processes-detected` |
 
 ## Session Continuity
 
-**Last session:** 2026-02-23 22:36 UTC
-**Stopped at:** Completed 04-06-PLAN.md
+**Last session:** 2026-02-24 02:59 UTC
+**Stopped at:** Completed 05-01-PLAN.md with failed checkpoint outcome
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-23T22:44:00Z_
+_Last updated: 2026-02-24T02:59:37Z_
