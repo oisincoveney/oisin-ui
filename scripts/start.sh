@@ -5,6 +5,8 @@ set -euo pipefail
 export PASEO_HOME="${PASEO_HOME:-/config}"
 export PASEO_LISTEN="${PASEO_LISTEN:-0.0.0.0:6767}"
 export PASEO_CORS_ORIGINS="${PASEO_CORS_ORIGINS:-http://localhost:44285,http://127.0.0.1:44285,http://0.0.0.0:44285}"
+export PASEO_DICTATION_ENABLED="${PASEO_DICTATION_ENABLED:-0}"
+export PASEO_VOICE_MODE_ENABLED="${PASEO_VOICE_MODE_ENABLED:-0}"
 
 DAEMON_PORT="${PASEO_LISTEN##*:}"
 if [[ ! "$DAEMON_PORT" =~ ^[0-9]+$ ]]; then
@@ -21,7 +23,7 @@ if [ ! -d node_modules ]; then
 fi
 
 echo "Starting daemon and web server..."
-bun run dev:server &
+bun run dev:server -- --no-relay --no-mcp &
 DAEMON_PID=$!
 
 bun run --filter @oisin/web dev -- --host 0.0.0.0 --port 44285 &
