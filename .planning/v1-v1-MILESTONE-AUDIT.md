@@ -1,15 +1,14 @@
 ---
 milestone: v1
-audited: 2026-02-24T03:12:00Z
-status: gaps_found
+audited: 2026-02-24T18:24:03Z
+status: passed
 scores:
-  requirements: 10/11
-  phases: 3/4
+  requirements: 11/11
+  phases: 4/4
   integration: 7/8
   flows: 6/6
 gaps:
-  requirements:
-    - "DOCK-01: runtime verification executed but failed (no WS 101, controlled stop found orphans); requirement remains blocked"
+  requirements: []
   integration: []
   flows: []
 tech_debt:
@@ -32,15 +31,15 @@ tech_debt:
 
 ## Overall Status
 
-- **Result:** gaps_found
-- **Reason:** one blocker remains (DOCK-01 runtime gate failed in phase 05 evidence capture)
-- **Report Date:** 2026-02-24T03:12:00Z
+- **Result:** passed
+- **Reason:** all v1 requirements are satisfied, including DOCK-01 runtime closure with WS 101 and clean stop proofs
+- **Report Date:** 2026-02-24T18:24:03Z
 
 ## Requirements Coverage
 
 | Requirement | Owner Phase | Coverage | Notes |
 | --- | --- | --- | --- |
-| DOCK-01 | 01-foundation-and-docker + 05-docker-runtime-verification-closure | partial | Runtime verification is executed and documented, but failed: websocket did not reach HTTP 101 and controlled stop reported orphan processes. See `.planning/phases/01-foundation-and-docker/01-foundation-and-docker-VERIFICATION.md` and `.planning/phases/05-docker-runtime-verification-closure/05-docker-runtime-verification-closure-VERIFICATION.md`. |
+| DOCK-01 | 01-foundation-and-docker + 05-docker-runtime-verification-closure | satisfied | Runtime verification now passes with `HTTP 101 seen: yes` and `no-orphan-processes-detected`. See `.planning/phases/01-foundation-and-docker/01-foundation-and-docker-VERIFICATION.md`, `.planning/phases/05-docker-runtime-verification-closure/05-docker-runtime-verification-closure-VERIFICATION.md`, and phase-05 evidence artifacts. |
 | TERM-01 | 02-terminal-i | satisfied | Verified passed in phase 02. |
 | TERM-02 | 02-terminal-i | satisfied | Verified passed in phase 02. |
 | TERM-03 | 02-terminal-i | satisfied | Verified passed in phase 02. |
@@ -52,13 +51,13 @@ tech_debt:
 | PROJ-05 | 03-project-and-thread-management | satisfied | Verified passed in phase 03. |
 | DIFF-01 | 04-code-diffs | satisfied | Verified passed in phase 04 after gap closure. |
 
-**Coverage score:** 10/11 fully satisfied, 1/11 partial
+**Coverage score:** 11/11 fully satisfied
 
 ## Phase Verification Rollup
 
 | Phase | Verification Status | Score | Blocking? |
 | --- | --- | --- | --- |
-| 01-foundation-and-docker | gaps_found | 5/5 (runtime gate failed) | Yes (WS 101 + no-orphan runtime criteria not met) |
+| 01-foundation-and-docker | passed | 5/5 (runtime gate passed) | No |
 | 02-terminal-i | passed | 12/12 | No |
 | 03-project-and-thread-management | passed | 13/13 | No |
 | 04-code-diffs | passed | 15/15 | No |
@@ -95,9 +94,7 @@ Integration checker result: **tech_debt**
 
 ## Critical Gaps
 
-1. **DOCK-01 runtime verification gate remains open**
-   - Phase 05 evidence capture confirms process-tree proof, but websocket handshake failed (`HTTP 101 seen: no`) and stop cleanup failed (`orphans-found`).
-   - Closure references: `.planning/phases/01-foundation-and-docker/01-foundation-and-docker-VERIFICATION.md`, `.planning/phases/05-docker-runtime-verification-closure/05-docker-runtime-verification-closure-VERIFICATION.md`.
+None.
 
 ## Non-Critical Tech Debt
 
@@ -111,6 +108,6 @@ Integration checker result: **tech_debt**
 
 ## Milestone Decision
 
-- **Milestone v1 status:** `gaps_found`
-- **Blockers:** 1 (DOCK-01 runtime verification failure)
-- **Interpretation:** implementation quality is strong across phases 02-04, but v1 definition of done is not fully closed until DOCK-01 runtime criteria pass (WS 101 plus no-orphan stop check).
+- **Milestone v1 status:** `passed`
+- **Blockers:** 0
+- **Interpretation:** v1 definition of done is closed; DOCK-01 runtime verification is now satisfied and no critical requirement blockers remain.
