@@ -1,6 +1,7 @@
 services:
   oisin-ui:
     build: .
+    init: true
     ports:
       # - "3000:3000"
       - "6767:6767"
