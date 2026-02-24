@@ -1,12 +1,15 @@
 PID                 USER                TIME                COMMAND
-2342431             root                0:00                /usr/bin/tini -- bash ./scripts/start.sh
-2342470             root                0:00                bash ./scripts/start.sh
-2342471             root                0:00                bun run dev:server -- --no-relay --no-mcp
-2342472             root                0:00                bun run --filter @oisin/web dev -- --host 0.0.0.0 --port 44285
-2342474             root                0:00                node /workspace/node_modules/.bin/tsx packages/server/scripts/daemon-runner.ts --dev --no-relay --no-mcp
-2342493             root                0:01                node /workspace/node_modules/.bin/vite --host 0.0.0.0 --port 44285
-2342528             root                0:00                /usr/local/bin/node --require /workspace/node_modules/tsx/dist/preflight.cjs --import file:///workspace/node_modules/tsx/dist/loader.mjs packages/server/scripts/daemon-runner.ts --dev --no-relay --no-mcp
-2342553             root                0:00                /workspace/node_modules/@esbuild/linux-arm64/bin/esbuild --service=0.27.3 --ping
-2342587             root                0:04                /workspace/node_modules/@esbuild/linux-arm64/bin/esbuild --service=0.27.3 --ping
-2342592             root                0:02                /usr/local/bin/node --import tsx /workspace/packages/server/src/server/index.ts --no-relay --no-mcp
-2342629             root                0:00                /workspace/node_modules/@esbuild/linux-arm64/bin/esbuild --service=0.27.3 --ping
+2950797             root                0:00                /sbin/docker-init -- /usr/bin/tini -- bash ./scripts/start.sh
+2950851             root                0:00                /usr/bin/tini -- bash ./scripts/start.sh
+2950852             root                0:00                bash ./scripts/start.sh
+2950853             root                0:00                bun run dev:server -- --no-relay --no-mcp
+2950854             root                0:00                bun run --filter @oisin/web dev -- --host 0.0.0.0 --port 44285
+2950855             root                0:00                node /workspace/node_modules/.bin/tsx packages/server/scripts/daemon-runner.ts --dev --no-relay --no-mcp
+2950856             root                0:01                node /workspace/node_modules/.bin/vite --host 0.0.0.0 --port 44285
+2950873             root                0:00                /usr/local/bin/node --require /workspace/node_modules/tsx/dist/preflight.cjs --import file:///workspace/node_modules/tsx/dist/loader.mjs packages/server/scripts/daemon-runner.ts --dev --no-relay --no-mcp
+2950883             root                0:03                /workspace/node_modules/@esbuild/linux-arm64/bin/esbuild --service=0.27.3 --ping
+2950922             root                0:00                /workspace/node_modules/@esbuild/linux-arm64/bin/esbuild --service=0.27.3 --ping
+2950931             root                0:03                /usr/local/bin/node --import tsx /workspace/packages/server/src/server/index.ts --no-relay --no-mcp
+2950947             root                0:00                /workspace/node_modules/@esbuild/linux-arm64/bin/esbuild --service=0.27.3 --ping
+2951113             root                0:00                {tmux: server} tmux new-session -d -s runtime-gate sleep 600
+2951114             root                0:00                sleep 600

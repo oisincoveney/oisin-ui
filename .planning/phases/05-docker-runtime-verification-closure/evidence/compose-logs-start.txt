@@ -1,18 +1,21 @@
-oisin-ui-1  | 2026-02-24T18:02:59.556148364Z Starting daemon and web server...
-oisin-ui-1  | 2026-02-24T18:02:59.624441955Z $ NODE_ENV=development tsx packages/server/scripts/daemon-runner.ts --dev --no-relay --no-mcp
-oisin-ui-1  | 2026-02-24T18:03:00.172111519Z [DaemonRunner] Starting daemon worker (dev mode, crash restarts enabled)
-oisin-ui-1  | 2026-02-24T18:03:00.310454123Z @oisin/web dev: 
-oisin-ui-1  | 2026-02-24T18:03:00.310770250Z @oisin/web dev:   VITE v7.3.1  ready in 601 ms
-oisin-ui-1  | 2026-02-24T18:03:00.310795458Z @oisin/web dev: 
-oisin-ui-1  | 2026-02-24T18:03:00.310800875Z @oisin/web dev:   ➜  Local:   http://localhost:44285/
-oisin-ui-1  | 2026-02-24T18:03:00.310803833Z @oisin/web dev:   ➜  Network: http://192.168.117.2:44285/
-oisin-ui-1  | 2026-02-24T18:03:01.864090603Z [18:03:01.791] [32mINFO[39m: [36mLoaded daemon keypair[39m [90m{"module":"daemon-keypair","filePath":"/config/daemon-keypair.json"}[39m
-oisin-ui-1  | 2026-02-24T18:03:01.864322854Z [18:03:01.818] [32mINFO[39m: [36mAgent registry loaded (0 records); agents will initialize on demand[39m [90m{"module":"bootstrap"}[39m
-oisin-ui-1  | 2026-02-24T18:03:01.864331563Z [18:03:01.818] [32mINFO[39m: [36mVoice mode configured for agent-scoped resume flow (no dedicated voice assistant provider)[39m [90m{"module":"bootstrap"}[39m
-oisin-ui-1  | 2026-02-24T18:03:01.864334604Z [18:03:01.818] [32mINFO[39m: [36mAgent MCP HTTP endpoint disabled[39m [90m{"module":"bootstrap"}[39m
-oisin-ui-1  | 2026-02-24T18:03:01.864336271Z [18:03:01.818] [32mINFO[39m: [36mResolved voice MCP bridge command[39m [90m{"module":"bootstrap","source":"default-js-script","command":"/usr/local/bin/node","baseArgs":["/workspace/packages/server/scripts/mcp-stdio-socket-bridge-cli.mjs"]}[39m
-oisin-ui-1  | 2026-02-24T18:03:01.864338604Z [18:03:01.818] [32mINFO[39m: [36mSpeech provider reconciliation started[39m [90m{"module":"speech-runtime","requestedProviders":{"dictationStt":{"provider":"local","enabled":false,"explicit":false},"voiceStt":{"provider":"local","enabled":false,"explicit":false},"voiceTts":{"provider":"local","enabled":false,"explicit":false}},"availability":{"openai":{"stt":false,"tts":false,"dictationStt":false}}}[39m
-oisin-ui-1  | 2026-02-24T18:03:01.864341521Z [18:03:01.819] [32mINFO[39m: [36mSpeech provider reconciliation completed[39m [90m{"module":"speech-runtime","requestedProviders":{"dictationStt":{"provider":"local","enabled":false,"explicit":false},"voiceStt":{"provider":"local","enabled":false,"explicit":false},"voiceTts":{"provider":"local","enabled":false,"explicit":false}},"effectiveProviders":{"dictationStt":"unavailable","voiceStt":"unavailable","voiceTts":"unavailable"}}[39m
-oisin-ui-1  | 2026-02-24T18:03:01.864343896Z [18:03:01.820] [32mINFO[39m: [36mWebSocket server initialized on /ws[39m [90m{"module":"websocket-server"}[39m
-oisin-ui-1  | 2026-02-24T18:03:01.864345521Z [18:03:01.830] [32mINFO[39m: [36mLoaded thread registry[39m [90m{"module":"thread-registry","filePath":"/config/thread-registry.json"}[39m
-oisin-ui-1  | 2026-02-24T18:03:01.871050546Z [18:03:01.868] [32mINFO[39m: [36mServer listening on http://0.0.0.0:6767[39m [90m{"module":"bootstrap","host":"0.0.0.0","port":6767}[39m
+oisin-ui-1  | 2026-02-24T21:52:10.305883749Z [WARN  tini (7)] Tini is not running as PID 1 and isn't registered as a child subreaper.
+oisin-ui-1  | 2026-02-24T21:52:10.305897499Z Zombie processes will not be re-parented to Tini, so zombie reaping won't work.
+oisin-ui-1  | 2026-02-24T21:52:10.305901791Z To fix the problem, use the -s option or set the environment variable TINI_SUBREAPER to register Tini as a child subreaper, or run Tini as PID 1.
+oisin-ui-1  | 2026-02-24T21:52:10.314961411Z Starting daemon and web server...
+oisin-ui-1  | 2026-02-24T21:52:10.330388848Z $ NODE_ENV=development tsx packages/server/scripts/daemon-runner.ts --dev --no-relay --no-mcp
+oisin-ui-1  | 2026-02-24T21:52:10.615092122Z [DaemonRunner] Starting daemon worker (dev mode, crash restarts enabled)
+oisin-ui-1  | 2026-02-24T21:52:10.625410456Z @oisin/web dev: 
+oisin-ui-1  | 2026-02-24T21:52:10.625421456Z @oisin/web dev:   VITE v7.3.1  ready in 240 ms
+oisin-ui-1  | 2026-02-24T21:52:10.625423081Z @oisin/web dev: 
+oisin-ui-1  | 2026-02-24T21:52:10.625424456Z @oisin/web dev:   ➜  Local:   http://localhost:44285/
+oisin-ui-1  | 2026-02-24T21:52:10.625426539Z @oisin/web dev:   ➜  Network: http://192.168.117.2:44285/
+oisin-ui-1  | 2026-02-24T21:52:12.194666207Z [21:52:12.139] [32mINFO[39m: [36mLoaded daemon keypair[39m [90m{"module":"daemon-keypair","filePath":"/config/daemon-keypair.json"}[39m
+oisin-ui-1  | 2026-02-24T21:52:12.199866478Z [21:52:12.160] [32mINFO[39m: [36mAgent registry loaded (0 records); agents will initialize on demand[39m [90m{"module":"bootstrap"}[39m
+oisin-ui-1  | 2026-02-24T21:52:12.199889562Z [21:52:12.160] [32mINFO[39m: [36mVoice mode configured for agent-scoped resume flow (no dedicated voice assistant provider)[39m [90m{"module":"bootstrap"}[39m
+oisin-ui-1  | 2026-02-24T21:52:12.199892645Z [21:52:12.160] [32mINFO[39m: [36mAgent MCP HTTP endpoint disabled[39m [90m{"module":"bootstrap"}[39m
+oisin-ui-1  | 2026-02-24T21:52:12.199894145Z [21:52:12.160] [32mINFO[39m: [36mResolved voice MCP bridge command[39m [90m{"module":"bootstrap","source":"default-js-script","command":"/usr/local/bin/node","baseArgs":["/workspace/packages/server/scripts/mcp-stdio-socket-bridge-cli.mjs"]}[39m
+oisin-ui-1  | 2026-02-24T21:52:12.199896145Z [21:52:12.160] [32mINFO[39m: [36mSpeech provider reconciliation started[39m [90m{"module":"speech-runtime","requestedProviders":{"dictationStt":{"provider":"local","enabled":false,"explicit":false},"voiceStt":{"provider":"local","enabled":false,"explicit":false},"voiceTts":{"provider":"local","enabled":false,"explicit":false}},"availability":{"openai":{"stt":false,"tts":false,"dictationStt":false}}}[39m
+oisin-ui-1  | 2026-02-24T21:52:12.199898520Z [21:52:12.161] [32mINFO[39m: [36mSpeech provider reconciliation completed[39m [90m{"module":"speech-runtime","requestedProviders":{"dictationStt":{"provider":"local","enabled":false,"explicit":false},"voiceStt":{"provider":"local","enabled":false,"explicit":false},"voiceTts":{"provider":"local","enabled":false,"explicit":false}},"effectiveProviders":{"dictationStt":"unavailable","voiceStt":"unavailable","voiceTts":"unavailable"}}[39m
+oisin-ui-1  | 2026-02-24T21:52:12.199900770Z [21:52:12.162] [32mINFO[39m: [36mWebSocket server initialized on /ws[39m [90m{"module":"websocket-server"}[39m
+oisin-ui-1  | 2026-02-24T21:52:12.199919187Z [21:52:12.172] [32mINFO[39m: [36mLoaded thread registry[39m [90m{"module":"thread-registry","filePath":"/config/thread-registry.json"}[39m
+oisin-ui-1  | 2026-02-24T21:52:12.199933478Z [21:52:12.194] [32mINFO[39m: [36mServer listening on http://0.0.0.0:6767[39m [90m{"module":"bootstrap","host":"0.0.0.0","port":6767}[39m

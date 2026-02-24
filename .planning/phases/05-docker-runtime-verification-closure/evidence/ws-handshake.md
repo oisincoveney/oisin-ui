@@ -1,10 +1,11 @@
 # WebSocket Handshake Evidence
 
-- Timestamp (UTC): 2026-02-24T18:03:02.277Z
-- Target URL: ws://localhost:6767/ws?clientSessionKey=web-client
-- Expected status: 101 Switching Protocols
+- timestamp_utc: 2026-02-24T21:52:13.178Z
+- source: browser
+- page_url: http://localhost:44285
+- request_url: ws://localhost:6767/ws?clientSessionKey=runtime-gate-browser
+- expected_status: 101 Switching Protocols
+- status_code: 101
 - HTTP 101 seen: yes
-- Socket close code: 1000
-- Socket close reason: runtime-gate-complete
-- Error: none
-- Completed at (UTC): 2026-02-24T18:03:02.314Z
+- error: none
+- completed_at_utc: 2026-02-24T21:52:15.468Z
