@@ -1,0 +1,138 @@
+#1 [internal] load local bake definitions
+#1 reading from stdin 513B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile:
+#2 transferring dockerfile: 548B done
+#2 DONE 0.5s
+
+#3 [internal] load metadata for docker.io/library/node:22-bookworm
+#3 DONE 0.5s
+
+#4 [1/6] FROM docker.io/library/node:22-bookworm@sha256:379c51ac7bbf9bffe16769cfda3eb027d59d9c66ac314383da3fcf71b46d026c
+#4 DONE 0.0s
+
+#5 [2/6] WORKDIR /workspace
+#5 CACHED
+
+#6 [3/6] RUN apt-get update && apt-get install -y     build-essential     curl     git     tini     tmux &&   npm install -g bun &&   rm -rf /var/lib/apt/lists/*
+#6 CACHED
+
+#7 [internal] load .dockerignore
+#7 transferring context: 102B done
+#7 DONE 0.1s
+
+#8 [internal] load build context
+#8 transferring context: 9.91MB 0.3s done
+#8 DONE 0.4s
+
+#9 [4/6] COPY . .
+#9 DONE 1.8s
+
+#10 [5/6] RUN bun install
+#10 0.477 bun install v1.3.9 (cf6cdbbb)
+#10 28.08 Saved lockfile
+#10 28.08 
+#10 28.08 $ node scripts/postinstall-patches.mjs
+#10 28.10 
+#10 28.10 + concurrently@9.2.1
+#10 28.10 + get-port-cli@3.0.0
+#10 28.10 + knip@5.85.0
+#10 28.10 + lefthook@1.13.6
+#10 28.10 + oxlint@1.49.0
+#10 28.10 + patch-package@8.0.1
+#10 28.10 + typescript@5.9.3
+#10 28.10 + @anthropic-ai/claude-agent-sdk@0.2.50
+#10 28.10 + ws@8.19.0
+#10 28.10 
+#10 28.10 628 packages installed [27.66s]
+#10 DONE 29.3s
+
+#11 [6/6] RUN chmod +x scripts/start.sh
+#11 DONE 0.6s
+
+#12 exporting to image
+#12 exporting layers
+#12 exporting layers 6.2s done
+#12 writing image sha256:e2c52fe70ed385c66dd44d6a00999ae7be14b72d98ce4919e3496d553a765164 done
+#12 naming to docker.io/library/oisin-ui-oisin-ui done
+#12 DONE 6.3s
+
+#13 resolving provenance for metadata file
+#13 DONE 0.0s
+ oisin-ui-oisin-ui  Built
+ Network oisin-ui_default  Creating
+ Network oisin-ui_default  Created
+ Container oisin-ui-oisin-ui-1  Creating
+ Container oisin-ui-oisin-ui-1  Created
+Attaching to oisin-ui-1
+oisin-ui-1  | Starting daemon and web server...
+oisin-ui-1  | $ NODE_ENV=development tsx packages/server/scripts/daemon-runner.ts --dev
+oisin-ui-1  | @oisin/web dev: 
+oisin-ui-1  | @oisin/web dev:   VITE v7.3.1  ready in 206 ms
+oisin-ui-1  | @oisin/web dev: 
+oisin-ui-1  | @oisin/web dev:   ➜  Local:   http://localhost:44285/
+oisin-ui-1  | @oisin/web dev:   ➜  Network: http://192.168.117.2:44285/
+oisin-ui-1  | [DaemonRunner] Starting daemon worker (dev mode, crash restarts enabled)
+oisin-ui-1  | [02:13:21.253] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:22.113] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:22.861] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:23.526] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:24.172] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:24.885] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:25.601] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:26.453] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:27.254] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:28.086] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:28.844] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:29.496] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:30.175] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:30.961] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:31.581] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:32.248] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:32.883] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:33.459] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:34.046] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:34.611] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:35.179] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:35.777] [31mERROR[39m: [36mAnother Paseo daemon is already running (PID 28, started 2026-02-23T23:09:49.577Z)[39m
+oisin-ui-1  | [DaemonRunner] Worker exited (code 1). Restarting worker...
+oisin-ui-1  | [02:13:36.420] [32mINFO[39m: [36mLoaded daemon keypair[39m [90m{"module":"daemon-keypair","filePath":"/config/daemon-keypair.json"}[39m
+oisin-ui-1  | [02:13:36.430] [32mINFO[39m: [36mAgent registry loaded (0 records); agents will initialize on demand[39m [90m{"module":"bootstrap"}[39m
+oisin-ui-1  | [02:13:36.430] [32mINFO[39m: [36mVoice mode configured for agent-scoped resume flow (no dedicated voice assistant provider)[39m [90m{"module":"bootstrap"}[39m
+oisin-ui-1  | [02:13:36.430] [32mINFO[39m: [36mAgent MCP server mounted on main app[39m [90m{"module":"bootstrap","route":"/mcp/agents"}[39m
+oisin-ui-1  | [02:13:36.430] [32mINFO[39m: [36mResolved voice MCP bridge command[39m [90m{"module":"bootstrap","source":"default-js-script","command":"/usr/local/bin/node","baseArgs":["/workspace/packages/server/scripts/mcp-stdio-socket-bridge-cli.mjs"]}[39m
+oisin-ui-1  | [02:13:36.431] [32mINFO[39m: [36mSpeech provider reconciliation started[39m [90m{"module":"speech-runtime","requestedProviders":{"dictationStt":{"provider":"local","enabled":true,"explicit":false},"voiceStt":{"provider":"local","enabled":true,"explicit":false},"voiceTts":{"provider":"local","enabled":true,"explicit":false}},"availability":{"openai":{"stt":false,"tts":false,"dictationStt":false}}}[39m
+oisin-ui-1  | [02:13:36.432] [32mINFO[39m: [36mEnsuring local speech models[39m [90m{"module":"speech-runtime","modelsDir":"/config/models/local-speech","modelIds":["parakeet-tdt-0.6b-v2-int8","kokoro-en-v0_19"]}[39m
+oisin-ui-1  | onnxruntime cpuid_info warning: Unknown CPU vendor. cpuinfo_vendor value: 0
+oisin-ui-1  | [02:13:40.045] [32mINFO[39m: [36mSherpa offline recognizer initialized[39m [90m{"module":"speech","provider":"local","component":"offline-recognizer","sampleRate":16000,"numThreads":2}[39m
+oisin-ui-1  | [02:13:41.877] [32mINFO[39m: [36mSherpa offline TTS initialized[39m [90m{"module":"speech","provider":"local","component":"tts","preset":"kokoro-en-v0_19","modelDir":"/config/models/local-speech/kokoro-en-v0_19"}[39m
+oisin-ui-1  | [02:13:41.882] [32mINFO[39m: [36mSpeech provider reconciliation completed[39m [90m{"module":"speech-runtime","requestedProviders":{"dictationStt":{"provider":"local","enabled":true,"explicit":false},"voiceStt":{"provider":"local","enabled":true,"explicit":false},"voiceTts":{"provider":"local","enabled":true,"explicit":false}},"effectiveProviders":{"dictationStt":"local","voiceStt":"local","voiceTts":"local"}}[39m
+oisin-ui-1  | [02:13:41.885] [32mINFO[39m: [36mWebSocket server initialized on /ws[39m [90m{"module":"websocket-server"}[39m
+oisin-ui-1  | [02:13:41.887] [32mINFO[39m: [36mLoaded thread registry[39m [90m{"module":"thread-registry","filePath":"/config/thread-registry.json"}[39m
+oisin-ui-1  | [02:13:41.955] [32mINFO[39m: [36mServer listening on http://0.0.0.0:6767[39m [90m{"module":"bootstrap","host":"0.0.0.0","port":6767}[39m
+oisin-ui-1  | [02:13:41.956] [32mINFO[39m: [36mpairing_offer[39m [90m{"module":"bootstrap","url":"https://app.paseo.sh/#offer=eyJ2IjoyLCJzZXJ2ZXJJZCI6InNydl9uRmUwcDNQQWx4SjUiLCJkYWVtb25QdWJsaWNLZXlCNjQiOiJxM0pmai9scHFUOFlpNktkcGl2KzNGNWxWZmFkQm5IejhWMDdhRXBmeG1VPSIsInJlbGF5Ijp7ImVuZHBvaW50IjoicmVsYXkucGFzZW8uc2g6NDQzIn19"}[39m
+oisin-ui-1  | [02:13:42.366] [34mDEBUG[39m: [36mrelay_control_open_waiting_for_ready[39m [90m{"module":"relay-transport","url":"wss://relay.paseo.sh/ws?serverId=srv_nFe0p3PAlxJ5&role=server&v=2","connectionId":1}[39m
+oisin-ui-1  | [02:13:42.428] [32mINFO[39m: [36mrelay_control_connected[39m [90m{"module":"relay-transport","url":"wss://relay.paseo.sh/ws?serverId=srv_nFe0p3PAlxJ5&role=server&v=2","connectionId":1}[39m
