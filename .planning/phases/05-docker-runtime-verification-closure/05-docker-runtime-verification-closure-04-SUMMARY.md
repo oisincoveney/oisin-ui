@@ -2,20 +2,20 @@
 phase: 05-docker-runtime-verification-closure
 plan: 04
 subsystem: infra
-tags: [docker, websocket, verification, audit]
+tags: [docker, verification, websocket, tmux, milestone-audit]
 
 requires:
   - phase: 05-03
-    provides: passing runtime artifacts for websocket 101 and clean stop/no-orphan checks
+    provides: fresh runtime evidence artifacts with tmux-live, browser-origin WS 101, and clean stop proofs
 provides:
-  - pass-state propagation of DOCK-01 into canonical phase verification docs
-  - milestone v1 audit closure at 11/11 requirements with zero critical blockers
-affects: [v1-milestone, release-readiness, roadmap-closure]
+  - phase-01 and phase-05 verification reports corrected to pass-state with evidence provenance aligned to fresh 05-03 artifacts
+  - milestone v1 audit revalidated at requirements 11/11 with DOCK-01 satisfied from corrected provenance chain
+affects: [DOCK-01, verification-chain, milestone-v1]
 
 tech-stack:
   added: []
   patterns:
-    - evidence-driven pass-state propagation from runtime artifacts to verification and milestone rollups
+    - evidence provenance for DOCK-01 closure must include tmux-runtime plus browser-origin websocket fields
 
 key-files:
   created:
@@ -26,11 +26,11 @@ key-files:
     - .planning/v1-v1-MILESTONE-AUDIT.md
 
 key-decisions:
-  - "Use only fresh 05-03 runtime artifacts as the source of truth when promoting verification and audit docs to passed."
-  - "Keep existing non-critical integration tech debt entries intact while clearing only the DOCK-01 critical blocker."
+  - "Use only fresh 05-03 artifacts as truth sources when propagating DOCK-01 pass-state across verification and milestone docs."
+  - "Require browser-origin websocket provenance fields (`source`, `page_url`, `request_url`, `HTTP 101 seen`) and explicit tmux-live markers in every closure narrative."
 
 patterns-established:
-  - "Verification and milestone documents only move to pass-state when runtime artifacts explicitly prove WS 101 and no-orphan stop outcomes."
+  - "Verification and milestone pass-state propagation is valid only when phase-01, phase-05, and milestone docs cite identical tmux-live and browser-origin evidence chain."
 
 duration: 2 min
 completed: 2026-02-24
@@ -38,38 +38,39 @@ completed: 2026-02-24
 
 # Phase 5 Plan 4: Docker Runtime Verification Closure Summary
 
-**DOCK-01 closure is fully propagated: phase-01 verification and phase-05 closure reports are passed, and milestone v1 now reports 11/11 requirements with no critical blocker.**
+**DOCK-01 closure docs now consistently prove tmux-live runtime, browser-origin websocket HTTP 101 provenance, and clean stop/no-orphan state from fresh 05-03 artifacts, with milestone v1 locked at 11/11.**
 
 ## Performance
 
 - **Duration:** 2 min
-- **Started:** 2026-02-24T18:24:03Z
-- **Completed:** 2026-02-24T18:26:43Z
+- **Started:** 2026-02-24T22:08:19Z
+- **Completed:** 2026-02-24T22:10:28Z
 - **Tasks:** 2 completed
 - **Files modified:** 3
 
 ## Accomplishments
-- Promoted `.planning/phases/01-foundation-and-docker/01-foundation-and-docker-VERIFICATION.md` and `.planning/phases/05-docker-runtime-verification-closure/05-docker-runtime-verification-closure-VERIFICATION.md` to pass-state using fresh 05-03 runtime artifacts.
-- Replaced stale failed runtime truths with explicit pass evidence (`HTTP 101 seen: yes`, `compose-ps-stop.json` as `[]`, and `no-orphan-processes-detected`).
-- Updated `.planning/v1-v1-MILESTONE-AUDIT.md` to `status: passed`, `requirements: 11/11`, DOCK-01 `satisfied`, and no critical gaps.
+- Corrected canonical phase-01 verification to reference both `process-tree.txt` and `tmux-runtime.txt` for tmux-live proof and browser-origin fields for WS 101 provenance.
+- Rewrote phase-05 verification from `gaps_found` to `passed` with 6/6 truths and an explicit evidence/link chain aligned to fresh artifacts.
+- Revalidated milestone v1 audit at `requirements: 11/11` with DOCK-01 `satisfied` and no critical blocker language drift.
 
 ## Task Commits
 
 Each task was committed atomically:
 
-1. **Task 1: Promote phase verification docs to passed with fresh runtime evidence** - `7bc08d5` (docs)
-2. **Task 2: Update milestone audit from 10/11 to 11/11** - `1f3c712` (docs)
+1. **Task 1: Correct verification docs with tmux-live + browser-origin WS evidence** - `26ed461` (docs)
+2. **Task 2: Revalidate milestone audit at 11/11 with corrected evidence provenance** - `193325e` (docs)
 
 **Plan metadata:** pending docs commit for SUMMARY/STATE updates
 
 ## Files Created/Modified
-- `.planning/phases/01-foundation-and-docker/01-foundation-and-docker-VERIFICATION.md` - marked DOCK-01 satisfied and swapped runtime rows to pass evidence with artifact links.
-- `.planning/phases/05-docker-runtime-verification-closure/05-docker-runtime-verification-closure-VERIFICATION.md` - converted closure report from gaps to fully passed 6/6 truths.
-- `.planning/v1-v1-MILESTONE-AUDIT.md` - promoted milestone to passed with requirements score 11/11 and no critical DOCK-01 blocker.
+- `.planning/phases/01-foundation-and-docker/01-foundation-and-docker-VERIFICATION.md` - aligned DOCK-01 runtime proof wording to tmux-runtime and browser-origin handshake evidence.
+- `.planning/phases/05-docker-runtime-verification-closure/05-docker-runtime-verification-closure-VERIFICATION.md` - promoted report to passed and removed stale contradiction/gap language.
+- `.planning/v1-v1-MILESTONE-AUDIT.md` - refreshed closure rationale and DOCK-01 row provenance while preserving non-critical debt notes.
+- `.planning/phases/05-docker-runtime-verification-closure/05-docker-runtime-verification-closure-04-SUMMARY.md` - execution summary for plan 05-04.
 
 ## Decisions Made
-- Use phase-05 runtime artifacts from 05-03 as the sole truth source for status propagation to avoid stale/contradictory closure language.
-- Preserve existing non-critical tech debt notes so the audit change reflects true blocker closure, not debt erasure.
+- Enforce fresh 05-03 artifacts as the only acceptable DOCK-01 closure provenance source.
+- Keep tmux-live and browser-origin WS 101 provenance explicit in all downstream verification/audit narratives.
 
 ## Deviations from Plan
 
@@ -88,8 +89,8 @@ None.
 None - no external service configuration required.
 
 ## Next Phase Readiness
-- Phase 05 closure documents are now aligned on passed DOCK-01 outcomes with explicit runtime evidence references.
-- Milestone v1 audit is unblocked and ready for final phase/roadmap closeout.
+- Verification chain is internally consistent across phase-01, phase-05, and milestone docs.
+- DOCK-01 blocker language is removed with evidence-backed provenance and milestone rollup remains 11/11.
 
 ---
 *Phase: 05-docker-runtime-verification-closure*
