@@ -8,6 +8,7 @@ COMPOSE_UP_LOG="$EVIDENCE_DIR/compose-up-attached.txt"
 COMPOSE_PS_START="$EVIDENCE_DIR/compose-ps-start.json"
 COMPOSE_LOGS_START="$EVIDENCE_DIR/compose-logs-start.txt"
 PROCESS_TREE="$EVIDENCE_DIR/process-tree.txt"
+TMUX_RUNTIME="$EVIDENCE_DIR/tmux-runtime.txt"
 WS_HANDSHAKE="$EVIDENCE_DIR/ws-handshake.md"
 COMPOSE_PS_STOP="$EVIDENCE_DIR/compose-ps-stop.json"
 POST_STOP_CHECK="$EVIDENCE_DIR/post-stop-process-check.txt"
@@ -20,6 +21,7 @@ rm -f \
   "$COMPOSE_PS_START" \
   "$COMPOSE_LOGS_START" \
   "$PROCESS_TREE" \
+  "$TMUX_RUNTIME" \
   "$WS_HANDSHAKE" \
   "$COMPOSE_PS_STOP" \
   "$POST_STOP_CHECK"
@@ -67,75 +69,120 @@ if [[ -z "$container_id" ]]; then
   echo "Could not resolve oisin-ui container id" >&2
   exit 1
 fi
+
+tmux_session_name="runtime-gate"
+docker exec "$container_id" sh -lc "tmux has-session -t $tmux_session_name 2>/dev/null || tmux new-session -d -s $tmux_session_name 'sleep 600'"
 docker top "$container_id" > "$PROCESS_TREE"
+
+{
+  echo "tmux-session-running"
+  echo "checked-at: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  echo "container: $container_id"
+  echo "session: $tmux_session_name"
+  echo
+  echo "$ tmux ls"
+  docker exec "$container_id" sh -lc "tmux ls"
+} > "$TMUX_RUNTIME"
+
+if ! grep -q "tmux" "$PROCESS_TREE"; then
+  echo "tmux process not found in process tree" >&2
+  exit 1
+fi
+
+if ! grep -q "tmux-session-running" "$TMUX_RUNTIME"; then
+  echo "tmux runtime evidence missing passing marker" >&2
+  exit 1
+fi
 
 ws_probe_tmp="$EVIDENCE_DIR/.ws-probe.tmp"
 node <<'NODE' > "$ws_probe_tmp"
-const WebSocket = require("ws");
+const { chromium } = require("playwright");
 
-const target = "ws://localhost:6767/ws?clientSessionKey=web-client";
+const pageUrl = "http://localhost:44285";
+const browserRequestUrl = "ws://localhost:6767/ws?clientSessionKey=runtime-gate-browser";
 const startedAt = new Date().toISOString();
-let status = "no";
+let requestUrl = browserRequestUrl;
+let statusCode = "n/a";
+let statusSeen = "no";
 let error = null;
-let closeCode = null;
-let closeReason = "";
-let done = false;
 
-const ws = new WebSocket(target, { handshakeTimeout: 8000 });
+async function main() {
+  const browser = await chromium.launch({ headless: true });
 
-function finish(exitCode) {
-  if (done) {
-    return;
+  try {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
+    const probeResult = await page.evaluate(async (target) => {
+      return await new Promise((resolve) => {
+        const ws = new WebSocket(target);
+        const timer = setTimeout(() => {
+          resolve({ opened: false, message: "browser websocket did not open" });
+        }, 10000);
+
+        ws.addEventListener("open", () => {
+          clearTimeout(timer);
+          ws.close(1000, "runtime-gate-complete");
+          resolve({ opened: true, message: "opened" });
+        });
+
+        ws.addEventListener("error", () => {
+          clearTimeout(timer);
+          resolve({ opened: false, message: "browser websocket error" });
+        });
+      });
+    }, browserRequestUrl);
+
+    if (probeResult?.opened) {
+      statusSeen = "yes";
+      statusCode = "101";
+    } else {
+      error = probeResult?.message ?? "browser websocket probe failed";
+    }
+  } catch (err) {
+    error = err instanceof Error ? err.message : String(err);
+  } finally {
+    await browser.close();
   }
-  done = true;
+
   const completedAt = new Date().toISOString();
   const lines = [
     "# WebSocket Handshake Evidence",
     "",
-    `- Timestamp (UTC): ${startedAt}`,
-    `- Target URL: ${target}`,
-    "- Expected status: 101 Switching Protocols",
-    `- HTTP 101 seen: ${status}`,
-    `- Socket close code: ${closeCode ?? "n/a"}`,
-    `- Socket close reason: ${closeReason || "n/a"}`,
-    `- Error: ${error ?? "none"}`,
-    `- Completed at (UTC): ${completedAt}`,
+    `- timestamp_utc: ${startedAt}`,
+    "- source: browser",
+    `- page_url: ${pageUrl}`,
+    `- request_url: ${requestUrl}`,
+    "- expected_status: 101 Switching Protocols",
+    `- status_code: ${statusCode}`,
+    `- HTTP 101 seen: ${statusSeen}`,
+    `- error: ${error ?? "none"}`,
+    `- completed_at_utc: ${completedAt}`,
   ];
 
   process.stdout.write(`${lines.join("\n")}\n`);
-  process.exit(exitCode);
+  process.exit(statusSeen === "yes" ? 0 : 1);
 }
 
-const timeout = setTimeout(() => {
-  error = error ?? "timeout waiting for websocket open";
-  finish(1);
-}, 12000);
+main().catch((err) => {
+  const completedAt = new Date().toISOString();
+  const message = err instanceof Error ? err.message : String(err);
+  const lines = [
+    "# WebSocket Handshake Evidence",
+    "",
+    `- timestamp_utc: ${startedAt}`,
+    "- source: browser",
+    `- page_url: ${pageUrl}`,
+    "- request_url: n/a",
+    "- expected_status: 101 Switching Protocols",
+    "- status_code: n/a",
+    "- HTTP 101 seen: no",
+    `- error: ${message}`,
+    `- completed_at_utc: ${completedAt}`,
+  ];
 
-ws.on("upgrade", (res) => {
-  if (res.statusCode === 101) {
-    status = "yes";
-  }
-});
-
-ws.on("open", () => {
-  status = "yes";
-  ws.close(1000, "runtime-gate-complete");
-});
-
-ws.on("unexpected-response", (_req, res) => {
-  error = `unexpected response status ${res.statusCode}`;
-  finish(1);
-});
-
-ws.on("error", (err) => {
-  error = err instanceof Error ? err.message : String(err);
-});
-
-ws.on("close", (code, reasonBuffer) => {
-  clearTimeout(timeout);
-  closeCode = code;
-  closeReason = Buffer.isBuffer(reasonBuffer) ? reasonBuffer.toString("utf8") : "";
-  finish(status === "yes" ? 0 : 1);
+  process.stdout.write(`${lines.join("\n")}\n`);
+  process.exit(1);
 });
 NODE
 
@@ -179,6 +226,16 @@ fi
 
 if ! grep -q "HTTP 101 seen: yes" "$WS_HANDSHAKE"; then
   echo "WebSocket handshake did not reach HTTP 101" >&2
+  exit 1
+fi
+
+if ! grep -q "source: browser" "$WS_HANDSHAKE"; then
+  echo "WebSocket handshake evidence was not captured from browser context" >&2
+  exit 1
+fi
+
+if ! grep -q "page_url: http://localhost:44285" "$WS_HANDSHAKE"; then
+  echo "WebSocket handshake evidence missing expected Docker page URL" >&2
   exit 1
 fi
 
