@@ -3,31 +3,31 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** DOCK-01 remains blocked after truthful 05-02 documentation closure attempt using failed 05-01 runtime evidence.
+**Current Focus:** Propagate new passing runtime evidence into verification and milestone docs (05-04) to close DOCK-01.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 05 of 5 (Docker Runtime Verification Closure)
-**Plan:** 02 of 02
-**Status:** Phase complete (outcome blocked: DOCK-01 still unmet).
-**Last activity:** 2026-02-24 - Completed 05-02 docs closure with blocked DOCK-01 outcome.
+**Plan:** 03 of 04
+**Status:** In progress.
+**Last activity:** 2026-02-24 - Completed 05-03-PLAN.md runtime stabilization and evidence regeneration.
 
 ```
-Progress: [████████████████████] 100%
+Progress: [███████████████████░] 96%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
 Phase 3:  █████ Complete (5/5)
 Phase 4:  ██████████ Complete (6/6)
-Phase 5:  ██████████ Complete (0/2 passed, 2/2 executed)
+Phase 5:  ████████░░ In progress (3/4)
 ```
 
 ## Performance Metrics
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 26    |
-| Plans passed           | 23    |
+| Plans executed         | 27    |
+| Plans passed           | 24    |
 | Plans failed           | 3     |
 | Total requirements     | 11    |
 | Requirements complete  | 10    |
@@ -79,6 +79,8 @@ Phase 5:  ██████████ Complete (0/2 passed, 2/2 executed)
 | Keep active-thread guard in diff-panel browser regression while asserting rename/highlight behavior when thread exists | Avoids false negatives in empty daemon state without silently dropping active-thread coverage | 04-06 |
 | Block 05-02 verification-doc closure unless 05-01 records WS HTTP 101 and clean post-stop orphan result | Prevents falsifying DOCK-01 pass state when runtime checkpoint evidence fails | 05-01 |
 | Keep phase verification and milestone audit in blocked state when runtime evidence fails closure criteria | Preserves audit integrity and prevents false 11/11 reporting | 05-02 |
+| Run Docker gate runtime with `--no-relay --no-mcp` and speech features disabled by default | Removes daemon startup churn/refusal windows before websocket handshake checks | 05-03 |
+| Use a single runtime-gate script to regenerate startup/handshake/stop evidence and fail on missing 101 or orphan checks | Keeps phase-05 closure evidence deterministic and reproducible at canonical artifact paths | 05-03 |
 
 ### Blockers
 
@@ -87,17 +89,15 @@ Phase 5:  ██████████ Complete (0/2 passed, 2/2 executed)
 | Repo-wide `npm run typecheck` can OOM in this environment | Full monorepo typecheck is not reliable for verification in this shell | Ongoing environment issue; workspace-level typechecks and e2e coverage used for plan execution |
 | Bun-driven vite/vitest startup intermittently fails with `esbuild` EPIPE in this shell | Blocks full browser e2e execution via Bun scripts despite code-level completion | Ongoing through 03-05; typechecks pass, daemon/web e2e entrypoints remain environment-blocked |
 | Diff-panel browser regression requires active thread fixture to execute assertions | Targeted e2e can skip in empty daemon bootstrap state, reducing local verification strictness | Ongoing; seed an active thread fixture before running targeted diff-panel Playwright checks |
-| 05-01 checkpoint evidence shows WS connection refusal (`ERR_CONNECTION_REFUSED`, close `1006`) and no `101 Switching Protocols` | DOCK-01 cannot be marked passed; 05-02 docs/audit closure must remain blocked | Open - diagnose daemon reachability from Docker-served web client and rerun checkpoint |
-| Post-stop host process check returned `orphans-found` | Controlled-stop criterion failed; runtime teardown cleanup needs remediation before closure | Open - rerun stop flow after runtime fix and require `no-orphan-processes-detected` |
-| 05-02 closure docs now finalized as blocked state (not pass) | Milestone reporting is accurate, but v1 remains incomplete until runtime criteria pass | Open - implement runtime fixes then rerun phase-05 closure flow |
+| Verification and milestone docs still reflect pre-fix blocked DOCK-01 state | Runtime evidence now passes, but canonical docs are not yet propagated to pass state | Open - execute 05-04 to update phase verification, phase-1 verification, and milestone audit |
 
 ## Session Continuity
 
-**Last session:** 2026-02-24 03:08 UTC
-**Stopped at:** Completed 05-02-PLAN.md with truthful blocked closure outcome
+**Last session:** 2026-02-24 18:03 UTC
+**Stopped at:** Completed 05-03-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-24T03:08:37Z_
+_Last updated: 2026-02-24T18:03:40Z_
