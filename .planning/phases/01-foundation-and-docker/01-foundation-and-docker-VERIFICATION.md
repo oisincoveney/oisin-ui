@@ -1,26 +1,30 @@
 ---
 phase: 01-foundation-and-docker
-verified: 2026-02-21T23:13:11Z
-status: human_needed
-score: 5/5 must-haves verified
-human_verification:
-  - test: 'Run single-container stack'
-    expected: '`docker compose up --build` starts both daemon and web UI in one container'
-    why_human: 'Requires real container runtime/process observation'
-  - test: 'Check connected indicator'
-    expected: 'Opening http://localhost:5173 shows connected status after initial connecting state'
-    why_human: 'UI/runtime behavior cannot be fully confirmed by static code inspection'
-  - test: 'Check reconnect overlay flow'
-    expected: 'Stopping daemon/container shows reconnect overlay; restarting recovers connection'
-    why_human: 'Needs live network/process disruption and visual confirmation'
+verified: 2026-02-24T03:12:00Z
+status: gaps_found
+score: 5/5 must-haves verified (runtime gate failed)
+re_verification:
+  previous_status: human_needed
+  previous_verified: 2026-02-21T23:13:11Z
+  runtime_capture_phase: 05-docker-runtime-verification-closure
+  runtime_app_url: http://localhost:44285/
+  runtime_daemon_endpoint: localhost:6767
+  outcomes:
+    single_container_tmux_process: passed
+    websocket_101_upgrade: failed
+    controlled_stop_no_orphans: failed
+  evidence:
+    - .planning/phases/05-docker-runtime-verification-closure/evidence/process-tree.txt
+    - .planning/phases/05-docker-runtime-verification-closure/evidence/ws-handshake.md
+    - .planning/phases/05-docker-runtime-verification-closure/evidence/post-stop-process-check.txt
 ---
 
 # Phase 1: Foundation & Docker Verification Report
 
 **Phase Goal:** A running daemon serves a web client inside Docker, and they can talk to each other.
-**Verified:** 2026-02-21T23:13:11Z
-**Status:** human_needed
-**Re-verification:** No — initial verification
+**Verified:** 2026-02-24T03:12:00Z
+**Status:** gaps_found
+**Re-verification:** Yes - runtime evidence review from phase 05
 
 ## Goal Achievement
 
@@ -64,7 +68,15 @@ human_verification:
 
 | Requirement                                                                     | Status        | Blocking Issue                                                                                                                         |
 | ------------------------------------------------------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| DOCK-01: Application runs in a single Docker container (daemon + web UI + tmux) | ? NEEDS HUMAN | Structure is present, but actual runtime confirmation (`docker compose up`, browser access, shutdown behavior) needs manual execution. |
+| DOCK-01: Application runs in a single Docker container (daemon + web UI + tmux) | ✗ NOT SATISFIED | Runtime verification failed: no WS `101 Switching Protocols` (`ws-handshake.md`) and controlled stop reported `orphans-found` (`post-stop-process-check.txt`). |
+
+### Runtime Evidence (Phase 05)
+
+| Runtime check | Expected | Result | Evidence |
+| --- | --- | --- | --- |
+| Single-container process tree includes daemon, web, and tmux | One `oisin-ui` runtime with `tini` -> `start.sh` -> daemon + Vite + tmux | ✓ PASSED | `.planning/phases/05-docker-runtime-verification-closure/evidence/process-tree.txt` |
+| Browser-to-daemon websocket upgrade reaches HTTP 101 | `ws://localhost:6767/ws?clientSessionKey=web-client` upgrades to `101 Switching Protocols` from app served at `http://localhost:44285/` | ✗ FAILED | `.planning/phases/05-docker-runtime-verification-closure/evidence/ws-handshake.md` (`ERR_CONNECTION_REFUSED`, close `1006`, `HTTP 101 seen: no`) |
+| Controlled stop leaves no orphan processes | Post-stop host check returns `no-orphan-processes-detected` | ✗ FAILED | `.planning/phases/05-docker-runtime-verification-closure/evidence/post-stop-process-check.txt` (`orphans-found`) |
 
 ### Anti-Patterns Found
 
@@ -72,31 +84,17 @@ human_verification:
 | --------------------------------------------------- | ---- | -------------------------------- | -------- | ------------------------------------------------------------- |
 | `packages/web/src/components/ConnectionOverlay.tsx` | 10   | `return null` in connected state | ℹ️ Info  | Intentional conditional render; not a stub/placeholder issue. |
 
-### Human Verification Required
+### Runtime Verification Follow-up Required
 
-### 1. Single Container Boot
-
-**Test:** Run `docker compose up --build` from repo root.
-**Expected:** One `oisin-ui` container starts and both daemon (`3000`) and web UI (`5173`) are reachable.
-**Why human:** Requires real Docker execution and process observation.
-
-### 2. Connection Handshake UI
-
-**Test:** Open `http://localhost:5173` after container startup.
-**Expected:** Initial connecting state transitions to connected indicator.
-**Why human:** Visual and runtime handshake behavior cannot be proven from static code alone.
-
-### 3. Disconnect/Reconnect Behavior
-
-**Test:** Stop daemon/container, then restart it.
-**Expected:** Reconnect overlay appears while disconnected and clears after reconnection.
-**Why human:** Requires live process interruption and recovery checks.
+1. Restore daemon reachability from Docker-served web runtime so websocket handshake succeeds with HTTP 101 at `ws://localhost:6767/ws?clientSessionKey=web-client`.
+2. Re-run controlled stop and require `.planning/phases/05-docker-runtime-verification-closure/evidence/post-stop-process-check.txt` to contain `no-orphan-processes-detected`.
+3. Re-run phase 05 closure plan only after both runtime conditions pass.
 
 ### Gaps Summary
 
-No structural gaps were found in required code artifacts or wiring for Phase 1. Remaining uncertainty is runtime-only (container execution and UX behavior), so human verification is required to confirm goal completion end-to-end.
+Structural phase-1 artifacts remain complete, but DOCK-01 stays open due to failed runtime evidence in phase 05. The gate is now a concrete runtime failure, not an unexecuted manual check.
 
 ---
 
-_Verified: 2026-02-21T23:13:11Z_
+_Verified: 2026-02-24T03:12:00Z_
 _Verifier: OpenCode (gsd-verifier)_
