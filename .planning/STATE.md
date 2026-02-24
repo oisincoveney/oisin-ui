@@ -3,15 +3,15 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Milestone v1 closure complete; keep runtime verification evidence chain stable for future maintenance.
+**Current Focus:** Milestone v1 closure complete; runtime closure evidence refreshed with browser-origin websocket and tmux-live proofs.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 05 of 5 (Docker Runtime Verification Closure)
-**Plan:** 04 of 04
+**Plan:** 03 of 04 (re-executed)
 **Status:** Phase complete.
-**Last activity:** 2026-02-24 - Completed 05-04-PLAN.md verification and milestone pass-state propagation.
+**Last activity:** 2026-02-24 - Re-executed 05-03-PLAN.md runtime evidence regeneration.
 
 ```
 Progress: [████████████████████] 100%
@@ -81,6 +81,7 @@ Phase 5:  ██████████ Complete (4/4)
 | Keep phase verification and milestone audit in blocked state when runtime evidence fails closure criteria | Preserves audit integrity and prevents false 11/11 reporting | 05-02 |
 | Run Docker gate runtime with `--no-relay --no-mcp` and speech features disabled by default | Removes daemon startup churn/refusal windows before websocket handshake checks | 05-03 |
 | Use a single runtime-gate script to regenerate startup/handshake/stop evidence and fail on missing 101 or orphan checks | Keeps phase-05 closure evidence deterministic and reproducible at canonical artifact paths | 05-03 |
+| Enable compose `init` in runtime verification service | Improves signal forwarding and deterministic stop behavior during runtime gate runs | 05-03 |
 | Promote verification and milestone docs to pass-state only from fresh runtime artifacts | Prevents stale blocker language and keeps DOCK-01 closure evidence-backed | 05-04 |
 | Preserve non-critical tech debt entries while clearing critical DOCK-01 blocker | Keeps milestone audit truthful by separating blocker closure from debt cleanup | 05-04 |
 
@@ -94,11 +95,11 @@ Phase 5:  ██████████ Complete (4/4)
 
 ## Session Continuity
 
-**Last session:** 2026-02-24 18:26 UTC
-**Stopped at:** Completed 05-04-PLAN.md
+**Last session:** 2026-02-24 21:53 UTC
+**Stopped at:** Completed 05-03-PLAN.md (re-execution)
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-24T18:26:43Z_
+_Last updated: 2026-02-24T21:53:23Z_
