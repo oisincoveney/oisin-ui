@@ -1,21 +1,10 @@
-## WebSocket handshake verification
+# WebSocket Handshake Evidence
 
-- Timestamp (UTC): 2026-02-24T00:00:00Z
-- App URL: `http://localhost:44285/`
-- Expected WS URL: `ws://localhost:6767/ws?clientSessionKey=web-client`
-- Observed result: handshake failed
-- HTTP 101 seen: no
-
-### Evidence
-
-- Browser snapshot showed reconnect overlay with:
-  - `endpoint: localhost:6767`
-  - `ws: ws://localhost:6767/ws?clientSessionKey=web-client`
-  - `reason: WebSocket closed unexpectedly (1006)`
-- Browser console/network events showed:
-  - `WebSocket connection ... failed`
-  - `ERR_CONNECTION_REFUSED`
-
-### Conclusion
-
-The required `101 Switching Protocols` upgrade was not observed. This checkpoint fails and should not be approved.
+- Timestamp (UTC): 2026-02-24T18:03:02.277Z
+- Target URL: ws://localhost:6767/ws?clientSessionKey=web-client
+- Expected status: 101 Switching Protocols
+- HTTP 101 seen: yes
+- Socket close code: 1000
+- Socket close reason: runtime-gate-complete
+- Error: none
+- Completed at (UTC): 2026-02-24T18:03:02.314Z
