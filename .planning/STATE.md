@@ -3,35 +3,35 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Propagate new passing runtime evidence into verification and milestone docs (05-04) to close DOCK-01.
+**Current Focus:** Milestone v1 closure complete; keep runtime verification evidence chain stable for future maintenance.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 05 of 5 (Docker Runtime Verification Closure)
-**Plan:** 03 of 04
-**Status:** In progress.
-**Last activity:** 2026-02-24 - Completed 05-03-PLAN.md runtime stabilization and evidence regeneration.
+**Plan:** 04 of 04
+**Status:** Phase complete.
+**Last activity:** 2026-02-24 - Completed 05-04-PLAN.md verification and milestone pass-state propagation.
 
 ```
-Progress: [███████████████████░] 96%
+Progress: [████████████████████] 100%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
 Phase 3:  █████ Complete (5/5)
 Phase 4:  ██████████ Complete (6/6)
-Phase 5:  ████████░░ In progress (3/4)
+Phase 5:  ██████████ Complete (4/4)
 ```
 
 ## Performance Metrics
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 27    |
-| Plans passed           | 24    |
+| Plans executed         | 28    |
+| Plans passed           | 25    |
 | Plans failed           | 3     |
 | Total requirements     | 11    |
-| Requirements complete  | 10    |
-| Requirements remaining | 1     |
+| Requirements complete  | 11    |
+| Requirements remaining | 0     |
 
 ## Accumulated Context
 
@@ -81,6 +81,8 @@ Phase 5:  ████████░░ In progress (3/4)
 | Keep phase verification and milestone audit in blocked state when runtime evidence fails closure criteria | Preserves audit integrity and prevents false 11/11 reporting | 05-02 |
 | Run Docker gate runtime with `--no-relay --no-mcp` and speech features disabled by default | Removes daemon startup churn/refusal windows before websocket handshake checks | 05-03 |
 | Use a single runtime-gate script to regenerate startup/handshake/stop evidence and fail on missing 101 or orphan checks | Keeps phase-05 closure evidence deterministic and reproducible at canonical artifact paths | 05-03 |
+| Promote verification and milestone docs to pass-state only from fresh runtime artifacts | Prevents stale blocker language and keeps DOCK-01 closure evidence-backed | 05-04 |
+| Preserve non-critical tech debt entries while clearing critical DOCK-01 blocker | Keeps milestone audit truthful by separating blocker closure from debt cleanup | 05-04 |
 
 ### Blockers
 
@@ -89,15 +91,14 @@ Phase 5:  ████████░░ In progress (3/4)
 | Repo-wide `npm run typecheck` can OOM in this environment | Full monorepo typecheck is not reliable for verification in this shell | Ongoing environment issue; workspace-level typechecks and e2e coverage used for plan execution |
 | Bun-driven vite/vitest startup intermittently fails with `esbuild` EPIPE in this shell | Blocks full browser e2e execution via Bun scripts despite code-level completion | Ongoing through 03-05; typechecks pass, daemon/web e2e entrypoints remain environment-blocked |
 | Diff-panel browser regression requires active thread fixture to execute assertions | Targeted e2e can skip in empty daemon bootstrap state, reducing local verification strictness | Ongoing; seed an active thread fixture before running targeted diff-panel Playwright checks |
-| Verification and milestone docs still reflect pre-fix blocked DOCK-01 state | Runtime evidence now passes, but canonical docs are not yet propagated to pass state | Open - execute 05-04 to update phase verification, phase-1 verification, and milestone audit |
 
 ## Session Continuity
 
-**Last session:** 2026-02-24 18:03 UTC
-**Stopped at:** Completed 05-03-PLAN.md
+**Last session:** 2026-02-24 18:26 UTC
+**Stopped at:** Completed 05-04-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-24T18:03:40Z_
+_Last updated: 2026-02-24T18:26:43Z_
