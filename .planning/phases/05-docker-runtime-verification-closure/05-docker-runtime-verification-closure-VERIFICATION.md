@@ -1,27 +1,24 @@
 ---
 phase: 05-docker-runtime-verification-closure
-verified: 2026-02-24T18:24:03Z
+verified: 2026-02-24T22:08:19Z
 status: passed
 score: 6/6 must-haves verified
 re_verification:
-  previous_status: blocked
-  previous_score: 1/3 runtime checks passed
+  previous_status: gaps_found
+  previous_score: 4/6 must-haves verified
   gaps_closed:
-    - "Browser app served from Docker URL upgrades WS to HTTP 101"
-    - "Controlled shutdown leaves no running containers or orphan processes"
-    - "DOCK-01 recorded as passed in verification/audit docs"
-    - "Milestone v1 audit no longer lists DOCK-01 gap"
+    - "Single-container runtime proof now includes explicit tmux process and tmux session evidence"
+    - "WS 101 evidence now records browser-origin source, page URL, and request URL provenance"
   gaps_remaining: []
   regressions: []
-gaps: []
 ---
 
 # Phase 5: Docker Runtime Verification Closure Verification Report
 
 **Phase Goal:** Close the DOCK-01 runtime verification gate so milestone v1 can be marked complete.
-**Verified:** 2026-02-24T18:24:03Z
+**Verified:** 2026-02-24T22:08:19Z
 **Status:** passed
-**Re-verification:** Yes - previous verification existed (updated with runtime-pass closure evidence)
+**Re-verification:** Yes - after prior gaps report
 
 ## Goal Achievement
 
@@ -29,12 +26,12 @@ gaps: []
 
 | # | Truth | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | Docker compose starts one `oisin-ui` container that runs daemon, web UI, and tmux in one runtime | ✓ VERIFIED | `compose-ps-start.json` shows one running `oisin-ui` service; `process-tree.txt` shows `tini` -> `scripts/start.sh` plus daemon, Vite, and tmux. |
-| 2 | Browser app served from Docker-mapped URL upgrades WebSocket connection to daemon with HTTP 101 | ✓ VERIFIED | `ws-handshake.md` records target `ws://localhost:6767/ws?clientSessionKey=web-client`, expected `101 Switching Protocols`, and `HTTP 101 seen: yes`. |
-| 3 | Controlled shutdown leaves no running project containers or orphaned child processes | ✓ VERIFIED | `compose-ps-stop.json` is `[]` (zero running project containers) and `post-stop-process-check.txt` contains `no-orphan-processes-detected`. |
-| 4 | DOCK-01 verification status is recorded as passed with runtime evidence references | ✓ VERIFIED | `.planning/phases/01-foundation-and-docker/01-foundation-and-docker-VERIFICATION.md` now reports `status: passed` and DOCK-01 `✓ SATISFIED` with runtime evidence links. |
-| 5 | Milestone v1 audit no longer lists DOCK-01 as a partial/human-needed gap | ✓ VERIFIED | `.planning/v1-v1-MILESTONE-AUDIT.md` now reports `status: passed`, `requirements: 11/11`, and DOCK-01 `satisfied`. |
-| 6 | Verification docs explicitly include WS 101 proof plus controlled-stop no-orphan proof links | ✓ VERIFIED | Verification chain references `ws-handshake.md`, `compose-ps-stop.json`, and `post-stop-process-check.txt` with pass-state outcomes. |
+| 1 | Docker compose starts one `oisin-ui` container that runs daemon, web UI, and tmux in one runtime | ✓ VERIFIED | `compose-ps-start.json` shows one running service; `process-tree.txt` contains `{tmux: server}`; `tmux-runtime.txt` contains `tmux-session-running`. |
+| 2 | Browser app served from Docker-mapped URL upgrades WebSocket connection to daemon with HTTP 101 | ✓ VERIFIED | `ws-handshake.md` records `source: browser`, `page_url: http://localhost:44285`, `request_url: ws://localhost:6767/ws?clientSessionKey=runtime-gate-browser`, `status_code: 101`, and `HTTP 101 seen: yes`. |
+| 3 | Controlled shutdown leaves no running project containers or orphaned child processes | ✓ VERIFIED | `compose-ps-stop.json` is `[]`; `post-stop-process-check.txt` contains `no-orphan-processes-detected`. |
+| 4 | DOCK-01 is marked passed in canonical phase verification after runtime pass evidence exists | ✓ VERIFIED | `.planning/phases/01-foundation-and-docker/01-foundation-and-docker-VERIFICATION.md` is `status: passed` with tmux-live + browser-origin WS provenance references. |
+| 5 | Phase-05 verification report status is passed and references tmux runtime + browser WS 101 + clean stop artifacts | ✓ VERIFIED | This report links to `process-tree.txt`, `tmux-runtime.txt`, `ws-handshake.md`, `compose-ps-stop.json`, and `post-stop-process-check.txt`. |
+| 6 | Milestone v1 audit shows 11/11 requirements with no DOCK-01 blocker | ✓ VERIFIED | `.planning/v1-v1-MILESTONE-AUDIT.md` reports `status: passed`, `requirements: 11/11`, and no critical DOCK-01 blockers. |
 
 **Score:** 6/6 truths verified
 
@@ -42,44 +39,45 @@ gaps: []
 
 | Artifact | Expected | Status | Details |
 | --- | --- | --- | --- |
-| `docker-compose.yml` | Single-service runtime and mapped web/daemon ports | ✓ VERIFIED | Defines one `oisin-ui` service and mapped ports `6767` and `44285`. |
-| `scripts/start.sh` | Coordinated daemon/web startup and signal-safe teardown | ✓ VERIFIED | Substantive supervisor logic with trap/PID tracking and coordinated cleanup. |
-| `.planning/phases/05-docker-runtime-verification-closure/evidence/compose-ps-start.json` | Startup state proof | ✓ VERIFIED | Shows one running `oisin-ui` service. |
-| `.planning/phases/05-docker-runtime-verification-closure/evidence/process-tree.txt` | In-container process proof incl. tmux | ✓ VERIFIED | Shows `tini`, `start.sh`, daemon/web processes, and `{tmux: server}`. |
-| `.planning/phases/05-docker-runtime-verification-closure/evidence/ws-handshake.md` | WS handshake 101 proof | ✓ VERIFIED | Contains `HTTP 101 seen: yes` with successful close and no error. |
-| `.planning/phases/05-docker-runtime-verification-closure/evidence/compose-ps-stop.json` | Post-stop no-running-container proof | ✓ VERIFIED | Contains `[]` proving controlled stop left no running project container. |
-| `.planning/phases/05-docker-runtime-verification-closure/evidence/post-stop-process-check.txt` | Explicit no-orphan host proof | ✓ VERIFIED | Contains `no-orphan-processes-detected`. |
-| `.planning/phases/01-foundation-and-docker/01-foundation-and-docker-VERIFICATION.md` | Canonical DOCK-01 passed status | ✓ VERIFIED | Updated to pass-state with runtime artifact references. |
-| `.planning/phases/05-docker-runtime-verification-closure/05-docker-runtime-verification-closure-VERIFICATION.md` | Phase-05 closure with pass state | ✓ VERIFIED | This report now captures full runtime closure in pass-state. |
-| `.planning/v1-v1-MILESTONE-AUDIT.md` | Milestone rollup at 11/11 with no DOCK-01 blocker | ✓ VERIFIED | Updated to `status: passed` and no DOCK-01 critical blocker. |
+| `docker-compose.yml` | Single-service runtime and mapped web/daemon ports | ✓ VERIFIED | One `oisin-ui` service; ports `6767` and `44285` mapped. |
+| `scripts/start.sh` | Coordinated daemon/web startup and signal-safe teardown | ✓ VERIFIED | Substantive trap/PID/wait supervisor logic; launches daemon + web. |
+| `.planning/phases/05-docker-runtime-verification-closure/scripts/runtime-gate.sh` | Deterministic runtime gate evidence runner | ✓ VERIFIED | Captures startup, tmux, browser handshake, and stop/no-orphan artifacts in one run. |
+| `.planning/phases/05-docker-runtime-verification-closure/evidence/compose-ps-start.json` | Startup container state proof | ✓ VERIFIED | Shows one running `oisin-ui` service. |
+| `.planning/phases/05-docker-runtime-verification-closure/evidence/process-tree.txt` | In-container process proof incl. tmux | ✓ VERIFIED | Captures daemon/web chain and `{tmux: server}` process entry. |
+| `.planning/phases/05-docker-runtime-verification-closure/evidence/tmux-runtime.txt` | Explicit tmux session proof | ✓ VERIFIED | Captures `tmux-session-running` marker and `tmux ls` output. |
+| `.planning/phases/05-docker-runtime-verification-closure/evidence/ws-handshake.md` | Browser WS 101 handshake proof | ✓ VERIFIED | Includes browser-origin source/page URL/request URL fields and explicit 101 success marker. |
+| `.planning/phases/05-docker-runtime-verification-closure/evidence/compose-ps-stop.json` | Post-stop no-running-container proof | ✓ VERIFIED | Contains `[]`. |
+| `.planning/phases/05-docker-runtime-verification-closure/evidence/post-stop-process-check.txt` | Explicit no-orphan proof | ✓ VERIFIED | Contains `no-orphan-processes-detected`. |
+| `.planning/phases/01-foundation-and-docker/01-foundation-and-docker-VERIFICATION.md` | Canonical DOCK-01 pass-state rollup | ✓ VERIFIED | Canonical row is satisfied and references tmux-live/browser-origin evidence provenance. |
+| `.planning/v1-v1-MILESTONE-AUDIT.md` | Milestone rollup at 11/11 with no DOCK-01 blocker | ✓ VERIFIED | Reports 11/11 and no critical gaps. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 | --- | --- | --- | --- | --- |
-| `docker-compose.yml` | `scripts/start.sh` | Build image that defines `ENTRYPOINT`/`CMD` | ✓ WIRED | `docker-compose.yml` builds local `Dockerfile`; `Dockerfile` runs `tini` + `scripts/start.sh`. |
-| `packages/web/src/lib/ws.ts` | `evidence/ws-handshake.md` | Browser-host-derived WS target and runtime result | ✓ WIRED | Code resolves `localhost:6767`; evidence records successful HTTP 101 upgrade. |
-| `evidence/compose-up-attached.txt` | `evidence/compose-ps-stop.json` | Attached run then controlled stop snapshot | ✓ WIRED | Stop snapshot is empty (`[]`) after controlled stop. |
-| `evidence/process-tree.txt` | `evidence/post-stop-process-check.txt` | Running tmux proof then no-orphan stop proof | ✓ WIRED | Start proof includes tmux; stop proof confirms `no-orphan-processes-detected`. |
-| `evidence/process-tree.txt` | `01-foundation-and-docker-VERIFICATION.md` | Verification cites tmux runtime evidence | ✓ WIRED | Phase-1 verification references process-tree runtime artifact in pass-state. |
-| `evidence/post-stop-process-check.txt` | `05-docker-runtime-verification-closure-VERIFICATION.md` | Closure report links no-orphan result | ✓ WIRED | Linked artifact reports explicit no-orphan success value. |
-| `01-foundation-and-docker-VERIFICATION.md` | `v1-v1-MILESTONE-AUDIT.md` | DOCK-01 pass propagation into milestone rollup | ✓ WIRED | DOCK-01 is satisfied in both docs and rolled up as 11/11 requirements. |
+| `docker-compose.yml` | `scripts/start.sh` | Image command chain | ✓ WIRED | `Dockerfile` uses `tini` + `scripts/start.sh`; compose builds that image. |
+| `scripts/runtime-gate.sh` | `evidence/process-tree.txt` + `evidence/tmux-runtime.txt` | Runtime tmux verification capture | ✓ WIRED | Gate records both tmux process presence and tmux session output. |
+| `scripts/runtime-gate.sh` | `evidence/ws-handshake.md` | Browser-context WS handshake capture | ✓ WIRED | Gate writes browser-origin metadata and 101 result fields. |
+| `scripts/runtime-gate.sh` | `evidence/post-stop-process-check.txt` | Compose teardown + orphan check | ✓ WIRED | Writes explicit no-orphan result; guard rails fail on leftovers. |
+| `evidence/ws-handshake.md` | `05-docker-runtime-verification-closure-VERIFICATION.md` | Verification truth cites browser-origin WS proof | ✓ WIRED | Link exists and resolves with required provenance fields. |
+| `evidence/process-tree.txt` + `evidence/tmux-runtime.txt` | `01-foundation-and-docker-VERIFICATION.md` | Canonical DOCK-01 row cites tmux-live proof | ✓ WIRED | Canonical report references tmux process and tmux session artifacts together. |
+| `01-foundation-and-docker-VERIFICATION.md` | `v1-v1-MILESTONE-AUDIT.md` | DOCK-01 pass propagation | ✓ WIRED | Milestone rollup reflects requirement satisfied state. |
 
 ### Requirements Coverage
 
 | Requirement | Status | Blocking Issue |
 | --- | --- | --- |
-| DOCK-01: Application runs in a single Docker container (daemon + web UI + tmux) | ✓ SATISFIED | None. Runtime gate passed with WS `101` handshake proof and clean stop/no-orphan proof. |
+| DOCK-01: Application runs in a single Docker container (daemon + web UI + tmux) | ✓ SATISFIED | None. Runtime truths are evidence-backed with tmux-live, browser-origin WS 101, and clean stop/no-orphan artifacts. |
 
 ### Anti-Patterns Found
 
-None - runtime closure artifacts are deterministic and pass-state.
+None.
 
 ### Gaps Summary
 
-None. Phase 05 closure goal is achieved, DOCK-01 is closed, and milestone v1 is unblocked.
+None. Phase 05 closure criteria are fully met with fresh 05-03 runtime artifacts and consistent pass-state propagation.
 
 ---
 
-_Verified: 2026-02-24T18:24:03Z_
+_Verified: 2026-02-24T22:08:19Z_
 _Verifier: OpenCode (gsd-verifier)_

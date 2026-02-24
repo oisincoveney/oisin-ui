@@ -1,6 +1,6 @@
 ---
 phase: 01-foundation-and-docker
-verified: 2026-02-24T18:24:03Z
+verified: 2026-02-24T22:08:19Z
 status: passed
 score: 5/5 must-haves verified (runtime gate passed)
 re_verification:
@@ -15,6 +15,7 @@ re_verification:
     controlled_stop_no_orphans: passed
   evidence:
     - .planning/phases/05-docker-runtime-verification-closure/evidence/process-tree.txt
+    - .planning/phases/05-docker-runtime-verification-closure/evidence/tmux-runtime.txt
     - .planning/phases/05-docker-runtime-verification-closure/evidence/ws-handshake.md
     - .planning/phases/05-docker-runtime-verification-closure/evidence/compose-ps-stop.json
     - .planning/phases/05-docker-runtime-verification-closure/evidence/post-stop-process-check.txt
@@ -23,7 +24,7 @@ re_verification:
 # Phase 1: Foundation & Docker Verification Report
 
 **Phase Goal:** A running daemon serves a web client inside Docker, and they can talk to each other.
-**Verified:** 2026-02-24T18:24:03Z
+**Verified:** 2026-02-24T22:08:19Z
 **Status:** passed
 **Re-verification:** Yes - runtime evidence review from phase 05
 
@@ -69,14 +70,14 @@ re_verification:
 
 | Requirement                                                                     | Status       | Blocking Issue |
 | ------------------------------------------------------------------------------- | ------------ | -------------- |
-| DOCK-01: Application runs in a single Docker container (daemon + web UI + tmux) | ✓ SATISFIED | None. Runtime verification passed with explicit WS 101 and clean stop/no-orphan proofs from phase 05 artifacts. |
+| DOCK-01: Application runs in a single Docker container (daemon + web UI + tmux) | ✓ SATISFIED | None. Runtime verification passed with tmux-live (`tmux-session-running`, tmux process present), browser-origin WS 101 proof, and clean stop/no-orphan artifacts from phase 05. |
 
 ### Runtime Evidence (Phase 05)
 
 | Runtime check | Expected | Result | Evidence |
 | --- | --- | --- | --- |
-| Single-container process tree includes daemon, web, and tmux | One `oisin-ui` runtime with `tini` -> `start.sh` -> daemon + Vite + tmux | ✓ PASSED | `.planning/phases/05-docker-runtime-verification-closure/evidence/process-tree.txt` |
-| Browser-to-daemon websocket upgrade reaches HTTP 101 | `ws://localhost:6767/ws?clientSessionKey=web-client` upgrades to `101 Switching Protocols` from app served at `http://localhost:44285/` | ✓ PASSED | `.planning/phases/05-docker-runtime-verification-closure/evidence/ws-handshake.md` (`HTTP 101 seen: yes`, close `1000`, no error) |
+| Single-container process tree includes daemon, web, and tmux | One `oisin-ui` runtime with `tini` -> `start.sh` -> daemon + Vite + tmux | ✓ PASSED | `.planning/phases/05-docker-runtime-verification-closure/evidence/process-tree.txt` (`{tmux: server}` present) and `.planning/phases/05-docker-runtime-verification-closure/evidence/tmux-runtime.txt` (`tmux-session-running`) |
+| Browser-to-daemon websocket upgrade reaches HTTP 101 | `ws://localhost:6767/ws?clientSessionKey=runtime-gate-browser` upgrades to `101 Switching Protocols` from app served at `http://localhost:44285` | ✓ PASSED | `.planning/phases/05-docker-runtime-verification-closure/evidence/ws-handshake.md` (`source: browser`, `page_url: http://localhost:44285`, `request_url: ws://localhost:6767/ws?clientSessionKey=runtime-gate-browser`, `HTTP 101 seen: yes`) |
 | Controlled stop leaves no orphan processes | Post-stop compose snapshot is empty and host check returns `no-orphan-processes-detected` | ✓ PASSED | `.planning/phases/05-docker-runtime-verification-closure/evidence/compose-ps-stop.json` (`[]`) and `.planning/phases/05-docker-runtime-verification-closure/evidence/post-stop-process-check.txt` |
 
 ### Anti-Patterns Found
@@ -87,7 +88,7 @@ re_verification:
 
 ### Runtime Verification Closure
 
-Phase-05 runtime gate artifacts satisfy all DOCK-01 runtime truths: single-container process chain, WS upgrade success (`HTTP 101 seen: yes`), and clean stop (`compose-ps-stop.json` empty + `no-orphan-processes-detected`).
+Phase-05 runtime gate artifacts satisfy all DOCK-01 runtime truths: single-container process chain with explicit tmux-live proof (`{tmux: server}` + `tmux-session-running`), browser-origin WS upgrade success (`source: browser`, `page_url: http://localhost:44285`, `HTTP 101 seen: yes`), and clean stop (`compose-ps-stop.json` empty + `no-orphan-processes-detected`).
 
 ### Gaps Summary
 
@@ -95,5 +96,5 @@ None. DOCK-01 is fully satisfied and closed.
 
 ---
 
-_Verified: 2026-02-24T18:24:03Z_
+_Verified: 2026-02-24T22:08:19Z_
 _Verifier: OpenCode (gsd-verifier)_
