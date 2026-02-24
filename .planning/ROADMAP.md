@@ -179,10 +179,11 @@ Oisin UI delivers a self-hosted web terminal for managing AI coding agents acros
 
 **Dependencies:** Phase 1 implementation complete, plus phases 2-4 regression baselines passing
 
-**Plans:** 1 plan
+**Plans:** 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Runtime evidence capture, WS handshake checkpoint, and audit closure
+- [ ] 05-01-PLAN.md — Runtime evidence capture, tmux/no-orphan proof, and WS checkpoint
+- [ ] 05-02-PLAN.md — Verification docs and milestone audit closure
 
 **Requirements:**
 
