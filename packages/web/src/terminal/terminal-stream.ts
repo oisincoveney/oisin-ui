@@ -132,6 +132,9 @@ export class TerminalStreamAdapter {
   }
 
   public setStreamId(streamId: number | null) {
+    if (streamId !== this.streamId && this.transportConnected) {
+      this.clearPendingInput();
+    }
     this.streamId = streamId;
   }
 
@@ -150,6 +153,7 @@ export class TerminalStreamAdapter {
       this.setOffset(options.offset);
     }
     this.setInputEnabled(true);
+    this.flushPendingInput();
   }
 
   public getOffset() {
@@ -231,5 +235,22 @@ export class TerminalStreamAdapter {
       return;
     }
     this.pendingInputBytes = Math.max(0, this.pendingInputBytes - dropped.byteLength);
+  }
+
+  private flushPendingInput() {
+    if (!this.canSendNow()) {
+      return;
+    }
+
+    this.dropExpiredInput();
+
+    while (this.pendingInput.length > 0 && this.canSendNow()) {
+      const next = this.pendingInput.shift();
+      if (!next) {
+        continue;
+      }
+      this.pendingInputBytes = Math.max(0, this.pendingInputBytes - next.byteLength);
+      this.sendInputFrame(next.text);
+    }
   }
 }
