@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-02-25)
 ## Current Position
 
 **Phase:** 06 of 08 (Runtime Reliability Hardening)
-**Plan:** 3 of 6 in current phase
+**Plan:** 4 of 6 in current phase
 **Status:** In progress
-**Last activity:** 2026-02-25 — Completed 06-03-PLAN.md
+**Last activity:** 2026-02-25 — Completed 06-04-PLAN.md
 
 ```
-Progress: [█████████░] 92.5% (37/40 plans have SUMMARY files)
+Progress: [█████████░] 95.0% (38/40 plans have SUMMARY files)
 ```
 
 ## Accumulated Context
@@ -42,13 +42,16 @@ Progress: [█████████░] 92.5% (37/40 plans have SUMMARY files
 - RUN-02 attach recovery now uses explicit `idle/retrying/failed` FSM with hard 60s deadline.
 - Reconnect success signaling is token-deduped so `Reconnected` toast emits once per recovery cycle.
 - Attach recovery retry state is visible in connected mode (attempt + remaining window + last error).
+- RUN-04 active delete success is an explicit neutral state; do not auto-fallback to another thread.
+- Delete-driven no-active state is preserved across thread-list/ensure-default updates until explicit user selection.
+- Active-thread-null transitions invalidate attach cycle guards and cancel stale pending attach/ensure retries.
 
 ## Session Continuity
 
-**Last session:** 2026-02-25T23:26:16Z
-**Stopped at:** Completed 06-03-PLAN.md
+**Last session:** 2026-02-25T23:31:39Z
+**Stopped at:** Completed 06-04-PLAN.md
 **Resume file:** None
 
 ---
 
-_State updated: 2026-02-25 after 06-03 execution_
+_State updated: 2026-02-25 after 06-04 execution_
