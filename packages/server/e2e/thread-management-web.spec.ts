@@ -89,7 +89,9 @@ async function createGitRepo(): Promise<string> {
   execSync("git config user.name 'Thread Web Test'", { cwd: repoPath, stdio: "pipe" });
   await writeFile(path.join(repoPath, "README.md"), "# thread web test\n", "utf8");
   const depPath = path.join(repoPath, "dep");
+  const fakeBinPath = path.join(repoPath, ".paseo-test-bin");
   await mkdir(depPath, { recursive: true });
+  await mkdir(fakeBinPath, { recursive: true });
   await writeFile(
     path.join(depPath, "package.json"),
     `${JSON.stringify({ name: "dep", version: "1.0.0" }, null, 2)}\n`,
@@ -110,14 +112,46 @@ async function createGitRepo(): Promise<string> {
     "utf8",
   );
   await writeFile(path.join(repoPath, ".gitignore"), "node_modules/\n", "utf8");
+  await writeFile(
+    path.join(fakeBinPath, "bun"),
+    [
+      "#!/usr/bin/env bash",
+      "set -eu",
+      "marker=node_modules/.paseo-frozen-lock-mismatch-once",
+      "if [[ \"${1:-}\" == \"install\" && \"${2:-}\" == \"--frozen-lockfile\" && ! -f \"$marker\" ]]; then",
+      "  printf 'error: lockfile had changes, but lockfile is frozen\\n' >&2",
+      "  printf 'mismatch-first-pass\\n' > bun.lock",
+      "  mkdir -p node_modules",
+      "  touch \"$marker\"",
+      "  exit 1",
+      "fi",
+      "if [[ \"${1:-}\" == \"install\" ]]; then",
+      "  printf 'mismatch-retry-pass\\n' > bun.lock",
+      "  mkdir -p node_modules",
+      "  exit 0",
+      "fi",
+      "printf 'unexpected bun args: %s\\n' \"$*\" >&2",
+      "exit 2",
+      "",
+    ].join("\n"),
+    { encoding: "utf8", mode: 0o755 },
+  );
   execSync("bun install --save-text-lockfile", { cwd: repoPath, stdio: "pipe" });
   await writeFile(
     path.join(repoPath, "paseo.json"),
-    `${JSON.stringify({ worktree: { setup: ["bun install --frozen-lockfile"] } }, null, 2)}\n`,
+    `${JSON.stringify(
+      {
+        worktree: {
+          setup: ["PATH=\"$PASEO_WORKTREE_PATH/.paseo-test-bin:$PATH\" bun install --frozen-lockfile"],
+        },
+      },
+      null,
+      2,
+    )}\n`,
     "utf8",
   );
   const lockfileName = existsSync(path.join(repoPath, "bun.lock")) ? "bun.lock" : "bun.lockb";
-  execSync(`git add README.md .gitignore dep/package.json package.json ${lockfileName} paseo.json`, {
+  execSync(`git add README.md .gitignore .paseo-test-bin/bun dep/package.json package.json ${lockfileName} paseo.json`, {
     cwd: repoPath,
     stdio: "pipe",
   });

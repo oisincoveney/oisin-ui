@@ -488,6 +488,7 @@ export async function runWorktreeSetupCommands(options: {
 
   const results: WorktreeSetupCommandResult[] = [];
   for (const [index, cmd] of setupCommands.entries()) {
+    const trackedBeforeCommand = await listTrackedChangedPaths(options.worktreePath);
     const executeCommand = async (command: string): Promise<WorktreeSetupCommandResult> => {
       return options.onEvent
         ? execSetupCommandStreamed({
@@ -511,13 +512,12 @@ export async function runWorktreeSetupCommands(options: {
       if (isBunFrozenLockfileCommand(cmd) && hasBunFrozenLockfileMismatch(result)) {
         const retryCommand = buildBunFrozenLockfileRetryCommand(cmd);
         if (retryCommand.length > 0 && retryCommand !== cmd) {
-          const trackedBeforeRetry = await listTrackedChangedPaths(options.worktreePath);
           const retryResult = await executeCommand(retryCommand);
           results.push(retryResult);
 
           if (retryResult.exitCode === 0) {
             const trackedAfterRetry = await listTrackedChangedPaths(options.worktreePath);
-            const trackedDelta = [...trackedAfterRetry].filter((path) => !trackedBeforeRetry.has(path));
+            const trackedDelta = [...trackedAfterRetry].filter((path) => !trackedBeforeCommand.has(path));
             if (trackedDelta.length > 0) {
               try {
                 await restoreTrackedPaths(options.worktreePath, trackedDelta);

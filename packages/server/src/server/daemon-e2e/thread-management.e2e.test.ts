@@ -13,7 +13,7 @@ import {
 const decoder = new TextDecoder();
 const shouldRun = !process.env.CI;
 
-function createRepoRoot(prefix: string, options?: { withBunWorktreeSetup?: boolean }): string {
+function createRepoRoot(prefix: string, options?: { withBunFrozenMismatchSetup?: boolean }): string {
   const repoRoot = mkdtempSync(path.join(tmpdir(), prefix));
   execSync("git init -b main", { cwd: repoRoot, stdio: "pipe" });
   execSync("git config user.email 'thread-e2e@test.local'", { cwd: repoRoot, stdio: "pipe" });
@@ -27,9 +27,11 @@ function createRepoRoot(prefix: string, options?: { withBunWorktreeSetup?: boole
   execSync("git commit -m 'release branch seed'", { cwd: repoRoot, stdio: "pipe" });
   execSync("git checkout main", { cwd: repoRoot, stdio: "pipe" });
 
-  if (options?.withBunWorktreeSetup) {
+  if (options?.withBunFrozenMismatchSetup) {
     const depDir = path.join(repoRoot, "dep");
+    const fakeBinDir = path.join(repoRoot, ".paseo-test-bin");
     mkdirSync(depDir, { recursive: true });
+    mkdirSync(fakeBinDir, { recursive: true });
     writeFileSync(path.join(depDir, "package.json"), `${JSON.stringify({ name: "dep", version: "1.0.0" }, null, 2)}\n`);
     writeFileSync(
       path.join(repoRoot, "package.json"),
@@ -45,13 +47,47 @@ function createRepoRoot(prefix: string, options?: { withBunWorktreeSetup?: boole
       )}\n`
     );
     writeFileSync(path.join(repoRoot, ".gitignore"), "node_modules/\n");
+    writeFileSync(
+      path.join(fakeBinDir, "bun"),
+      [
+        "#!/usr/bin/env bash",
+        "set -eu",
+        "marker=node_modules/.paseo-frozen-lock-mismatch-once",
+        "if [[ \"${1:-}\" == \"install\" && \"${2:-}\" == \"--frozen-lockfile\" && ! -f \"$marker\" ]]; then",
+        "  printf 'error: lockfile had changes, but lockfile is frozen\\n' >&2",
+        "  printf 'mismatch-first-pass\\n' > bun.lock",
+        "  mkdir -p node_modules",
+        "  touch \"$marker\"",
+        "  exit 1",
+        "fi",
+        "if [[ \"${1:-}\" == \"install\" ]]; then",
+        "  printf 'mismatch-retry-pass\\n' > bun.lock",
+        "  mkdir -p node_modules",
+        "  exit 0",
+        "fi",
+        "printf 'unexpected bun args: %s\\n' \"$*\" >&2",
+        "exit 2",
+        "",
+      ].join("\n"),
+      { mode: 0o755 }
+    );
     execSync("bun install --save-text-lockfile", { cwd: repoRoot, stdio: "pipe" });
     writeFileSync(
       path.join(repoRoot, "paseo.json"),
-      `${JSON.stringify({ worktree: { setup: ["bun install --frozen-lockfile"] } }, null, 2)}\n`
+      `${JSON.stringify(
+        {
+          worktree: {
+            setup: [
+              "PATH=\"$PASEO_WORKTREE_PATH/.paseo-test-bin:$PATH\" bun install --frozen-lockfile",
+            ],
+          },
+        },
+        null,
+        2
+      )}\n`
     );
     const lockfileName = existsSync(path.join(repoRoot, "bun.lock")) ? "bun.lock" : "bun.lockb";
-    execSync(`git add .gitignore dep/package.json package.json ${lockfileName} paseo.json`, {
+    execSync(`git add .gitignore .paseo-test-bin/bun dep/package.json package.json ${lockfileName} paseo.json`, {
       cwd: repoRoot,
       stdio: "pipe",
     });
@@ -304,9 +340,9 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
     120000
   );
 
-  test("creates a thread successfully when worktree setup uses bun.lock bootstrap", async () => {
+  test("creates a thread successfully when bun frozen-lockfile mismatch is recovered", async () => {
     const bunRepoRoot = createRepoRoot("daemon-thread-mgmt-bun-", {
-      withBunWorktreeSetup: true,
+      withBunFrozenMismatchSetup: true,
     });
 
     try {
@@ -330,6 +366,21 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
       expect(createResult.accepted).toBe(true);
       expect(createResult.error).toBeNull();
       expect(createResult.thread).toBeTruthy();
+
+      const createdWorktreePath = readThreadWorktreePath(
+        path.join(ctx.daemon.paseoHome, "thread-registry.json"),
+        projectId,
+        createResult.thread!.threadId
+      );
+      expect(createdWorktreePath).toBeTruthy();
+      expect(existsSync(path.join(createdWorktreePath!, "node_modules/.paseo-frozen-lock-mismatch-once"))).toBe(true);
+      const trackedStatus = execSync("git status --porcelain=v1 --untracked-files=no", {
+        cwd: createdWorktreePath!,
+        stdio: "pipe",
+      })
+        .toString()
+        .trim();
+      expect(trackedStatus).toBe("");
 
       const listResult = await ctx.client.listThreads(projectId);
       expect(listResult.error).toBeNull();

@@ -8,6 +8,7 @@ import {
   listPaseoWorktrees,
   resolveWorktreeRuntimeEnv,
   type WorktreeSetupCommandProgressEvent,
+  WorktreeSetupError,
   runWorktreeSetupCommands,
   slugify,
 } from "./worktree";
@@ -393,6 +394,120 @@ describe("createWorktree", () => {
 
     // Verify worktree was cleaned up
     expect(existsSync(expectedWorktreePath)).toBe(false);
+  });
+
+  it("retries bun frozen-lockfile mismatch once and restores tracked lockfile state", async () => {
+    const fakeBinDir = join(repoDir, ".test-bin");
+    execSync(`mkdir -p ${fakeBinDir}`);
+    writeFileSync(
+      join(fakeBinDir, "bun"),
+      [
+        "#!/usr/bin/env bash",
+        "set -eu",
+        "if [[ \"${1:-}\" == \"install\" && \"${2:-}\" == \"--frozen-lockfile\" ]]; then",
+        "  printf 'error: lockfile had changes, but lockfile is frozen\\n' >&2",
+        "  printf 'mutated-by-frozen\\n' > bun.lock",
+        "  exit 1",
+        "fi",
+        "if [[ \"${1:-}\" == \"install\" ]]; then",
+        "  printf 'mutated-by-retry\\n' > bun.lock",
+        "  mkdir -p node_modules",
+        "  exit 0",
+        "fi",
+        "printf 'unexpected args: %s\\n' \"$*\" >&2",
+        "exit 2",
+        "",
+      ].join("\n"),
+      { mode: 0o755 }
+    );
+    writeFileSync(join(repoDir, "package.json"), `${JSON.stringify({ name: "retry-test", private: true }, null, 2)}\n`);
+    writeFileSync(join(repoDir, "bun.lock"), "seed-lock\n");
+    writeFileSync(join(repoDir, ".gitignore"), "node_modules/\n");
+    writeFileSync(
+      join(repoDir, "paseo.json"),
+      `${JSON.stringify(
+        {
+          worktree: {
+            setup: ["PATH=\"$PASEO_WORKTREE_PATH/.test-bin:$PATH\" bun install --frozen-lockfile"],
+          },
+        },
+        null,
+        2
+      )}\n`
+    );
+    execSync("git add .gitignore .test-bin/bun package.json bun.lock paseo.json", { cwd: repoDir });
+    execSync("git -c commit.gpgsign=false commit -m 'add bun fallback fixture'", { cwd: repoDir });
+
+    const results = await runWorktreeSetupCommands({
+      worktreePath: repoDir,
+      branchName: "main",
+      cleanupOnFailure: false,
+    });
+
+    expect(results).toHaveLength(2);
+    expect(results[0]?.exitCode).toBe(1);
+    expect(results[0]?.stderr).toContain("lockfile had changes, but lockfile is frozen");
+    expect(results[1]?.exitCode).toBe(0);
+    expect(readFileSync(join(repoDir, "bun.lock"), "utf8")).toBe("seed-lock\n");
+    const trackedStatus = execSync("git status --porcelain=v1 --untracked-files=no", {
+      cwd: repoDir,
+    })
+      .toString()
+      .trim();
+    expect(trackedStatus).toBe("");
+  });
+
+  it("does not retry bun failures that do not match frozen-lockfile mismatch signature", async () => {
+    const fakeBinDir = join(repoDir, ".test-bin");
+    execSync(`mkdir -p ${fakeBinDir}`);
+    writeFileSync(
+      join(fakeBinDir, "bun"),
+      [
+        "#!/usr/bin/env bash",
+        "set -eu",
+        "if [[ \"${1:-}\" == \"install\" && \"${2:-}\" == \"--frozen-lockfile\" ]]; then",
+        "  printf 'error: network timeout\\n' >&2",
+        "  exit 1",
+        "fi",
+        "printf 'retry-ran\\n' > retry.log",
+        "exit 0",
+        "",
+      ].join("\n"),
+      { mode: 0o755 }
+    );
+    writeFileSync(join(repoDir, "package.json"), `${JSON.stringify({ name: "no-retry-test", private: true }, null, 2)}\n`);
+    writeFileSync(join(repoDir, "bun.lock"), "seed-lock\n");
+    writeFileSync(
+      join(repoDir, "paseo.json"),
+      `${JSON.stringify(
+        {
+          worktree: {
+            setup: ["PATH=\"$PASEO_WORKTREE_PATH/.test-bin:$PATH\" bun install --frozen-lockfile"],
+          },
+        },
+        null,
+        2
+      )}\n`
+    );
+    execSync("git add .test-bin/bun package.json bun.lock paseo.json", { cwd: repoDir });
+    execSync("git -c commit.gpgsign=false commit -m 'add bun no-retry fixture'", { cwd: repoDir });
+
+    let thrown: unknown;
+    try {
+      await runWorktreeSetupCommands({
+        worktreePath: repoDir,
+        branchName: "main",
+        cleanupOnFailure: false,
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(WorktreeSetupError);
+    const setupError = thrown as WorktreeSetupError;
+    expect(setupError.results).toHaveLength(1);
+    expect(setupError.results[0]?.stderr).toContain("network timeout");
+    expect(existsSync(join(repoDir, "retry.log"))).toBe(false);
   });
 
   it("reads worktree terminal specs from paseo.json with optional name", async () => {
