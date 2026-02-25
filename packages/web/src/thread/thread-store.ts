@@ -68,6 +68,7 @@ export type ThreadStoreState = {
   projects: ProjectSummary[]
   threadsByProjectId: Record<string, ThreadSummary[]>
   activeThreadKey: string | null
+  activeThreadClearedByDelete: boolean
   loadingProjects: boolean
   create: {
     pending: boolean
@@ -146,6 +147,7 @@ const initialState: ThreadStoreState = {
   projects: [],
   threadsByProjectId: {},
   activeThreadKey: null,
+  activeThreadClearedByDelete: false,
   loadingProjects: false,
   create: {
     pending: false,
@@ -551,7 +553,15 @@ function handleThreadListResponse(message: SessionMessage): void {
       ),
     }
 
+    if (previous.activeThreadClearedByDelete && previous.activeThreadKey === null) {
+      nextState.activeThreadKey = null
+      return nextState
+    }
+
     nextState.activeThreadKey = deriveActiveThreadKey(nextState)
+    if (nextState.activeThreadKey !== null) {
+      nextState.activeThreadClearedByDelete = false
+    }
     return nextState
   })
 }
@@ -594,6 +604,7 @@ function handleThreadCreateResponse(message: SessionMessage): void {
       [thread.projectId]: updatedThreads,
     }
     nextState.activeThreadKey = toThreadKey(thread.projectId, thread.threadId)
+    nextState.activeThreadClearedByDelete = false
 
     return nextState
   })
@@ -628,6 +639,7 @@ function handleThreadSwitchResponse(message: SessionMessage): void {
     }
 
     nextState.activeThreadKey = toThreadKey(pending.projectId, pending.threadId)
+    nextState.activeThreadClearedByDelete = false
     return nextState
   })
 
@@ -651,6 +663,8 @@ function handleThreadDeleteResponse(message: SessionMessage): void {
   const dirtyReason = parseDirtyDeleteError(error)
 
   updateState((previous) => {
+    const deletedThreadKey = toThreadKey(pending.projectId, pending.threadId)
+    const deletingPreviouslyActiveThread = previous.delete.previousActiveThreadKey === deletedThreadKey
     const nextState: ThreadStoreState = {
       ...previous,
       delete: {
@@ -658,7 +672,7 @@ function handleThreadDeleteResponse(message: SessionMessage): void {
         error,
         requiresDirtyConfirm: Boolean(dirtyReason),
         dirtyReason,
-        targetThreadKey: toThreadKey(pending.projectId, pending.threadId),
+        targetThreadKey: deletedThreadKey,
         previousActiveThreadKey: previous.delete.previousActiveThreadKey,
       },
     }
@@ -667,6 +681,7 @@ function handleThreadDeleteResponse(message: SessionMessage): void {
       if (previous.delete.previousActiveThreadKey) {
         nextState.activeThreadKey = previous.delete.previousActiveThreadKey
       }
+      nextState.activeThreadClearedByDelete = false
       return nextState
     }
 
@@ -677,7 +692,12 @@ function handleThreadDeleteResponse(message: SessionMessage): void {
       [pending.projectId]: remaining,
     }
 
-    const deletedThreadKey = toThreadKey(pending.projectId, pending.threadId)
+    if (deletingPreviouslyActiveThread) {
+      nextState.activeThreadKey = null
+      nextState.activeThreadClearedByDelete = true
+      return nextState
+    }
+
     if (previous.activeThreadKey !== deletedThreadKey) {
       return nextState
     }
@@ -853,6 +873,10 @@ function handleEnsureDefaultTerminalResponse(message: SessionMessage): void {
   }
 
   updateState((previous) => {
+    if (previous.activeThreadClearedByDelete && previous.activeThreadKey === null) {
+      return previous
+    }
+
     const activeThreadKey = toThreadKey(projectId, resolvedThreadId)
     const projectThreads = previous.threadsByProjectId[projectId] ?? []
     const nextThreads = projectThreads.map((thread) => {
@@ -871,6 +895,7 @@ function handleEnsureDefaultTerminalResponse(message: SessionMessage): void {
     return {
       ...previous,
       activeThreadKey,
+      activeThreadClearedByDelete: false,
       threadsByProjectId: {
         ...previous.threadsByProjectId,
         [projectId]: nextThreads,
@@ -1030,6 +1055,7 @@ export function switchToThread(projectId: string, threadId: string): void {
       error: null,
     },
     activeThreadKey: nextThreadKey,
+    activeThreadClearedByDelete: false,
   }))
 
   clearThreadUnread(projectId, threadId)
@@ -1239,6 +1265,7 @@ export function requestDeleteThread(projectId: string, threadId: string, force: 
     return {
       ...previous,
       activeThreadKey: isDeletingActiveThread ? null : previous.activeThreadKey,
+      activeThreadClearedByDelete: isDeletingActiveThread ? true : previous.activeThreadClearedByDelete,
       delete: {
         pending: true,
         error: null,
