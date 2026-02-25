@@ -331,6 +331,63 @@ async function execSetupCommandStreamed(options: {
   });
 }
 
+function isBunFrozenLockfileCommand(command: string): boolean {
+  return /\bbun\s+install\b/.test(command) && /(^|\s)--frozen-lockfile(?=\s|$)/.test(command);
+}
+
+function hasBunFrozenLockfileMismatch(result: WorktreeSetupCommandResult): boolean {
+  const output = `${result.stderr}\n${result.stdout}`;
+  return /lockfile had changes, but lockfile is frozen/i.test(output);
+}
+
+function buildBunFrozenLockfileRetryCommand(command: string): string {
+  return command.replace(/(^|\s)--frozen-lockfile(?=\s|$)/, "$1").trim();
+}
+
+async function listTrackedChangedPaths(cwd: string): Promise<Set<string>> {
+  try {
+    const { stdout } = await execAsync("git status --porcelain=v1 --untracked-files=no", {
+      cwd,
+      env: READ_ONLY_GIT_ENV,
+    });
+    const tracked = new Set<string>();
+    for (const rawLine of stdout.split("\n")) {
+      const line = rawLine.trimEnd();
+      if (line.length < 4) {
+        continue;
+      }
+      const pathPart = line.slice(3).trim();
+      if (!pathPart) {
+        continue;
+      }
+      if (pathPart.includes(" -> ")) {
+        const [oldPath, newPath] = pathPart.split(" -> ");
+        if (oldPath) {
+          tracked.add(oldPath);
+        }
+        if (newPath) {
+          tracked.add(newPath);
+        }
+        continue;
+      }
+      tracked.add(pathPart);
+    }
+    return tracked;
+  } catch {
+    return new Set<string>();
+  }
+}
+
+async function restoreTrackedPaths(cwd: string, paths: string[]): Promise<void> {
+  for (const filePath of paths) {
+    const escapedPath = filePath.replace(/["\\$`]/g, "\\$&");
+    await execAsync(`git checkout -- "${escapedPath}"`, {
+      cwd,
+      env: READ_ONLY_GIT_ENV,
+    });
+  }
+}
+
 async function getAvailablePort(): Promise<number> {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
@@ -431,22 +488,59 @@ export async function runWorktreeSetupCommands(options: {
 
   const results: WorktreeSetupCommandResult[] = [];
   for (const [index, cmd] of setupCommands.entries()) {
-    const result = options.onEvent
-      ? await execSetupCommandStreamed({
-          command: cmd,
-          cwd: options.worktreePath,
-          env: setupEnv,
-          index: index + 1,
-          total: setupCommands.length,
-          onEvent: options.onEvent,
-        })
-      : await execSetupCommand(cmd, {
-          cwd: options.worktreePath,
-          env: setupEnv,
-        });
+    const executeCommand = async (command: string): Promise<WorktreeSetupCommandResult> => {
+      return options.onEvent
+        ? execSetupCommandStreamed({
+            command,
+            cwd: options.worktreePath,
+            env: setupEnv,
+            index: index + 1,
+            total: setupCommands.length,
+            onEvent: options.onEvent,
+          })
+        : execSetupCommand(command, {
+            cwd: options.worktreePath,
+            env: setupEnv,
+          });
+    };
+
+    let result = await executeCommand(cmd);
     results.push(result);
 
     if (result.exitCode !== 0) {
+      if (isBunFrozenLockfileCommand(cmd) && hasBunFrozenLockfileMismatch(result)) {
+        const retryCommand = buildBunFrozenLockfileRetryCommand(cmd);
+        if (retryCommand.length > 0 && retryCommand !== cmd) {
+          const trackedBeforeRetry = await listTrackedChangedPaths(options.worktreePath);
+          const retryResult = await executeCommand(retryCommand);
+          results.push(retryResult);
+
+          if (retryResult.exitCode === 0) {
+            const trackedAfterRetry = await listTrackedChangedPaths(options.worktreePath);
+            const trackedDelta = [...trackedAfterRetry].filter((path) => !trackedBeforeRetry.has(path));
+            if (trackedDelta.length > 0) {
+              try {
+                await restoreTrackedPaths(options.worktreePath, trackedDelta);
+                continue;
+              } catch (restoreError: unknown) {
+                result = {
+                  command: retryCommand,
+                  cwd: options.worktreePath,
+                  stdout: retryResult.stdout,
+                  stderr: `${retryResult.stderr}\nFailed to restore tracked files after bun fallback: ${restoreError instanceof Error ? restoreError.message : String(restoreError)}`,
+                  exitCode: 1,
+                  durationMs: retryResult.durationMs,
+                };
+              }
+            } else {
+              continue;
+            }
+          } else {
+            result = retryResult;
+          }
+        }
+      }
+
       if (options.cleanupOnFailure) {
         try {
           await execAsync(`git worktree remove "${options.worktreePath}" --force`, {
