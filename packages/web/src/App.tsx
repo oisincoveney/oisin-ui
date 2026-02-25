@@ -16,6 +16,7 @@ import {
   useDiffStoreSnapshot,
 } from './diff/diff-store'
 import {
+  type ConnectionStatus,
   useConnectionDiagnostics,
   useConnectionStatus,
   sendWsMessage,
@@ -57,14 +58,54 @@ function randomId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2)}`
 }
 
+function getConnectionBadge(status: ConnectionStatus): {
+  label: string
+  className: string
+  dotClassName: string
+} {
+  if (status === 'connected') {
+    return {
+      label: 'Connected',
+      className: 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300',
+      dotClassName: 'bg-emerald-400',
+    }
+  }
+
+  if (status === 'connecting') {
+    return {
+      label: 'Connecting',
+      className: 'border-amber-500/35 bg-amber-500/10 text-amber-300',
+      dotClassName: 'bg-amber-400',
+    }
+  }
+
+  if (status === 'reconnecting') {
+    return {
+      label: 'Reconnecting',
+      className: 'border-amber-500/35 bg-amber-500/10 text-amber-300',
+      dotClassName: 'bg-amber-400',
+    }
+  }
+
+  return {
+    label: 'Disconnected',
+    className: 'border-red-500/35 bg-red-500/10 text-red-300',
+    dotClassName: 'bg-red-400',
+  }
+}
+
 function App() {
   const status = useConnectionStatus()
+  const connectionBadge = getConnectionBadge(status)
   const diagnostics = useConnectionDiagnostics()
   const threadSnapshot = useThreadStoreSnapshot()
   const diffSnapshot = useDiffStoreSnapshot()
   const isMobile = useIsMobile()
   const activeThread = getActiveThread(threadSnapshot)
-  const activeThreadTerminalId = activeThread?.terminalId ?? null
+  const activeThreadTerminalId =
+    activeThread && activeThread.status !== 'closed' && activeThread.status !== 'error'
+      ? (activeThread.terminalId ?? null)
+      : null
   const activeDiffEntry = getActiveDiffEntry(diffSnapshot)
   const diffFiles = activeDiffEntry?.files ?? []
   const diffPanelOpen = diffSnapshot.panel.isOpen
@@ -187,7 +228,7 @@ function App() {
         setTerminalId(activeThreadTerminalId)
         sendAttachRequest(activeThreadTerminalId, forceRefresh)
         forceRefreshOnAttachRef.current = false
-      } else {
+      } else if (activeThreadTerminalId) {
         ensureDefaultTerminal()
       }
       return
@@ -260,7 +301,19 @@ function App() {
       return
     }
 
-    if (!terminalRef.current || !activeThreadTerminalId) {
+    if (!terminalRef.current) {
+      return
+    }
+
+    if (!activeThreadTerminalId) {
+      pendingEnsureRef.current = null
+      pendingAttachRef.current = null
+      terminalIdRef.current = null
+      setTerminalId(null)
+      setAttachFailureReason(null)
+      adapterRef.current?.resetForStreamRollover({ resetOffset: true })
+      terminalRef.current.clear()
+      terminalRef.current.options.cursorBlink = false
       return
     }
 
@@ -330,6 +383,16 @@ function App() {
 
         adapter.resetForStreamRollover()
 
+        const currentActiveThread = getActiveThread()
+        if (
+          !currentActiveThread?.terminalId ||
+          currentActiveThread.terminalId !== terminalId ||
+          currentActiveThread.status === 'closed' ||
+          currentActiveThread.status === 'error'
+        ) {
+          return
+        }
+
         if (statusRef.current !== 'connected' || pendingAttachRef.current) {
           return
         }
@@ -383,6 +446,7 @@ function App() {
           typeof msg.payload?.error === 'string' && msg.payload.error.length > 0
             ? msg.payload.error
             : 'attach_terminal_stream_response missing streamId'
+
         setAttachFailureReason(attachError)
         console.error('[terminal] attach failed', msg.payload?.error)
         return
@@ -449,8 +513,6 @@ function App() {
         terminalIdRef.current = activeThreadTerminalId
         setTerminalId(activeThreadTerminalId)
         sendAttachRequest(activeThreadTerminalId, false)
-      } else {
-        ensureDefaultTerminal()
       }
     }
   }
@@ -480,7 +542,15 @@ function App() {
           <p className="text-xs text-muted-foreground">{activeThread?.projectId ?? 'No active thread'}</p>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <div
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium ${connectionBadge.className}`}
+            aria-live="polite"
+            title={`Daemon websocket status: ${connectionBadge.label}`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${connectionBadge.dotClassName}`} aria-hidden="true" />
+            <span>{connectionBadge.label}</span>
+          </div>
           <Button
             type="button"
             variant="ghost"

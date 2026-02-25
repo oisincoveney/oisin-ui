@@ -72,6 +72,7 @@ export type ThreadStoreState = {
     requiresDirtyConfirm: boolean
     dirtyReason: string | null
     targetThreadKey: string | null
+    previousActiveThreadKey: string | null
   }
   switch: {
     pending: boolean
@@ -123,11 +124,11 @@ type SendRequestOptions = {
 const jotaiStore = getDefaultStore()
 const pendingRequests = new Map<string, PendingRequestEntry>()
 
-const CREATE_THREAD_RESPONSE_TIMEOUT_MS = 8_000
+const CREATE_THREAD_RESPONSE_TIMEOUT_MS = 120_000
 const CREATE_THREAD_DISCONNECTED_ERROR =
   'Create Thread failed because the daemon connection is offline. Wait for reconnect, then try again.'
 const CREATE_THREAD_TIMEOUT_ERROR =
-  'Create Thread timed out waiting for daemon response. Confirm daemon health and try again.'
+  'Create Thread timed out waiting for daemon response after 120s. Confirm daemon health and try again.'
 
 let started = false
 let unsubscribeTextMessages: (() => void) | null = null
@@ -149,6 +150,7 @@ const initialState: ThreadStoreState = {
     requiresDirtyConfirm: false,
     dirtyReason: null,
     targetThreadKey: null,
+    previousActiveThreadKey: null,
   },
   switch: {
     pending: false,
@@ -608,10 +610,14 @@ function handleThreadDeleteResponse(message: SessionMessage): void {
         requiresDirtyConfirm: Boolean(dirtyReason),
         dirtyReason,
         targetThreadKey: toThreadKey(pending.projectId, pending.threadId),
+        previousActiveThreadKey: previous.delete.previousActiveThreadKey,
       },
     }
 
     if (error) {
+      if (previous.delete.previousActiveThreadKey) {
+        nextState.activeThreadKey = previous.delete.previousActiveThreadKey
+      }
       return nextState
     }
 
@@ -1153,16 +1159,22 @@ export function clearCreateThreadError(): void {
 }
 
 export function requestDeleteThread(projectId: string, threadId: string, force: boolean): void {
-  updateState((previous) => ({
-    ...previous,
-    delete: {
-      pending: true,
-      error: null,
-      requiresDirtyConfirm: false,
-      dirtyReason: null,
-      targetThreadKey: toThreadKey(projectId, threadId),
-    },
-  }))
+  updateState((previous) => {
+    const targetThreadKey = toThreadKey(projectId, threadId)
+    const isDeletingActiveThread = previous.activeThreadKey === targetThreadKey
+    return {
+      ...previous,
+      activeThreadKey: isDeletingActiveThread ? null : previous.activeThreadKey,
+      delete: {
+        pending: true,
+        error: null,
+        requiresDirtyConfirm: false,
+        dirtyReason: null,
+        targetThreadKey,
+        previousActiveThreadKey: isDeletingActiveThread ? previous.activeThreadKey : null,
+      },
+    }
+  })
 
   const requestId = randomRequestId('thread-delete')
   sendRequest(
@@ -1197,6 +1209,7 @@ export function clearDeleteThreadError(): void {
       requiresDirtyConfirm: false,
       dirtyReason: null,
       targetThreadKey: null,
+      previousActiveThreadKey: null,
     },
   }))
 }

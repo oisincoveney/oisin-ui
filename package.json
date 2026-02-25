@@ -11,6 +11,7 @@
     "dev": "./scripts/dev.sh",
     "dev:server": "NODE_ENV=development tsx packages/server/scripts/daemon-runner.ts --dev",
     "postinstall": "node scripts/postinstall-patches.mjs",
+    "hooks:install": "lefthook install",
     "build": "bun run --filter '*' build",
     "typecheck": "bun run --filter '*' typecheck",
     "test": "bun run --filter '*' test",
@@ -36,6 +37,7 @@
     "concurrently": "^9.2.1",
     "get-port-cli": "^3.0.0",
     "knip": "^5.82.1",
+    "lefthook": "^1.7.18",
     "oxlint": "^1.49.0",
     "patch-package": "^8.0.1",
     "typescript": "^5.9.3"
@@ -52,7 +54,8 @@
   "author": "moboudra",
   "license": "MIT",
   "overrides": {
-    "lightningcss": "1.30.1"
+    "lightningcss": "1.30.1",
+    "esbuild": "0.25.11"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.11",

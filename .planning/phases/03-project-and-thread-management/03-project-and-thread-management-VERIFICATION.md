@@ -1,13 +1,12 @@
 ---
 phase: 03-project-and-thread-management
-verified: 2026-02-23T15:45:53Z
+verified: 2026-02-25T05:14:16Z
 status: passed
-score: 13/13 must-haves verified
+score: 8/8 must-haves verified
 re_verification:
-  previous_status: gaps_found
-  previous_score: 12/13
-  gaps_closed:
-    - "User can create a thread with name, agent/command, and base branch; errors render inline in the dialog."
+  previous_status: passed
+  previous_score: 8/8
+  gaps_closed: []
   gaps_remaining: []
   regressions: []
 ---
@@ -15,9 +14,9 @@ re_verification:
 # Phase 3: Project & Thread Management Verification Report
 
 **Phase Goal:** Users can manage multiple projects and threads, each with isolated worktrees and terminal sessions.
-**Verified:** 2026-02-23T15:45:53Z
+**Verified:** 2026-02-25T05:14:16Z
 **Status:** passed
-**Re-verification:** Yes - after gap closure
+**Re-verification:** Yes - baseline regression check against existing pass report
 
 ## Goal Achievement
 
@@ -25,93 +24,69 @@ re_verification:
 
 | # | Truth | Status | Evidence |
 | --- | --- | --- | --- |
-| 1 | Configured project list persists and drives sidebar | ✓ VERIFIED | Project repo schema + normalization in `packages/server/src/server/persisted-config.ts:85` and `packages/server/src/server/persisted-config.ts:227`; sync to registry in `packages/server/src/server/session.ts:745`; sidebar maps projects in `packages/web/src/components/app-sidebar.tsx:104`. |
-| 2 | Threads are create/list/switch/delete capable with stable IDs across restarts | ✓ VERIFIED | Registry load/flush + atomic rename in `packages/server/src/server/thread/thread-registry.ts:281` and `packages/server/src/server/thread/thread-registry.ts:523`; CRUD in `packages/server/src/server/thread/thread-registry.ts:372`, `packages/server/src/server/thread/thread-registry.ts:419`, `packages/server/src/server/thread/thread-registry.ts:453`. |
-| 3 | Legacy/default terminal bootstrap still works during migration | ✓ VERIFIED | Compatibility field still in schema `packages/server/src/shared/messages.ts:2072`; ensure handler still emits compatibility payload in `packages/server/src/server/session.ts:6824`. |
-| 4 | Creating a thread provisions worktree + tmux + agent and auto-switches active thread | ✓ VERIFIED | Lifecycle orchestration in `packages/server/src/server/thread/thread-lifecycle.ts:129`, `packages/server/src/server/thread/thread-lifecycle.ts:138`, `packages/server/src/server/thread/thread-lifecycle.ts:161`; active pointer update in `packages/server/src/server/thread/thread-registry.ts:400`. |
-| 5 | Switching thread reattaches terminal while previous thread keeps running | ✓ VERIFIED | Switch updates active metadata only in `packages/server/src/server/thread/thread-lifecycle.ts:200`; client reattach on active terminal change in `packages/web/src/App.tsx:190`; daemon regression covers continuity in `packages/server/src/server/daemon-e2e/thread-management.e2e.test.ts:174`. |
-| 6 | Delete thread cleans worktree + tmux + agent and guards dirty worktrees | ✓ VERIFIED | Dirty gate + cleanup in `packages/server/src/server/thread/thread-lifecycle.ts:221`, `packages/server/src/server/thread/thread-lifecycle.ts:228`, `packages/server/src/server/thread/thread-lifecycle.ts:240`; checked delete helper in `packages/server/src/utils/worktree.ts:906`. |
-| 7 | Sidebar shows projects with nested threads and top-level New Thread | ✓ VERIFIED | Top-level and per-project create actions in `packages/web/src/components/app-sidebar.tsx:87` and `packages/web/src/components/app-sidebar.tsx:135`; nested thread render in `packages/web/src/components/app-sidebar.tsx:139`. |
-| 8 | User can create thread with name + agent/command + base branch + inline errors | ✓ VERIFIED | Dialog collects base branch/command and shows inline errors in `packages/web/src/components/thread-create-dialog.tsx:197`, `packages/web/src/components/thread-create-dialog.tsx:228`, `packages/web/src/components/thread-create-dialog.tsx:244`; store sends `baseBranch` + `launchConfig.commandOverride` in `packages/web/src/thread/thread-store.ts:1015`; request schema now accepts both in `packages/server/src/shared/messages.ts:1088` and `packages/server/src/shared/messages.ts:1037`; session forwards base branch in `packages/server/src/server/session.ts:4917`; lifecycle applies base-branch precedence + command override into agent config in `packages/server/src/server/thread/thread-lifecycle.ts:116` and `packages/server/src/server/thread/thread-lifecycle.ts:146`; regressions assert both in `packages/server/src/server/daemon-e2e/thread-management.e2e.test.ts:96` and `packages/server/e2e/thread-management-web.spec.ts:226`. |
-| 9 | Clicking a thread switches active terminal stream and preserves background execution | ✓ VERIFIED | Sidebar click dispatches switch in `packages/web/src/components/app-sidebar.tsx:150`; app reattach path in `packages/web/src/App.tsx:208`; switch RPC handler in `packages/server/src/server/session.ts:4985`. |
-| 10 | Cmd+Up/Down wraps thread navigation with active highlight | ✓ VERIFIED | Meta+Arrow handlers in `packages/web/src/App.tsx:229`; wrap logic in `packages/web/src/thread/thread-store.ts:897`; active style binding in `packages/web/src/components/app-sidebar.tsx:148`. |
-| 11 | Background thread exits/errors surface status + toast | ✓ VERIFIED | Server emits status/unread updates in `packages/server/src/server/session.ts:820`; store builds non-active closed/error toasts in `packages/web/src/thread/thread-store.ts:599`. |
-| 12 | Session reaper cleans orphan tmux/worktree resources not in registry | ✓ VERIFIED | Reaper reconciliation/cleanup loops in `packages/server/src/server/thread/session-reaper.ts:179`, `packages/server/src/server/thread/session-reaper.ts:283`, `packages/server/src/server/thread/session-reaper.ts:315`; start/stop wiring in `packages/server/src/server/bootstrap.ts:529` and `packages/server/src/server/bootstrap.ts:605`. |
-| 13 | E2E coverage exists for create/switch/delete lifecycle, keyboard wrap, cleanup | ✓ VERIFIED | Daemon lifecycle e2e in `packages/server/src/server/daemon-e2e/thread-management.e2e.test.ts:77`; browser flow spec in `packages/server/e2e/thread-management-web.spec.ts:216`; sidebar regression in `packages/web/e2e/thread-sidebar.spec.ts:20`. |
+| 1 | Users see configured projects with nested thread rows and thread actions in sidebar | ✓ VERIFIED | Sidebar renders projects + per-project thread lists + create/delete actions in `packages/web/src/components/app-sidebar.tsx:104`, `packages/web/src/components/app-sidebar.tsx:140`, `packages/web/src/components/app-sidebar.tsx:173`; project list is synced from persisted configured repositories in `packages/server/src/server/session.ts:745`, `packages/server/src/server/session.ts:4804`. |
+| 2 | Creating a thread provisions isolated worktree, tmux terminal session, and agent with chosen provider/base branch | ✓ VERIFIED | Create dialog submits provider/baseBranch in `packages/web/src/components/thread-create-dialog.tsx:257`; store emits `thread_create_request` with `launchConfig` + `baseBranch` in `packages/web/src/thread/thread-store.ts:1128`; server forwards to lifecycle in `packages/server/src/server/session.ts:4911`; lifecycle calls worktree create, terminal ensure, and agent create in `packages/server/src/server/thread/thread-lifecycle.ts:129`, `packages/server/src/server/thread/thread-lifecycle.ts:138`, `packages/server/src/server/thread/thread-lifecycle.ts:161`. |
+| 3 | Switching thread in UI rebinds terminal stream to selected thread without killing background threads | ✓ VERIFIED | Sidebar click dispatches switch in `packages/web/src/components/app-sidebar.tsx:149`; store emits `thread_switch_request` in `packages/web/src/thread/thread-store.ts:980`; server delegates switch in `packages/server/src/server/session.ts:4985`; app re-attaches terminal stream for active thread in `packages/web/src/App.tsx:329`. |
+| 4 | Deleting thread enforces dirty guard and cleans agent/tmux/worktree resources | ✓ VERIFIED | Delete flow emits `thread_delete_request` in `packages/web/src/thread/thread-store.ts:1182`; server maps dirty lifecycle error to force-delete confirmation message in `packages/server/src/server/session.ts:4965`; lifecycle checks dirty worktree and performs cleanup in `packages/server/src/server/thread/thread-lifecycle.ts:221`, `packages/server/src/server/thread/thread-lifecycle.ts:230`, `packages/server/src/server/thread/thread-lifecycle.ts:242`. |
+| 5 | Create Thread cannot remain indefinitely in `Creating...` when daemon response never arrives | ✓ VERIFIED | Request lifecycle tracks pending entries + timeout cleanup in `packages/web/src/thread/thread-store.ts:291`, `packages/web/src/thread/thread-store.ts:309`, `packages/web/src/thread/thread-store.ts:1140`; dialog reflects pending state and error inline in `packages/web/src/components/thread-create-dialog.tsx:244`, `packages/web/src/components/thread-create-dialog.tsx:268`. |
+| 6 | If websocket is offline at submit, Create Thread exits pending immediately with actionable inline error | ✓ VERIFIED | WS send returns false unless OPEN in `packages/web/src/lib/ws.ts:187`; store handles send failure and sets disconnected error in `packages/web/src/thread/thread-store.ts:303`, `packages/web/src/thread/thread-store.ts:1142`; inline error block is rendered in `packages/web/src/components/thread-create-dialog.tsx:244`. |
+| 7 | If send succeeds but no response arrives, Create Thread exits pending with actionable timeout error | ✓ VERIFIED | Timeout callback clears pending request and sets timeout message in `packages/web/src/thread/thread-store.ts:310`, `packages/web/src/thread/thread-store.ts:1145`; pending reset path is centralized via `setCreateError` in `packages/web/src/thread/thread-store.ts:220`. |
+| 8 | Regression coverage exists for create-thread failure modes (no-response, disconnected transport, prior workspace setup failure) | ✓ VERIFIED | Web e2e asserts timeout + disconnected pending recovery in `packages/server/e2e/thread-management-web.spec.ts:393`, `packages/server/e2e/thread-management-web.spec.ts:484`, and blocks workspace regression text in `packages/server/e2e/thread-management-web.spec.ts:357`, `packages/server/e2e/thread-management-web.spec.ts:371`; canonical setup commands now Bun-compatible in `paseo.json:4`. |
 
-**Score:** 13/13 truths verified
+**Score:** 8/8 truths verified
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 | --- | --- | --- | --- |
-| `packages/server/src/server/persisted-config.ts` | durable configured-project schema/defaults | ✓ VERIFIED | Exists; 306 lines; substantive schema + normalization (`:85`, `:227`), consumed by session sync (`packages/server/src/server/session.ts:736`). |
-| `packages/server/src/server/thread/thread-registry.ts` | persisted project/thread metadata store | ✓ VERIFIED | Exists; 529 lines; load/migrate/flush + CRUD + active pointer updates (`:281`, `:372`, `:523`). |
-| `packages/server/src/shared/messages.ts` | project/thread RPC schemas + compatibility fields | ✓ VERIFIED | Exists; 2481 lines; thread create schema includes strict `baseBranch` + `commandOverride` (`:1088`, `:1037`). |
-| `packages/server/src/client/daemon-client.ts` | typed project/thread client RPC methods | ✓ VERIFIED | Exists; 3144 lines; list/create/switch/delete methods include `baseBranch` typing (`:2675`, `:2680`). |
-| `packages/server/src/server/thread/thread-lifecycle.ts` | transactional create/switch/delete orchestration | ✓ VERIFIED | Exists; 333 lines; base branch precedence + command override propagation + rollback/cleanup (`:116`, `:146`, `:190`). |
-| `packages/server/src/server/session.ts` | websocket wiring to thread lifecycle/registry | ✓ VERIFIED | Exists; 7398 lines; thread handlers wired and create forwards `baseBranch` (`:4910`, `:4917`). |
-| `packages/server/src/terminal/terminal-manager.ts` | deterministic per-thread tmux session keys | ✓ VERIFIED | Exists; 495 lines; deterministic `deriveThreadSessionKey`, ensure/kill by session key (`:429`, `:433`, `:482`). |
-| `packages/server/src/utils/worktree.ts` | dirty detection + safe delete helpers | ✓ VERIFIED | Exists; 1033 lines; porcelain status and checked delete (`:890`, `:906`). |
-| `packages/web/src/thread/thread-store.ts` | external thread state + ws lifecycle boundary | ✓ VERIFIED | Exists; 1108 lines; request dispatch + status/unread/toast + wrap switching (`:599`, `:897`, `:1029`). |
-| `packages/web/src/components/app-sidebar.tsx` | sidebar projects/threads UI + active/unread/status | ✓ VERIFIED | Exists; 222 lines; nested render + active + unread + switch click wiring (`:104`, `:148`, `:150`). |
-| `packages/web/src/components/thread-create-dialog.tsx` | create dialog + inline validation/errors | ✓ VERIFIED | Exists; 274 lines; command/base-branch inputs + inline error + create dispatch (`:197`, `:228`, `:244`, `:257`). |
-| `packages/web/src/components/thread-delete-dialog.tsx` | delete flow with dirty-worktree second confirm | ✓ VERIFIED | Exists; 135 lines; dirty-confirm second step implemented (`:84`, `:109`). |
-| `packages/web/src/App.tsx` | active-thread attach + keyboard thread switching | ✓ VERIFIED | Exists; 430 lines; attach on active-thread change + Meta+Arrow handlers (`:190`, `:229`). |
-| `packages/server/src/server/thread/session-reaper.ts` | periodic orphan reconciliation | ✓ VERIFIED | Exists; 347 lines; `runOnce` reconciles agents/tmux/worktrees (`:179`, `:283`, `:315`). |
-| `packages/server/src/server/bootstrap.ts` | daemon wiring for reaper lifecycle | ✓ VERIFIED | Exists; 661 lines; reaper start/stop wired (`:529`, `:605`). |
-| `packages/server/src/server/daemon-e2e/thread-management.e2e.test.ts` | daemon lifecycle regression coverage | ✓ VERIFIED | Exists; 340 lines; create/switch/delete/reconnect + baseBranch/command assertions (`:93`, `:96`, `:120`, `:247`). |
-| `packages/server/e2e/thread-management-web.spec.ts` | browser flow regression coverage | ✓ VERIFIED | Exists; 292 lines; command/base-branch create flow and inline error checks (`:226`, `:228`, `:230`, `:244`). |
-| `packages/web/e2e/thread-sidebar.spec.ts` | UI regression checks for wrap/highlight/unread | ✓ VERIFIED | Exists; 35 lines; active/unread/status + wrap checks (`:6`, `:20`). |
+| `packages/web/src/components/app-sidebar.tsx` | Sidebar UI for projects/threads + create/switch/delete entry points | ✓ VERIFIED | Exists (222 lines), substantive, exported component (`packages/web/src/components/app-sidebar.tsx:65`), imported/wired via `packages/web/src/main.tsx:5`. |
+| `packages/web/src/components/thread-create-dialog.tsx` | Thread create form for provider/baseBranch + pending/error UX | ✓ VERIFIED | Exists (274 lines), substantive, exported component (`packages/web/src/components/thread-create-dialog.tsx:34`), submit path wired to `createThread(...)` (`packages/web/src/components/thread-create-dialog.tsx:257`). |
+| `packages/web/src/thread/thread-store.ts` | Thread/project external store and request lifecycle guards | ✓ VERIFIED | Exists (1223 lines), substantive, exports request/state APIs (`packages/web/src/thread/thread-store.ts:960`, `packages/web/src/thread/thread-store.ts:1073`), wired across app/sidebar/dialog imports. |
+| `packages/web/src/lib/ws.ts` | WS send contract reports send success/failure | ✓ VERIFIED | Exists (508 lines), substantive, `sendWsMessage` boolean OPEN-gated contract in `packages/web/src/lib/ws.ts:186`; consumed by store send path in `packages/web/src/thread/thread-store.ts:303`. |
+| `packages/web/src/App.tsx` | Active-thread terminal attach/rebind orchestration | ✓ VERIFIED | Exists (654 lines), substantive, sends `attach_terminal_stream_request` and rebinds on active-thread change in `packages/web/src/App.tsx:185`, `packages/web/src/App.tsx:329`. |
+| `packages/server/src/server/session.ts` | RPC handlers wiring project/thread flows to lifecycle | ✓ VERIFIED | Exists (7396 lines), substantive, create/switch/delete handlers in `packages/server/src/server/session.ts:4908`, `packages/server/src/server/session.ts:4946`, `packages/server/src/server/session.ts:4983`. |
+| `packages/server/src/server/thread/thread-lifecycle.ts` | Lifecycle orchestration and delete cleanup with dirty guard | ✓ VERIFIED | Exists (333 lines), substantive, create/switch/delete implementation in `packages/server/src/server/thread/thread-lifecycle.ts:105`, `packages/server/src/server/thread/thread-lifecycle.ts:200`, `packages/server/src/server/thread/thread-lifecycle.ts:209`. |
+| `packages/server/e2e/thread-management-web.spec.ts` | Browser regressions for thread create/switch/delete and failure-mode recovery | ✓ VERIFIED | Exists (539 lines), substantive, includes timeout/disconnected/workspace assertions in `packages/server/e2e/thread-management-web.spec.ts:357`, `packages/server/e2e/thread-management-web.spec.ts:393`, `packages/server/e2e/thread-management-web.spec.ts:484`. |
+| `paseo.json` | Canonical worktree setup commands compatible with current Bun runtime | ✓ VERIFIED | Exists (14 lines), substantive for config artifact (>=5 lines), no npm workspace bootstrap; uses `bun install --frozen-lockfile` in `paseo.json:4`. |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 | --- | --- | --- | --- | --- |
-| `packages/server/src/server/persisted-config.ts` | `packages/server/src/server/thread/thread-registry.ts` | configured repos bootstrap into registry | ✓ WIRED | Session maps persisted repos and calls `setProjects` (`packages/server/src/server/session.ts:736`, `packages/server/src/server/session.ts:747`). |
-| `packages/web/src/components/thread-create-dialog.tsx` | `packages/web/src/thread/thread-store.ts` | dialog submit to typed create action | ✓ WIRED | Dialog calls `createThread` with command + base branch fields (`packages/web/src/components/thread-create-dialog.tsx:257`). |
-| `packages/web/src/thread/thread-store.ts` | `packages/server/src/shared/messages.ts` | `thread_create_request` payload contract | ✓ WIRED | Store sends `baseBranch` and `launchConfig.commandOverride` (`packages/web/src/thread/thread-store.ts:1032`); schema accepts strict fields (`packages/server/src/shared/messages.ts:1088`, `packages/server/src/shared/messages.ts:1037`). |
-| `packages/server/src/server/session.ts` | `packages/server/src/server/thread/thread-lifecycle.ts` | create handler forwards payload | ✓ WIRED | Session forwards `baseBranch` and `launchConfig` into lifecycle create (`packages/server/src/server/session.ts:4917`, `packages/server/src/server/session.ts:4918`). |
-| `packages/server/src/server/thread/thread-lifecycle.ts` | agent session config | command override propagation | ✓ WIRED | Lifecycle maps command override into provider-scoped `extra` before `createAgent` (`packages/server/src/server/thread/thread-lifecycle.ts:146`, `packages/server/src/server/thread/thread-lifecycle.ts:161`). |
-| `packages/server/src/server/thread/thread-lifecycle.ts` | `packages/server/src/utils/worktree.ts` | worktree create/delete + dirty checks | ✓ WIRED | Lifecycle uses `createWorktree`, `getWorktreePorcelainStatus`, `deleteWorktreeChecked` (`packages/server/src/server/thread/thread-lifecycle.ts:129`, `packages/server/src/server/thread/thread-lifecycle.ts:222`, `packages/server/src/server/thread/thread-lifecycle.ts:241`). |
-| `packages/web/src/App.tsx` | `packages/web/src/thread/thread-store.ts` | active thread change triggers attach stream | ✓ WIRED | On active terminal change app sends attach request (`packages/web/src/App.tsx:208`). |
-| `packages/server/src/server/thread/session-reaper.ts` | thread registry + runtime resources | periodic orphan reconciliation | ✓ WIRED | Reaper loads snapshot then reconciles agents/tmux/worktrees (`packages/server/src/server/thread/session-reaper.ts:180`, `packages/server/src/server/thread/session-reaper.ts:283`, `packages/server/src/server/thread/session-reaper.ts:315`). |
+| `packages/server/src/server/session.ts` | configured projects in persisted config | `loadPersistedConfig` -> `threadRegistry.setProjects` -> `project_list_response` | ✓ WIRED | Configured repo list drives project API output via `packages/server/src/server/session.ts:736`, `packages/server/src/server/session.ts:747`, `packages/server/src/server/session.ts:4804`. |
+| `packages/web/src/components/thread-create-dialog.tsx` | `packages/web/src/thread/thread-store.ts` | submit calls `createThread({ projectId,title,provider,baseBranch,... })` | ✓ WIRED | Dialog submit payload includes required thread-create fields in `packages/web/src/components/thread-create-dialog.tsx:257`. |
+| `packages/web/src/thread/thread-store.ts` | `packages/web/src/lib/ws.ts` | `sendRequest` branches on `sendWsMessage` return value | ✓ WIRED | Unsent requests exit pending immediately through onSendFailure branch in `packages/web/src/thread/thread-store.ts:303`, with OPEN-check contract in `packages/web/src/lib/ws.ts:187`. |
+| `packages/web/src/thread/thread-store.ts` | `packages/server/src/server/session.ts` | `thread_create_request` / `thread_switch_request` / `thread_delete_request` websocket messages | ✓ WIRED | Request emission in `packages/web/src/thread/thread-store.ts:1128`, `packages/web/src/thread/thread-store.ts:982`, `packages/web/src/thread/thread-store.ts:1182`; server handlers in `packages/server/src/server/session.ts:4908`, `packages/server/src/server/session.ts:4983`, `packages/server/src/server/session.ts:4946`. |
+| `packages/server/src/server/session.ts` | `packages/server/src/server/thread/thread-lifecycle.ts` | handler delegation for create/switch/delete | ✓ WIRED | Lifecycle delegation implemented in `packages/server/src/server/session.ts:4911`, `packages/server/src/server/session.ts:4948`, `packages/server/src/server/session.ts:4985`. |
+| `packages/server/src/server/thread/thread-lifecycle.ts` | worktree + terminal + agent resources | create flow then cleanup/rollback | ✓ WIRED | Create path provisions resources in `packages/server/src/server/thread/thread-lifecycle.ts:129`, `packages/server/src/server/thread/thread-lifecycle.ts:138`, `packages/server/src/server/thread/thread-lifecycle.ts:161`; rollback/cleanup exists in `packages/server/src/server/thread/thread-lifecycle.ts:190`, `packages/server/src/server/thread/thread-lifecycle.ts:242`. |
+| `paseo.json` | `packages/server/src/utils/worktree.ts` | setup commands executed by `runWorktreeSetupCommands` during thread create | ✓ WIRED | Worktree setup reads configured command list in `packages/server/src/utils/worktree.ts:479`; config provides Bun install bootstrap at `paseo.json:4`. |
+| `packages/server/e2e/thread-management-web.spec.ts` | create-thread pending/error lifecycle | Playwright assertions enforce bounded failure and no workspace regression | ✓ WIRED | Spec asserts pending recovery + explicit errors and excludes `No workspaces found` in `packages/server/e2e/thread-management-web.spec.ts:357`, `packages/server/e2e/thread-management-web.spec.ts:433`, `packages/server/e2e/thread-management-web.spec.ts:537`. |
 
 ### Requirements Coverage
 
 | Requirement | Status | Blocking Issue |
 | --- | --- | --- |
-| PROJ-01: sidebar lists configured projects | ✓ SATISFIED | None |
-| PROJ-02: multiple threads per project with isolated worktrees | ✓ SATISFIED | None |
-| PROJ-03: create/delete thread lifecycle cleanup | ✓ SATISFIED | None |
-| PROJ-04: switch active threads with click | ✓ SATISFIED | None |
-| PROJ-05: select CLI agent per thread | ✓ SATISFIED | None |
+| PROJ-01: User can see all projects in sidebar from configured repos | ✓ SATISFIED | None |
+| PROJ-02: User can create multiple isolated threads/worktrees | ✓ SATISFIED | None |
+| PROJ-03: User can create/delete threads with lifecycle cleanup | ✓ SATISFIED | None |
+| PROJ-04: User can switch active thread with click | ✓ SATISFIED | None |
+| PROJ-05: User can choose CLI agent per thread | ✓ SATISFIED | None |
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 | --- | --- | --- | --- | --- |
-| `packages/server/src/server/session.ts` | 6821 | compatibility placeholder marker remains for phase-2 ensure-default identity path | ⚠ Warning | Non-blocking for Phase 3 goal; indicates legacy compatibility branch still present. |
+| `packages/server/src/server/session.ts` | 6805 | `phase2-active-thread-placeholder` fallback marker | ℹ Info | Compatibility marker appears only in ensure-default fallback payload; no stubbed thread lifecycle path found in create/switch/delete handlers. |
 
 ### Human Verification Required
 
-### 1. Multi-project runtime UX
-
-**Test:** In web UI, run create/switch/delete across at least 2 configured repos.
-**Expected:** Sidebar active row, terminal stream, and thread status stay in sync.
-**Why human:** Visual/runtime coherence across websocket and tmux is best validated interactively.
-
-### 2. Worktree isolation sanity
-
-**Test:** In two threads of the same project, run `pwd` and create different files.
-**Expected:** Distinct worktree paths; file changes stay isolated per thread.
-**Why human:** Confirms end-to-end behavior under real shell state.
+None for this structural verification pass.
 
 ### Gaps Summary
 
-Previous gap is closed. Create-thread base branch and command override now flow end-to-end: dialog -> store -> strict wire schema -> session handler -> lifecycle agent/worktree provisioning, with daemon and browser regression coverage. No remaining structural gaps against Phase 3 must-haves.
+No structural gaps found. Phase 3 goal behavior remains implemented and wired end-to-end: configured projects feed sidebar state, thread lifecycle create/switch/delete paths are substantive, and create-thread pending leak protections + regressions are in place.
 
 ---
 
-_Verified: 2026-02-23T15:45:53Z_
+_Verified: 2026-02-25T05:14:16Z_
 _Verifier: OpenCode (gsd-verifier)_

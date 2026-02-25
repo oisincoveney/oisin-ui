@@ -1,21 +1,22 @@
-oisin-ui-1  | 2026-02-25T03:10:20.349564558Z [WARN  tini (7)] Tini is not running as PID 1 and isn't registered as a child subreaper.
-oisin-ui-1  | 2026-02-25T03:10:20.349594350Z Zombie processes will not be re-parented to Tini, so zombie reaping won't work.
-oisin-ui-1  | 2026-02-25T03:10:20.349601809Z To fix the problem, use the -s option or set the environment variable TINI_SUBREAPER to register Tini as a child subreaper, or run Tini as PID 1.
-oisin-ui-1  | 2026-02-25T03:10:20.365151938Z Starting daemon and web server...
-oisin-ui-1  | 2026-02-25T03:10:20.400163218Z $ NODE_ENV=development tsx packages/server/scripts/daemon-runner.ts --dev --no-relay --no-mcp
-oisin-ui-1  | 2026-02-25T03:10:20.648613155Z @oisin/web dev: 
-oisin-ui-1  | 2026-02-25T03:10:20.648629322Z @oisin/web dev:   VITE v7.3.1  ready in 199 ms
-oisin-ui-1  | 2026-02-25T03:10:20.648633947Z @oisin/web dev: 
-oisin-ui-1  | 2026-02-25T03:10:20.648635780Z @oisin/web dev:   ➜  Local:   http://localhost:44285/
-oisin-ui-1  | 2026-02-25T03:10:20.648637614Z @oisin/web dev:   ➜  Network: http://192.168.117.2:44285/
-oisin-ui-1  | 2026-02-25T03:10:20.662299482Z [DaemonRunner] Starting daemon worker (dev mode, crash restarts enabled)
-oisin-ui-1  | 2026-02-25T03:10:21.766234559Z [03:10:21.716] [32mINFO[39m: [36mLoaded daemon keypair[39m [90m{"module":"daemon-keypair","filePath":"/config/runtime-gate/daemon-keypair.json"}[39m
-oisin-ui-1  | 2026-02-25T03:10:21.768066403Z [03:10:21.729] [32mINFO[39m: [36mAgent registry loaded (0 records); agents will initialize on demand[39m [90m{"module":"bootstrap"}[39m
-oisin-ui-1  | 2026-02-25T03:10:21.768079487Z [03:10:21.729] [32mINFO[39m: [36mVoice mode configured for agent-scoped resume flow (no dedicated voice assistant provider)[39m [90m{"module":"bootstrap"}[39m
-oisin-ui-1  | 2026-02-25T03:10:21.768083612Z [03:10:21.729] [32mINFO[39m: [36mAgent MCP HTTP endpoint disabled[39m [90m{"module":"bootstrap"}[39m
-oisin-ui-1  | 2026-02-25T03:10:21.768085153Z [03:10:21.729] [32mINFO[39m: [36mResolved voice MCP bridge command[39m [90m{"module":"bootstrap","source":"default-js-script","command":"/usr/local/bin/node","baseArgs":["/workspace/packages/server/scripts/mcp-stdio-socket-bridge-cli.mjs"]}[39m
-oisin-ui-1  | 2026-02-25T03:10:21.768087570Z [03:10:21.730] [32mINFO[39m: [36mSpeech provider reconciliation started[39m [90m{"module":"speech-runtime","requestedProviders":{"dictationStt":{"provider":"local","enabled":false,"explicit":false},"voiceStt":{"provider":"local","enabled":false,"explicit":false},"voiceTts":{"provider":"local","enabled":false,"explicit":false}},"availability":{"openai":{"stt":false,"tts":false,"dictationStt":false}}}[39m
-oisin-ui-1  | 2026-02-25T03:10:21.768116403Z [03:10:21.731] [32mINFO[39m: [36mSpeech provider reconciliation completed[39m [90m{"module":"speech-runtime","requestedProviders":{"dictationStt":{"provider":"local","enabled":false,"explicit":false},"voiceStt":{"provider":"local","enabled":false,"explicit":false},"voiceTts":{"provider":"local","enabled":false,"explicit":false}},"effectiveProviders":{"dictationStt":"unavailable","voiceStt":"unavailable","voiceTts":"unavailable"}}[39m
-oisin-ui-1  | 2026-02-25T03:10:21.768118737Z [03:10:21.732] [32mINFO[39m: [36mWebSocket server initialized on /ws[39m [90m{"module":"websocket-server"}[39m
-oisin-ui-1  | 2026-02-25T03:10:21.768131570Z [03:10:21.733] [32mINFO[39m: [36mLoaded thread registry[39m [90m{"module":"thread-registry","filePath":"/config/runtime-gate/thread-registry.json"}[39m
-oisin-ui-1  | 2026-02-25T03:10:21.768146945Z [03:10:21.746] [32mINFO[39m: [36mServer listening on http://0.0.0.0:6767[39m [90m{"module":"bootstrap","host":"0.0.0.0","port":6767}[39m
+oisin-ui-1  | 2026-02-25T04:18:39.316351361Z [WARN  tini (7)] Tini is not running as PID 1 and isn't registered as a child subreaper.
+oisin-ui-1  | 2026-02-25T04:18:39.316447695Z Zombie processes will not be re-parented to Tini, so zombie reaping won't work.
+oisin-ui-1  | 2026-02-25T04:18:39.316469403Z To fix the problem, use the -s option or set the environment variable TINI_SUBREAPER to register Tini as a child subreaper, or run Tini as PID 1.
+oisin-ui-1  | 2026-02-25T04:18:39.562444343Z PID lock preflight: no existing lock file
+oisin-ui-1  | 2026-02-25T04:18:39.562674345Z Starting daemon and web server...
+oisin-ui-1  | 2026-02-25T04:18:39.570534306Z $ NODE_ENV=development tsx packages/server/scripts/daemon-runner.ts --dev --no-relay --no-mcp
+oisin-ui-1  | 2026-02-25T04:18:40.037541377Z @oisin/web dev: 
+oisin-ui-1  | 2026-02-25T04:18:40.037573419Z @oisin/web dev:   VITE v7.3.1  ready in 409 ms
+oisin-ui-1  | 2026-02-25T04:18:40.037578586Z @oisin/web dev: 
+oisin-ui-1  | 2026-02-25T04:18:40.037579877Z @oisin/web dev:   ➜  Local:   http://localhost:44285/
+oisin-ui-1  | 2026-02-25T04:18:40.037581502Z @oisin/web dev:   ➜  Network: http://192.168.117.2:44285/
+oisin-ui-1  | 2026-02-25T04:18:40.133573590Z [DaemonRunner] Starting daemon worker (dev mode, crash restarts enabled)
+oisin-ui-1  | 2026-02-25T04:18:42.552242588Z [04:18:42.380] [32mINFO[39m: [36mLoaded daemon keypair[39m [90m{"module":"daemon-keypair","filePath":"/config/runtime-gate/daemon-keypair.json"}[39m
+oisin-ui-1  | 2026-02-25T04:18:42.562236062Z [04:18:42.491] [32mINFO[39m: [36mAgent registry loaded (0 records); agents will initialize on demand[39m [90m{"module":"bootstrap"}[39m
+oisin-ui-1  | 2026-02-25T04:18:42.562264603Z [04:18:42.491] [32mINFO[39m: [36mVoice mode configured for agent-scoped resume flow (no dedicated voice assistant provider)[39m [90m{"module":"bootstrap"}[39m
+oisin-ui-1  | 2026-02-25T04:18:42.562269645Z [04:18:42.491] [32mINFO[39m: [36mAgent MCP HTTP endpoint disabled[39m [90m{"module":"bootstrap"}[39m
+oisin-ui-1  | 2026-02-25T04:18:42.562271229Z [04:18:42.491] [32mINFO[39m: [36mResolved voice MCP bridge command[39m [90m{"module":"bootstrap","source":"default-js-script","command":"/usr/local/bin/node","baseArgs":["/workspace/packages/server/scripts/mcp-stdio-socket-bridge-cli.mjs"]}[39m
+oisin-ui-1  | 2026-02-25T04:18:42.562273520Z [04:18:42.492] [32mINFO[39m: [36mSpeech provider reconciliation started[39m [90m{"module":"speech-runtime","requestedProviders":{"dictationStt":{"provider":"local","enabled":false,"explicit":false},"voiceStt":{"provider":"local","enabled":false,"explicit":false},"voiceTts":{"provider":"local","enabled":false,"explicit":false}},"availability":{"openai":{"stt":false,"tts":false,"dictationStt":false}}}[39m
+oisin-ui-1  | 2026-02-25T04:18:42.562276437Z [04:18:42.493] [32mINFO[39m: [36mSpeech provider reconciliation completed[39m [90m{"module":"speech-runtime","requestedProviders":{"dictationStt":{"provider":"local","enabled":false,"explicit":false},"voiceStt":{"provider":"local","enabled":false,"explicit":false},"voiceTts":{"provider":"local","enabled":false,"explicit":false}},"effectiveProviders":{"dictationStt":"unavailable","voiceStt":"unavailable","voiceTts":"unavailable"}}[39m
+oisin-ui-1  | 2026-02-25T04:18:42.562284062Z [04:18:42.495] [32mINFO[39m: [36mWebSocket server initialized on /ws[39m [90m{"module":"websocket-server"}[39m
+oisin-ui-1  | 2026-02-25T04:18:42.562699273Z [04:18:42.507] [32mINFO[39m: [36mLoaded thread registry[39m [90m{"module":"thread-registry","filePath":"/config/runtime-gate/thread-registry.json"}[39m
+oisin-ui-1  | 2026-02-25T04:18:42.706694341Z [04:18:42.705] [32mINFO[39m: [36mServer listening on http://0.0.0.0:6767[39m [90m{"module":"bootstrap","host":"0.0.0.0","port":6767}[39m

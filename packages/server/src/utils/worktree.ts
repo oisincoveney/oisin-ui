@@ -468,12 +468,6 @@ export async function runWorktreeSetupCommands(options: {
   runtimeEnv?: WorktreeRuntimeEnv;
   onEvent?: (event: WorktreeSetupCommandProgressEvent) => void;
 }): Promise<WorktreeSetupCommandResult[]> {
-  // Read paseo.json from the worktree (it will have the same content as the source repo)
-  const setupCommands = getWorktreeSetupCommands(options.worktreePath);
-  if (setupCommands.length === 0) {
-    return [];
-  }
-
   const runtimeEnv =
     options.runtimeEnv ??
     (await resolveWorktreeRuntimeEnv({
@@ -481,6 +475,12 @@ export async function runWorktreeSetupCommands(options: {
       branchName: options.branchName,
       ...(options.repoRootPath ? { repoRootPath: options.repoRootPath } : {}),
     }));
+
+  const setupCommands = getWorktreeSetupCommands(runtimeEnv.PASEO_SOURCE_CHECKOUT_PATH);
+  if (setupCommands.length === 0) {
+    return [];
+  }
+
   const setupEnv = {
     ...process.env,
     ...runtimeEnv,

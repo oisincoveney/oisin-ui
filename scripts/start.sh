@@ -11,8 +11,8 @@ export PASEO_VOICE_MODE_ENABLED="${PASEO_VOICE_MODE_ENABLED:-0}"
 mkdir -p "$PASEO_HOME"
 LOCK_PATH="$PASEO_HOME/paseo.pid"
 
-set +e
-LOCK_PREFLIGHT_RESULT="$(node - "$LOCK_PATH" <<'NODE'
+lock_preflight() {
+  node - "$LOCK_PATH" <<'NODE'
 const { execFileSync } = require("node:child_process");
 const { existsSync, readFileSync, unlinkSync } = require("node:fs");
 
@@ -92,20 +92,33 @@ if (daemonCommand && sameStartWindow) {
 clearLock(`cleared-stale-pid-reuse:${lock.pid}`);
 process.exit(0);
 NODE
-)"
-LOCK_PREFLIGHT_STATUS=$?
-set -e
+}
 
-if [[ "$LOCK_PREFLIGHT_STATUS" -eq 0 ]]; then
-  if [[ "$LOCK_PREFLIGHT_RESULT" == no-lock ]]; then
-    echo "PID lock preflight: no existing lock file"
-  elif [[ "$LOCK_PREFLIGHT_RESULT" == cleared-stale-* ]]; then
-    echo "PID lock preflight: $LOCK_PREFLIGHT_RESULT"
+LOCK_PREFLIGHT_RESULT=""
+for attempt in 1 2 3 4 5 6; do
+  set +e
+  LOCK_PREFLIGHT_RESULT="$(lock_preflight)"
+  LOCK_PREFLIGHT_STATUS=$?
+  set -e
+
+  if [[ "$LOCK_PREFLIGHT_STATUS" -eq 0 ]]; then
+    if [[ "$LOCK_PREFLIGHT_RESULT" == no-lock ]]; then
+      echo "PID lock preflight: no existing lock file"
+    elif [[ "$LOCK_PREFLIGHT_RESULT" == cleared-stale-* ]]; then
+      echo "PID lock preflight: $LOCK_PREFLIGHT_RESULT"
+    fi
+    break
   fi
-else
+
+  if [[ "$attempt" -lt 6 ]]; then
+    echo "PID lock preflight: active lock owner detected ($LOCK_PREFLIGHT_RESULT), retrying... ($attempt/6)"
+    sleep 1
+    continue
+  fi
+
   echo "PID lock preflight: active lock owner detected ($LOCK_PREFLIGHT_RESULT), refusing startup" >&2
   exit 1
-fi
+done
 
 DAEMON_PORT="${PASEO_LISTEN##*:}"
 if [[ ! "$DAEMON_PORT" =~ ^[0-9]+$ ]]; then

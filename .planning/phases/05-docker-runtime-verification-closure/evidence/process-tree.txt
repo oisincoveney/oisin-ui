@@ -1,15 +1,15 @@
 PID                 USER                TIME                COMMAND
-3856414             root                0:00                /sbin/docker-init -- /usr/bin/tini -- bash ./scripts/start.sh
-3856464             root                0:00                /usr/bin/tini -- bash ./scripts/start.sh
-3856465             root                0:00                bash ./scripts/start.sh
-3856468             root                0:00                bun run dev:server -- --no-relay --no-mcp
-3856469             root                0:00                bun run --filter @oisin/web dev -- --host 0.0.0.0 --port 44285
-3856471             root                0:00                node /workspace/node_modules/.bin/tsx packages/server/scripts/daemon-runner.ts --dev --no-relay --no-mcp
-3856472             root                0:00                node /workspace/node_modules/.bin/vite --host 0.0.0.0 --port 44285
-3856489             root                0:00                /usr/local/bin/node --require /workspace/node_modules/tsx/dist/preflight.cjs --import file:///workspace/node_modules/tsx/dist/loader.mjs packages/server/scripts/daemon-runner.ts --dev --no-relay --no-mcp
-3856497             root                0:03                /workspace/node_modules/@esbuild/linux-arm64/bin/esbuild --service=0.25.11 --ping
-3856524             root                0:00                /workspace/node_modules/@esbuild/linux-arm64/bin/esbuild --service=0.25.11 --ping
-3856546             root                0:01                /usr/local/bin/node --import tsx /workspace/packages/server/src/server/index.ts --no-relay --no-mcp
-3856562             root                0:00                /workspace/node_modules/@esbuild/linux-arm64/bin/esbuild --service=0.25.11 --ping
-3856712             root                0:00                {tmux: server} tmux new-session -d -s runtime-gate sleep 600
-3856713             root                0:00                sleep 600
+4057714             root                0:00                /sbin/docker-init -- /usr/bin/tini -- bash ./scripts/start.sh
+4057769             root                0:00                /usr/bin/tini -- bash ./scripts/start.sh
+4057770             root                0:00                bash ./scripts/start.sh
+4057781             root                0:00                bun run dev:server -- --no-relay --no-mcp
+4057782             root                0:00                bun run --filter @oisin/web dev -- --host 0.0.0.0 --port 44285
+4057783             root                0:00                node /workspace/node_modules/.bin/tsx packages/server/scripts/daemon-runner.ts --dev --no-relay --no-mcp
+4057784             root                0:04                node /workspace/node_modules/.bin/vite --host 0.0.0.0 --port 44285
+4057801             root                0:00                /usr/local/bin/node --require /workspace/node_modules/tsx/dist/preflight.cjs --import file:///workspace/node_modules/tsx/dist/loader.mjs packages/server/scripts/daemon-runner.ts --dev --no-relay --no-mcp
+4057809             root                0:05                /workspace/node_modules/@esbuild/linux-arm64/bin/esbuild --service=0.25.11 --ping
+4057843             root                0:00                /workspace/node_modules/@esbuild/linux-arm64/bin/esbuild --service=0.25.11 --ping
+4057853             root                0:04                /usr/local/bin/node --import tsx /workspace/packages/server/src/server/index.ts --no-relay --no-mcp
+4057914             root                0:00                /workspace/node_modules/@esbuild/linux-arm64/bin/esbuild --service=0.25.11 --ping
+4058045             root                0:00                {tmux: server} tmux new-session -d -s runtime-gate sleep 600
+4058046             root                0:00                sleep 600

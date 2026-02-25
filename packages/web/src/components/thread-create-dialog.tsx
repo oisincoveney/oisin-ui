@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -7,7 +7,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -34,6 +33,7 @@ type ThreadCreateDialogProps = {
 
 export function ThreadCreateDialog({ open, onOpenChange, initialProjectId }: ThreadCreateDialogProps) {
   const snapshot = useThreadStoreSnapshot()
+  const createRequestedRef = useRef(false)
   const [projectId, setProjectId] = useState(initialProjectId ?? '')
   const [threadTitle, setThreadTitle] = useState('')
   const [provider, setProvider] = useState('opencode')
@@ -75,8 +75,6 @@ export function ThreadCreateDialog({ open, onOpenChange, initialProjectId }: Thr
     open,
     initialProjectId,
     snapshot.projects,
-    snapshot.providers.list,
-    branchSuggestions,
   ])
 
   useEffect(() => {
@@ -92,22 +90,25 @@ export function ThreadCreateDialog({ open, onOpenChange, initialProjectId }: Thr
 
   useEffect(() => {
     if (!open) {
+      createRequestedRef.current = false
       return
     }
 
-    if (snapshot.create.pending || snapshot.create.error) {
+    if (snapshot.create.pending) {
+      createRequestedRef.current = true
       return
     }
 
-    if (threadTitle.trim().length === 0) {
+    if (!createRequestedRef.current || snapshot.create.error) {
       return
     }
 
     onOpenChange(false)
+    createRequestedRef.current = false
     setThreadTitle('')
     setCommandMode('default')
     setCommandArgsRaw('')
-  }, [snapshot.create.pending, snapshot.create.error, threadTitle, open, onOpenChange])
+  }, [snapshot.create.pending, snapshot.create.error, open, onOpenChange])
 
   useEffect(() => {
     if (!open) {
@@ -128,7 +129,6 @@ export function ThreadCreateDialog({ open, onOpenChange, initialProjectId }: Thr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create New Thread</DialogTitle>
