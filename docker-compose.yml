@@ -8,7 +8,6 @@ services:
       - "44285:44285"
     environment:
       PASEO_HOME: ${PASEO_HOME:-/config}
-      PASEO_PRESTART_CLEAN_LOCK: ${PASEO_PRESTART_CLEAN_LOCK:-0}
     volumes:
       - .:/workspace
       - /workspace/node_modules
