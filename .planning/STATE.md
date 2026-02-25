@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-02-25)
 ## Current Position
 
 **Phase:** 06 of 08 (Runtime Reliability Hardening)
-**Plan:** 4 of 6 in current phase
+**Plan:** 5 of 6 in current phase
 **Status:** In progress
-**Last activity:** 2026-02-25 — Completed 06-04-PLAN.md
+**Last activity:** 2026-02-25 — Completed 06-05-PLAN.md
 
 ```
-Progress: [█████████░] 95.0% (38/40 plans have SUMMARY files)
+Progress: [██████████] 97.5% (39/40 plans have SUMMARY files)
 ```
 
 ## Accumulated Context
@@ -30,7 +30,7 @@ Progress: [█████████░] 95.0% (38/40 plans have SUMMARY files
 
 - Ensure-default metadata contract completion (`projectId` / `resolvedThreadId` emission).
 - Deterministic diff-panel browser regression fixture (avoid skip path).
-- Continue reconnect/runtime hardening UX polish on top of RUN-02 queued-send prerequisite.
+- Run deterministic closure checks for RUN-01..RUN-04 in 06-06.
 
 ### Decisions Logged
 
@@ -45,13 +45,16 @@ Progress: [█████████░] 95.0% (38/40 plans have SUMMARY files
 - RUN-04 active delete success is an explicit neutral state; do not auto-fallback to another thread.
 - Delete-driven no-active state is preserved across thread-list/ensure-default updates until explicit user selection.
 - Active-thread-null transitions invalidate attach cycle guards and cancel stale pending attach/ensure retries.
+- Restart detection now keys off `status.server_info.serverId` identity change, not websocket transport state alone.
+- Warm-up locks create/switch/delete until both thread refresh and attach settle complete.
+- Restart recovery restores prior active thread if present, else falls back to newest thread by `updatedAt`.
 
 ## Session Continuity
 
-**Last session:** 2026-02-25T23:31:39Z
-**Stopped at:** Completed 06-04-PLAN.md
+**Last session:** 2026-02-25T23:39:51Z
+**Stopped at:** Completed 06-05-PLAN.md
 **Resume file:** None
 
 ---
 
-_State updated: 2026-02-25 after 06-04 execution_
+_State updated: 2026-02-25 after 06-05 execution_
