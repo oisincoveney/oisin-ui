@@ -3,15 +3,15 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Project/thread runtime path hardened for Bun lockfile thread creation in configured repos.
+**Current Focus:** Docker runtime gate closure completed with deterministic duplicate-lock-free evidence chain for DOCK-01.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
-**Phase:** 03 of 5 (Project and Thread Management)
-**Plan:** 06 of 06
+**Phase:** 05 of 5 (Docker Runtime Verification Closure)
+**Plan:** 05 of 05
 **Status:** Phase complete.
-**Last activity:** 2026-02-25 - Completed 03-06-PLAN.md Bun lockfile thread-create runtime closure.
+**Last activity:** 2026-02-25 - Completed 05-05-PLAN.md duplicate-daemon runtime gate determinism closure.
 
 ```
 Progress: [████████████████████] 100%
@@ -19,7 +19,7 @@ Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
 Phase 3:  ██████████ Complete (6/6)
 Phase 4:  ██████████ Complete (6/6)
-Phase 5:  ██████████ Complete (4/4)
+Phase 5:  ██████████ Complete (5/5)
 ```
 
 ## Performance Metrics
@@ -84,6 +84,8 @@ Phase 5:  ██████████ Complete (4/4)
 | Enable compose `init` in runtime verification service | Improves signal forwarding and deterministic stop behavior during runtime gate runs | 05-03 |
 | Promote verification and milestone docs to pass-state only from fresh runtime artifacts | Prevents stale blocker language and keeps DOCK-01 closure evidence-backed | 05-04 |
 | Preserve non-critical tech debt entries while clearing critical DOCK-01 blocker | Keeps milestone audit truthful by separating blocker closure from debt cleanup | 05-04 |
+| Run runtime gate with isolated `PASEO_HOME=/config/runtime-gate` for verification runs | Prevents persisted daemon lock state from causing duplicate-daemon startup churn | 05-05 |
+| Keep prestart lock cleanup opt-in and gate-scoped via `PASEO_PRESTART_CLEAN_LOCK=1` | Maintains normal daemon lock behavior while making verification startup deterministic | 05-05 |
 | Use bun install --frozen-lockfile as canonical worktree bootstrap command for this repo runtime | Aligns thread bootstrap with bun.lock strategy and removes npm lockfile dependency from create-thread flow | 03-06 |
 | Seed bun-lockfile runtime fixtures with local file dependency plus node_modules ignore | Keeps frozen-lockfile create-thread regressions deterministic and preserves delete-flow cleanliness in web e2e | 03-06 |
 
@@ -97,11 +99,11 @@ Phase 5:  ██████████ Complete (4/4)
 
 ## Session Continuity
 
-**Last session:** 2026-02-25 02:58 UTC
-**Stopped at:** Completed 03-06-PLAN.md
+**Last session:** 2026-02-25 03:11 UTC
+**Stopped at:** Completed 05-05-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-25T02:58:15Z_
+_Last updated: 2026-02-25T03:11:51Z_
