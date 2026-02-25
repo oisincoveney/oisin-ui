@@ -12,6 +12,7 @@ TMUX_RUNTIME="$EVIDENCE_DIR/tmux-runtime.txt"
 WS_HANDSHAKE="$EVIDENCE_DIR/ws-handshake.md"
 COMPOSE_PS_STOP="$EVIDENCE_DIR/compose-ps-stop.json"
 POST_STOP_CHECK="$EVIDENCE_DIR/post-stop-process-check.txt"
+GATE_PASEO_HOME="/config/runtime-gate"
 
 cd "$ROOT_DIR"
 
@@ -39,7 +40,7 @@ trap cleanup EXIT
 
 docker compose down --remove-orphans >/dev/null 2>&1 || true
 
-docker compose up --build >"$COMPOSE_UP_LOG" 2>&1 &
+PASEO_HOME="$GATE_PASEO_HOME" PASEO_PRESTART_CLEAN_LOCK=1 docker compose up --build >"$COMPOSE_UP_LOG" 2>&1 &
 compose_up_pid=$!
 
 ready=0

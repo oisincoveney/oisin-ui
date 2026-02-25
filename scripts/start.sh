@@ -8,6 +8,11 @@ export PASEO_CORS_ORIGINS="${PASEO_CORS_ORIGINS:-http://localhost:44285,http://1
 export PASEO_DICTATION_ENABLED="${PASEO_DICTATION_ENABLED:-0}"
 export PASEO_VOICE_MODE_ENABLED="${PASEO_VOICE_MODE_ENABLED:-0}"
 
+if [[ "${PASEO_PRESTART_CLEAN_LOCK:-0}" == "1" ]]; then
+  mkdir -p "$PASEO_HOME"
+  rm -f "$PASEO_HOME/paseo.pid"
+fi
+
 DAEMON_PORT="${PASEO_LISTEN##*:}"
 if [[ ! "$DAEMON_PORT" =~ ^[0-9]+$ ]]; then
   echo "PASEO_LISTEN must end with a TCP port, got: $PASEO_LISTEN" >&2
