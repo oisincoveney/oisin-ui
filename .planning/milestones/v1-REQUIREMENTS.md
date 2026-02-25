@@ -1,11 +1,19 @@
-# Requirements: Oisin UI
+# Requirements Archive: v1 MVP
+
+**Archived:** 2026-02-25
+**Status:** ✅ SHIPPED
+
+This is the archived requirements specification for v1.
+For current requirements, start next milestone planning with fresh requirements.
+
+---
+
+# Requirements: Oisin UI (v1 archive)
 
 **Defined:** 2026-02-21
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
 
 ## v1 Requirements
-
-Requirements for initial release. Each maps to roadmap phases.
 
 ### Terminal & Connectivity
 
@@ -30,9 +38,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **DOCK-01**: Application runs in a single Docker container (daemon + web UI + tmux)
 
-## v2 Requirements
-
-Deferred to future release. Tracked but not in current roadmap.
+## v2 Requirements (Deferred)
 
 ### Terminal
 
@@ -51,8 +57,6 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ## Out of Scope
 
-Explicitly excluded. Documented to prevent scope creep.
-
 | Feature | Reason |
 |---------|--------|
 | Code editor (Monaco/CodeMirror) | Terminal-first — agents edit code, users review diffs |
@@ -65,29 +69,35 @@ Explicitly excluded. Documented to prevent scope creep.
 | OpenClaw/Discord integration | Future phase after web UI is solid |
 | Cloud deployment/hosting | Docker makes this portable, deploy after it works locally |
 
-## Traceability
-
-Which phases cover which requirements. Updated during roadmap creation.
+## Traceability (Final v1)
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DOCK-01 | Phase 1: Foundation & Docker | Complete |
-| TERM-01 | Phase 2: Terminal I/O | Complete |
-| TERM-02 | Phase 2: Terminal I/O | Complete |
-| TERM-03 | Phase 2: Terminal I/O | Complete |
-| TERM-04 | Phase 2: Terminal I/O | Complete |
-| PROJ-01 | Phase 3: Project & Thread Management | Complete |
-| PROJ-02 | Phase 3: Project & Thread Management | Complete |
-| PROJ-03 | Phase 3: Project & Thread Management | Complete |
-| PROJ-04 | Phase 3: Project & Thread Management | Complete |
-| PROJ-05 | Phase 3: Project & Thread Management | Complete |
-| DIFF-01 | Phase 4: Code Diffs | Complete |
+| DOCK-01 | Phase 1 + Phase 5 | Complete |
+| TERM-01 | Phase 2 | Complete |
+| TERM-02 | Phase 2 | Complete |
+| TERM-03 | Phase 2 | Complete |
+| TERM-04 | Phase 2 | Complete |
+| PROJ-01 | Phase 3 | Complete |
+| PROJ-02 | Phase 3 | Complete |
+| PROJ-03 | Phase 3 | Complete |
+| PROJ-04 | Phase 3 | Complete |
+| PROJ-05 | Phase 3 | Complete |
+| DIFF-01 | Phase 4 | Complete |
 
-**Coverage:**
-- v1 requirements: 11 total
-- Mapped to phases: 11 ✓
-- Unmapped: 0
+**Coverage:** 11/11 complete
 
 ---
-*Requirements defined: 2026-02-21*
-*Last updated: 2026-02-23 after phase 4 verification*
+
+## Milestone Summary
+
+**Shipped:** 11 of 11 v1 requirements
+
+**Adjusted during implementation:**
+- DOCK-01 required dedicated Phase 5 runtime verification closure work to promote from partial to complete.
+- Project/thread create reliability required additional gap-closure plans (03-06..03-09) for lockfile/workspace/bootstrap and pending-state hardening.
+
+**Dropped:** None.
+
+---
+*Archived: 2026-02-25 as part of v1 milestone completion*
