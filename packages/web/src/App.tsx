@@ -54,6 +54,102 @@ type PendingEnsure = {
   cycleId: number
 }
 
+export const ATTACH_RECOVERY_WINDOW_MS = 60_000
+const ATTACH_RECOVERY_BASE_DELAY_MS = 500
+const ATTACH_RECOVERY_MAX_DELAY_MS = 5_000
+
+export type AttachRecoveryPhase = 'idle' | 'retrying' | 'failed'
+
+export type AttachRecoveryState = {
+  phase: AttachRecoveryPhase
+  startedAt: number | null
+  deadlineAt: number | null
+  attempt: number
+  lastError: string | null
+  token: number
+}
+
+export function createIdleAttachRecoveryState(token = 0): AttachRecoveryState {
+  return {
+    phase: 'idle',
+    startedAt: null,
+    deadlineAt: null,
+    attempt: 0,
+    lastError: null,
+    token,
+  }
+}
+
+export function getAttachRecoveryRetryDelayMs(attempt: number): number {
+  if (attempt <= 1) {
+    return ATTACH_RECOVERY_BASE_DELAY_MS
+  }
+  return Math.min(ATTACH_RECOVERY_BASE_DELAY_MS * 2 ** (attempt - 1), ATTACH_RECOVERY_MAX_DELAY_MS)
+}
+
+export function getAttachRecoveryRemainingMs(state: AttachRecoveryState, now: number): number | null {
+  if (state.phase !== 'retrying' || state.deadlineAt === null) {
+    return null
+  }
+  return Math.max(0, state.deadlineAt - now)
+}
+
+export function nextAttachRecoveryRetryState(
+  current: AttachRecoveryState,
+  now: number,
+  error: string
+): AttachRecoveryState {
+  const starting = current.phase !== 'retrying'
+  const startedAt = starting ? now : (current.startedAt ?? now)
+  const deadlineAt = starting ? now + ATTACH_RECOVERY_WINDOW_MS : (current.deadlineAt ?? now + ATTACH_RECOVERY_WINDOW_MS)
+  const attempt = starting ? 1 : current.attempt + 1
+  const token = starting ? current.token + 1 : current.token
+
+  if (now >= deadlineAt) {
+    return {
+      phase: 'failed',
+      startedAt,
+      deadlineAt,
+      attempt,
+      lastError: error,
+      token,
+    }
+  }
+
+  return {
+    phase: 'retrying',
+    startedAt,
+    deadlineAt,
+    attempt,
+    lastError: error,
+    token,
+  }
+}
+
+export function resolveAttachRecoverySuccess(
+  current: AttachRecoveryState,
+  lastToastToken: number | null
+): {
+  nextState: AttachRecoveryState
+  emitToast: boolean
+  nextToastToken: number | null
+} {
+  if (current.phase === 'idle') {
+    return {
+      nextState: current,
+      emitToast: false,
+      nextToastToken: lastToastToken,
+    }
+  }
+
+  const emitToast = current.token > 0 && current.token !== lastToastToken
+  return {
+    nextState: createIdleAttachRecoveryState(current.token),
+    emitToast,
+    nextToastToken: emitToast ? current.token : lastToastToken,
+  }
+}
+
 function randomId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2)}`
 }
@@ -113,13 +209,19 @@ function App() {
   const previousActiveThreadKeyRef = useRef<string | null>(threadSnapshot.activeThreadKey)
   const [_, setTerminalId] = useState<string | null>(null)
   const [attachFailureReason, setAttachFailureReason] = useState<string | null>(null)
+  const [attachRecovery, setAttachRecovery] = useState<AttachRecoveryState>(() => createIdleAttachRecoveryState())
+  const [attachRecoveryNow, setAttachRecoveryNow] = useState(() => Date.now())
   const adapterRef = useRef<TerminalStreamAdapter | null>(null)
   const terminalRef = useRef<Terminal | null>(null)
   const terminalIdRef = useRef<string | null>(null)
+  const activeThreadTerminalIdRef = useRef<string | null>(activeThreadTerminalId)
   const pendingAttachRef = useRef<PendingAttach | null>(null)
   const pendingEnsureRef = useRef<PendingEnsure | null>(null)
   const statusRef = useRef(status)
   const attachCycleRef = useRef(0)
+  const attachRecoveryRef = useRef<AttachRecoveryState>(createIdleAttachRecoveryState())
+  const attachRecoveryRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const attachRecoveryToastTokenRef = useRef<number | null>(null)
   const hadConnectedOnceRef = useRef(false)
   const forceRefreshOnAttachRef = useRef(false)
   const pendingScrollToBottomRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -130,6 +232,83 @@ function App() {
       clearTimeout(pendingScrollToBottomRef.current)
       pendingScrollToBottomRef.current = null
     }
+  }
+
+  const clearAttachRecoveryRetryTimer = () => {
+    if (attachRecoveryRetryTimerRef.current !== null) {
+      clearTimeout(attachRecoveryRetryTimerRef.current)
+      attachRecoveryRetryTimerRef.current = null
+    }
+  }
+
+  const setAttachRecoveryState = (next: AttachRecoveryState) => {
+    attachRecoveryRef.current = next
+    setAttachRecovery(next)
+  }
+
+  const resetAttachRecovery = () => {
+    clearAttachRecoveryRetryTimer()
+    const next = createIdleAttachRecoveryState(attachRecoveryRef.current.token)
+    setAttachRecoveryState(next)
+    setAttachRecoveryNow(Date.now())
+  }
+
+  const failAttachRecovery = (next: AttachRecoveryState) => {
+    clearAttachRecoveryRetryTimer()
+    setAttachRecoveryState(next)
+    setAttachRecoveryNow(Date.now())
+    setAttachFailureReason(
+      `Attach recovery timed out after 60s. Last error: ${next.lastError ?? 'attach failed'}. Try switching threads or restarting the daemon.`
+    )
+  }
+
+  const scheduleAttachRecoveryRetry = (next: AttachRecoveryState, terminalId: string) => {
+    if (next.phase !== 'retrying') {
+      failAttachRecovery(next)
+      return
+    }
+
+    const remainingMs = getAttachRecoveryRemainingMs(next, Date.now())
+    if (remainingMs === null || remainingMs <= 0) {
+      failAttachRecovery({ ...next, phase: 'failed' })
+      return
+    }
+
+    clearAttachRecoveryRetryTimer()
+    const retryDelayMs = Math.min(getAttachRecoveryRetryDelayMs(next.attempt), remainingMs)
+    attachRecoveryRetryTimerRef.current = setTimeout(() => {
+      attachRecoveryRetryTimerRef.current = null
+
+      if (statusRef.current !== 'connected') {
+        return
+      }
+
+      const currentRecovery = attachRecoveryRef.current
+      if (currentRecovery.phase !== 'retrying') {
+        return
+      }
+
+      const now = Date.now()
+      const windowRemainingMs = getAttachRecoveryRemainingMs(currentRecovery, now)
+      if (windowRemainingMs === null || windowRemainingMs <= 0) {
+        failAttachRecovery({ ...currentRecovery, phase: 'failed' })
+        return
+      }
+
+      const targetTerminalId = activeThreadTerminalIdRef.current ?? terminalIdRef.current ?? terminalId
+      if (!targetTerminalId) {
+        failAttachRecovery({
+          ...currentRecovery,
+          phase: 'failed',
+          lastError: 'No active terminal id available during attach recovery',
+        })
+        return
+      }
+
+      terminalIdRef.current = targetTerminalId
+      setTerminalId(targetTerminalId)
+      sendAttachRequest(targetTerminalId, true)
+    }, retryDelayMs)
   }
 
   const toggleDiffPanel = () => {
@@ -163,7 +342,6 @@ function App() {
   }
 
   const sendAttachRequest = (terminalId: string, forceRefresh: boolean) => {
-    setAttachFailureReason(null)
     const nextResumeOffset = forceRefresh ? 0 : (adapterRef.current?.getOffset() ?? 0)
     adapterRef.current?.resetForStreamRollover({ resetOffset: forceRefresh })
     const requestId = randomId('attach')
@@ -213,6 +391,29 @@ function App() {
   }
 
   useEffect(() => {
+    activeThreadTerminalIdRef.current = activeThreadTerminalId
+  }, [activeThreadTerminalId])
+
+  useEffect(() => {
+    attachRecoveryRef.current = attachRecovery
+  }, [attachRecovery])
+
+  useEffect(() => {
+    if (attachRecovery.phase !== 'retrying') {
+      return
+    }
+
+    setAttachRecoveryNow(Date.now())
+    const timer = setInterval(() => {
+      setAttachRecoveryNow(Date.now())
+    }, 1_000)
+
+    return () => {
+      clearInterval(timer)
+    }
+  }, [attachRecovery.phase])
+
+  useEffect(() => {
     statusRef.current = status
     adapterRef.current?.setTransportConnected(status === 'connected')
 
@@ -235,10 +436,12 @@ function App() {
     }
 
     if (status === 'disconnected' || status === 'reconnecting') {
+      clearAttachRecoveryRetryTimer()
       attachCycleRef.current += 1
       forceRefreshOnAttachRef.current = hadConnectedOnceRef.current
       pendingEnsureRef.current = null
       pendingAttachRef.current = null
+      setAttachRecoveryState(createIdleAttachRecoveryState(attachRecoveryRef.current.token))
       adapterRef.current?.resetForStreamRollover()
       if (terminalRef.current) {
         terminalRef.current.options.cursorBlink = false
@@ -306,6 +509,7 @@ function App() {
     }
 
     if (!activeThreadTerminalId) {
+      resetAttachRecovery()
       pendingEnsureRef.current = null
       pendingAttachRef.current = null
       terminalIdRef.current = null
@@ -323,6 +527,7 @@ function App() {
     }
 
     pendingEnsureRef.current = null
+    resetAttachRecovery()
     terminalIdRef.current = activeThreadTerminalId
     setTerminalId(activeThreadTerminalId)
     clearUnreadForActiveThread()
@@ -447,11 +652,26 @@ function App() {
             ? msg.payload.error
             : 'attach_terminal_stream_response missing streamId'
 
+        const now = Date.now()
+        const nextRecovery = nextAttachRecoveryRetryState(attachRecoveryRef.current, now, attachError)
+        setAttachRecoveryState(nextRecovery)
+        setAttachRecoveryNow(now)
         setAttachFailureReason(attachError)
+        scheduleAttachRecoveryRetry(nextRecovery, pendingAttach.terminalId)
         console.error('[terminal] attach failed', msg.payload?.error)
         return
       }
 
+      const recoveryResolution = resolveAttachRecoverySuccess(
+        attachRecoveryRef.current,
+        attachRecoveryToastTokenRef.current
+      )
+      setAttachRecoveryState(recoveryResolution.nextState)
+      attachRecoveryToastTokenRef.current = recoveryResolution.nextToastToken
+      if (recoveryResolution.emitToast) {
+        toast.success('Reconnected')
+      }
+      clearAttachRecoveryRetryTimer()
       setAttachFailureReason(null)
 
       const adapter = adapterRef.current
@@ -489,6 +709,7 @@ function App() {
     return () => {
       unsubText()
       unsubBin()
+      clearAttachRecoveryRetryTimer()
       clearPendingScroll()
     }
   }, [])
@@ -533,6 +754,8 @@ function App() {
       },
     })
   }
+
+  const attachRecoveryRemainingMs = getAttachRecoveryRemainingMs(attachRecovery, attachRecoveryNow)
 
   return (
     <main className="relative flex h-full w-full flex-col overflow-hidden bg-background">
@@ -645,6 +868,13 @@ function App() {
           wsFailureReason: diagnostics.lastFailureReason,
           wsFailureHint: diagnostics.lastFailureHint,
           attachFailureReason,
+          attachRecovery: {
+            phase: attachRecovery.phase,
+            attempt: attachRecovery.attempt,
+            deadlineAt: attachRecovery.deadlineAt,
+            remainingMs: attachRecoveryRemainingMs,
+            lastError: attachRecovery.lastError,
+          },
         }}
       />
     </main>
