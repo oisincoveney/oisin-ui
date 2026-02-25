@@ -10,12 +10,12 @@ See: `.planning/PROJECT.md` (updated 2026-02-25)
 ## Current Position
 
 **Phase:** 06 of 08 (Runtime Reliability Hardening)
-**Plan:** 06-01 of TBD
-**Status:** Ready to plan
-**Last activity:** 2026-02-25 — v1.1 roadmap created; phase 06 queued
+**Plan:** 2 of 6 in current phase
+**Status:** In progress
+**Last activity:** 2026-02-25 — Completed 06-02-PLAN.md
 
 ```
-Progress: [████████████░░░░░░░░] 62.5% (v1 shipped; v1.1 phases pending)
+Progress: [█████████████░░░░░░░] 66.7% (v1 shipped; phase 06 underway)
 ```
 
 ## Accumulated Context
@@ -30,8 +30,19 @@ Progress: [████████████░░░░░░░░] 62.5% (
 
 - Ensure-default metadata contract completion (`projectId` / `resolvedThreadId` emission).
 - Deterministic diff-panel browser regression fixture (avoid skip path).
-- Continued reconnect/runtime hardening UX polish.
+- Continue reconnect/runtime hardening UX polish on top of RUN-02 queued-send prerequisite.
+
+### Decisions Logged
+
+- RUN-02 input durability uses bounded FIFO queue (`maxBytes`/`maxChunks`/`ttlMs`) with oldest-first eviction.
+- Queued terminal input flushes only after attach confirmation and is cleared on unsafe live stream invalidation/switch.
+
+## Session Continuity
+
+**Last session:** 2026-02-25T23:18:55Z
+**Stopped at:** Completed 06-02-PLAN.md
+**Resume file:** None
 
 ---
 
-_State updated: 2026-02-25 after v1.1 roadmap creation_
+_State updated: 2026-02-25 after 06-02 execution_
