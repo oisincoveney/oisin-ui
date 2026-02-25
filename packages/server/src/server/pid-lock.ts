@@ -2,6 +2,8 @@ import { open, readFile, unlink, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { hostname } from "node:os";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 export interface PidLockInfo {
   pid: number;
@@ -19,6 +21,18 @@ export class PidLockError extends Error {
     super(message);
     this.name = "PidLockError";
   }
+}
+
+const execFileAsync = promisify(execFile);
+
+interface ProcessMetadata {
+  startedAt: Date | null;
+  command: string | null;
+}
+
+export interface AcquirePidLockOptions {
+  isPidRunning?: (pid: number) => boolean;
+  getProcessMetadata?: (pid: number) => Promise<ProcessMetadata | null>;
 }
 
 function isPidRunning(pid: number): boolean {
@@ -45,11 +59,67 @@ function resolveLockOwnerPid(): number {
   return process.pid;
 }
 
+function commandLooksLikePaseoDaemon(command: string | null): boolean {
+  if (!command) {
+    return false;
+  }
+
+  return /\bpaseo\b|dev:server|@oisin\/server|packages\/server/i.test(command);
+}
+
+async function getProcessMetadata(pid: number): Promise<ProcessMetadata | null> {
+  try {
+    const [{ stdout: startedAtRaw }, { stdout: commandRaw }] = await Promise.all([
+      execFileAsync("ps", ["-o", "lstart=", "-p", String(pid)]),
+      execFileAsync("ps", ["-o", "command=", "-p", String(pid)]),
+    ]);
+
+    const startedAtString = startedAtRaw.trim();
+    const command = commandRaw.trim();
+    const startedAt = startedAtString.length > 0 ? new Date(startedAtString) : null;
+
+    return {
+      startedAt:
+        startedAt && Number.isFinite(startedAt.getTime()) ? startedAt : null,
+      command: command.length > 0 ? command : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function isActivePaseoDaemonOwner(
+  lock: PidLockInfo,
+  readProcessMetadata: (pid: number) => Promise<ProcessMetadata | null>
+): Promise<boolean> {
+  const metadata = await readProcessMetadata(lock.pid);
+  if (!metadata) {
+    return true;
+  }
+
+  const lockStartedAt = new Date(lock.startedAt);
+  const hasValidLockStartedAt = Number.isFinite(lockStartedAt.getTime());
+
+  if (hasValidLockStartedAt && metadata.startedAt) {
+    const startDeltaMs = Math.abs(
+      metadata.startedAt.getTime() - lockStartedAt.getTime()
+    );
+    if (startDeltaMs > 10_000) {
+      return false;
+    }
+  }
+
+  return commandLooksLikePaseoDaemon(metadata.command);
+}
+
 export async function acquirePidLock(
   paseoHome: string,
-  sockPath: string
+  sockPath: string,
+  options: AcquirePidLockOptions = {}
 ): Promise<void> {
   const pidPath = getPidFilePath(paseoHome);
+  const checkPidRunning = options.isPidRunning ?? isPidRunning;
+  const readProcessMetadata = options.getProcessMetadata ?? getProcessMetadata;
 
   // Ensure paseoHome directory exists
   if (!existsSync(paseoHome)) {
@@ -68,18 +138,26 @@ export async function acquirePidLock(
   // Check if existing lock is stale
   const lockOwnerPid = resolveLockOwnerPid();
   if (existingLock) {
-    if (isPidRunning(existingLock.pid)) {
+    if (checkPidRunning(existingLock.pid)) {
       if (existingLock.pid === lockOwnerPid) {
         return;
       }
 
-      throw new PidLockError(
-        `Another Paseo daemon is already running (PID ${existingLock.pid}, started ${existingLock.startedAt})`,
-        existingLock
+      const activePaseoOwner = await isActivePaseoDaemonOwner(
+        existingLock,
+        readProcessMetadata
       );
+      if (activePaseoOwner) {
+        throw new PidLockError(
+          `Another Paseo daemon is already running (PID ${existingLock.pid}, started ${existingLock.startedAt})`,
+          existingLock
+        );
+      }
+
+      await unlink(pidPath).catch(() => {});
+    } else {
+      await unlink(pidPath).catch(() => {});
     }
-    // Stale lock - remove it
-    await unlink(pidPath).catch(() => {});
   }
 
   // Create new lock with exclusive flag
