@@ -1,6 +1,6 @@
 ---
 milestone: v1
-audited: 2026-02-24T22:08:19Z
+audited: 2026-02-25T03:10:25Z
 status: passed
 scores:
   requirements: 11/11
@@ -33,13 +33,13 @@ tech_debt:
 
 - **Result:** passed
 - **Reason:** all v1 requirements are satisfied, including DOCK-01 runtime closure with tmux-live proof, browser-origin WS 101 provenance, and clean stop/no-orphan proofs
-- **Report Date:** 2026-02-24T22:08:19Z
+- **Report Date:** 2026-02-25T03:10:25Z
 
 ## Requirements Coverage
 
 | Requirement | Owner Phase | Coverage | Notes |
 | --- | --- | --- | --- |
-| DOCK-01 | 01-foundation-and-docker + 05-docker-runtime-verification-closure | satisfied | Runtime verification now passes with tmux-live evidence (`{tmux: server}` + `tmux-session-running`), browser-origin handshake provenance (`source: browser`, `page_url: http://localhost:44285`, `HTTP 101 seen: yes`), and clean stop evidence (`no-orphan-processes-detected`). See `.planning/phases/01-foundation-and-docker/01-foundation-and-docker-VERIFICATION.md`, `.planning/phases/05-docker-runtime-verification-closure/05-docker-runtime-verification-closure-VERIFICATION.md`, and phase-05 evidence artifacts. |
+| DOCK-01 | 01-foundation-and-docker + 05-docker-runtime-verification-closure | satisfied | Runtime verification passes deterministically on consecutive gate runs with daemon-ready startup and no duplicate lock churn (`compose-up-attached.txt`), tmux-live evidence (`{tmux: server}` + `tmux-session-running`), browser-origin handshake provenance (`source: browser`, `page_url: http://localhost:44285`, `HTTP 101 seen: yes`), and clean stop evidence (`no-orphan-processes-detected`). See `.planning/phases/01-foundation-and-docker/01-foundation-and-docker-VERIFICATION.md`, `.planning/phases/05-docker-runtime-verification-closure/05-docker-runtime-verification-closure-VERIFICATION.md`, and phase-05 evidence artifacts. |
 | TERM-01 | 02-terminal-i | satisfied | Verified passed in phase 02. |
 | TERM-02 | 02-terminal-i | satisfied | Verified passed in phase 02. |
 | TERM-03 | 02-terminal-i | satisfied | Verified passed in phase 02. |
