@@ -12,10 +12,10 @@ See: `.planning/PROJECT.md` (updated 2026-02-25)
 **Phase:** 06 of 08 (Runtime Reliability Hardening)
 **Plan:** 2 of 6 in current phase
 **Status:** In progress
-**Last activity:** 2026-02-25 — Completed 06-02-PLAN.md
+**Last activity:** 2026-02-25 — Completed 06-01-PLAN.md
 
 ```
-Progress: [█████████████░░░░░░░] 66.7% (v1 shipped; phase 06 underway)
+Progress: [█████████░] 90.0% (36/40 plans have SUMMARY files)
 ```
 
 ## Accumulated Context
@@ -36,13 +36,16 @@ Progress: [█████████████░░░░░░░] 66.7% (
 
 - RUN-02 input durability uses bounded FIFO queue (`maxBytes`/`maxChunks`/`ttlMs`) with oldest-first eviction.
 - Queued terminal input flushes only after attach confirmation and is cleared on unsafe live stream invalidation/switch.
+- RUN-03 create failures now use a typed dialog contract (`summary`, `details`, `copyText`, `requestId`) instead of flat strings.
+- RUN-03 bootstrap failures surface concise summary text with expandable raw diagnostics retained for copy/retry.
+- RUN-03 create pending lifecycle must clear on send failure, timeout boundary, response, and store teardown.
 
 ## Session Continuity
 
-**Last session:** 2026-02-25T23:18:55Z
-**Stopped at:** Completed 06-02-PLAN.md
+**Last session:** 2026-02-25T23:19:49Z
+**Stopped at:** Completed 06-01-PLAN.md
 **Resume file:** None
 
 ---
 
-_State updated: 2026-02-25 after 06-02 execution_
+_State updated: 2026-02-25 after 06-01 execution_
