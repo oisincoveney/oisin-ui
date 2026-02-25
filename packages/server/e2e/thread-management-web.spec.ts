@@ -390,6 +390,53 @@ test("thread sidebar supports create flow inline errors, active highlight, and C
   ).toBeVisible();
 });
 
+test("create thread exits pending with timeout error when create response never arrives", async ({ page }) => {
+  await page.addInitScript(() => {
+    const globalWindow = window as Window & {
+      __dropCreateRequestForTest?: boolean;
+      __originalWebSocketSendForTest?: WebSocket["send"];
+    };
+
+    if (!globalWindow.__originalWebSocketSendForTest) {
+      globalWindow.__originalWebSocketSendForTest = WebSocket.prototype.send;
+      WebSocket.prototype.send = function (data: Parameters<WebSocket["send"]>[0]): void {
+        if (globalWindow.__dropCreateRequestForTest && typeof data === "string") {
+          try {
+            const parsed = JSON.parse(data) as {
+              type?: string;
+              message?: { type?: string };
+            };
+            if (parsed.type === "session" && parsed.message?.type === "thread_create_request") {
+              return;
+            }
+          } catch {
+            // fall through
+          }
+        }
+
+        globalWindow.__originalWebSocketSendForTest?.call(this, data);
+      };
+    }
+
+    globalWindow.__dropCreateRequestForTest = true;
+  });
+
+  await page.goto(runtime.webUrl);
+  await expect(page.getByText("Thread Web Project")).toBeVisible();
+
+  await page.getByRole("button", { name: "Create new thread" }).click();
+  await page.getByLabel("Thread Name").fill("thread-timeout");
+  await page.getByLabel("Base Branch").fill("main");
+  await page.getByRole("button", { name: "Create Thread" }).click();
+
+  await expect(page.getByRole("button", { name: "Creating…" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Creating…" })).toHaveCount(0, { timeout: 12_000 });
+  await expect(page.getByRole("button", { name: "Create Thread" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Create New Thread" })).toContainText(
+    "Create Thread timed out waiting for daemon response. Confirm daemon health and try again.",
+  );
+});
+
 test("background thread delete updates sidebar state", async ({ page }) => {
   const existing = await controlClient.listThreads("thread-web-project");
   if (!existing.threads.some((thread) => thread.title === "thread-alpha")) {
@@ -432,4 +479,61 @@ test("background thread delete updates sidebar state", async ({ page }) => {
   await page.getByRole("button", { name: "Delete Thread" }).click();
 
   await expect(betaRow).toHaveCount(0);
+});
+
+test("create thread exits pending immediately with disconnected error when websocket is offline", async ({ page }) => {
+  await page.addInitScript(() => {
+    const globalWindow = window as Window & {
+      __trackSocketInstalledForTest?: boolean;
+      __lastSocketForTest?: WebSocket;
+    };
+
+    if (globalWindow.__trackSocketInstalledForTest) {
+      return;
+    }
+
+    const OriginalWebSocket = window.WebSocket;
+    const TrackingWebSocket = function (...args: ConstructorParameters<typeof WebSocket>) {
+      const socket = new OriginalWebSocket(...args);
+      globalWindow.__lastSocketForTest = socket;
+      return socket;
+    } as unknown as typeof WebSocket;
+
+    TrackingWebSocket.prototype = OriginalWebSocket.prototype;
+    Object.setPrototypeOf(TrackingWebSocket, OriginalWebSocket);
+
+    window.WebSocket = TrackingWebSocket;
+    globalWindow.__trackSocketInstalledForTest = true;
+  });
+
+  await page.goto(runtime.webUrl);
+  await expect(page.getByText("Thread Web Project")).toBeVisible();
+
+  await stopProcess(runtime.daemon);
+  await page.evaluate(() => {
+    const socket = (window as Window & { __lastSocketForTest?: WebSocket }).__lastSocketForTest;
+    socket?.close();
+  });
+  await expect.poll(
+    async () => {
+      return await page.evaluate(() => {
+        const socket = (window as Window & { __lastSocketForTest?: WebSocket }).__lastSocketForTest;
+        return socket?.readyState ?? -1;
+      });
+    },
+    {
+      timeout: 10_000,
+    },
+  ).not.toBe(WebSocket.OPEN);
+
+  await page.getByRole("button", { name: "Create new thread" }).click();
+  await page.getByLabel("Thread Name").fill("thread-disconnected");
+  await page.getByLabel("Base Branch").fill("main");
+  await page.getByRole("button", { name: "Create Thread" }).click();
+
+  await expect(page.getByRole("button", { name: "Creating…" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Create Thread" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Create New Thread" })).toContainText(
+    "Create Thread failed because the daemon connection is offline. Wait for reconnect, then try again.",
+  );
 });
