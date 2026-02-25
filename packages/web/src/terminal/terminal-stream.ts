@@ -14,6 +14,26 @@ type TerminalStreamChunkEvent = {
 
 type TerminalStreamAdapterOptions = {
   onChunkApplied?: (event: TerminalStreamChunkEvent) => void;
+  inputQueue?: Partial<TerminalInputQueueConfig>;
+  now?: () => number;
+};
+
+type TerminalInputQueueConfig = {
+  maxBytes: number;
+  maxChunks: number;
+  ttlMs: number;
+};
+
+type PendingInputChunk = {
+  text: string;
+  byteLength: number;
+  enqueuedAt: number;
+};
+
+const defaultInputQueueConfig: TerminalInputQueueConfig = {
+  maxBytes: 16 * 1024,
+  maxChunks: 128,
+  ttlMs: 15_000,
 };
 
 export class TerminalStreamAdapter {
@@ -26,6 +46,10 @@ export class TerminalStreamAdapter {
   streamId: number | null;
   sendBinary: (data: Uint8Array) => void;
   private readonly onChunkApplied?: (event: TerminalStreamChunkEvent) => void;
+  private readonly inputQueueConfig: TerminalInputQueueConfig;
+  private readonly now: () => number;
+  private pendingInput: PendingInputChunk[] = [];
+  private pendingInputBytes = 0;
 
   constructor(
     terminal: Terminal,
@@ -37,6 +61,11 @@ export class TerminalStreamAdapter {
     this.streamId = streamId;
     this.sendBinary = sendBinary;
     this.onChunkApplied = options?.onChunkApplied;
+    this.inputQueueConfig = {
+      ...defaultInputQueueConfig,
+      ...options?.inputQueue,
+    };
+    this.now = options?.now ?? (() => Date.now());
   }
 
   handleFrame(frame: BinaryMuxFrame) {
@@ -58,25 +87,24 @@ export class TerminalStreamAdapter {
   }
 
   public sendInput(text: string) {
-    if (!this.inputEnabled || !this.transportConnected || this.streamId === null) return;
+    if (!this.canSendNow()) {
+      this.enqueueInput(text);
+      return;
+    }
 
-    const payload = this.encoder.encode(text);
-    const frame = encodeBinaryMuxFrame({
-      channel: BinaryMuxChannel.Terminal,
-      streamId: this.streamId,
-      messageType: TerminalBinaryMessageType.InputUtf8,
-      offset: 0,
-      payload,
-    });
-    this.sendBinary(frame);
+    this.sendInputFrame(text);
   }
 
   private sendAck(ackOffset: number) {
-    if (!this.inputEnabled || !this.transportConnected || this.streamId === null) return;
+    if (!this.canSendNow()) return;
+    const streamId = this.streamId;
+    if (streamId === null) {
+      return;
+    }
 
     const frame = encodeBinaryMuxFrame({
       channel: BinaryMuxChannel.Terminal,
-      streamId: this.streamId,
+      streamId,
       messageType: TerminalBinaryMessageType.Ack,
       offset: ackOffset,
     });
@@ -99,7 +127,8 @@ export class TerminalStreamAdapter {
   }
 
   public clearPendingInput() {
-    // Input is intentionally not buffered across disconnects.
+    this.pendingInput = [];
+    this.pendingInputBytes = 0;
   }
 
   public setStreamId(streamId: number | null) {
@@ -129,5 +158,78 @@ export class TerminalStreamAdapter {
 
   public setOffset(offset: number) {
     this.offset = offset;
+  }
+
+  private canSendNow() {
+    return this.inputEnabled && this.transportConnected && this.streamId !== null;
+  }
+
+  private sendInputFrame(text: string) {
+    if (this.streamId === null) {
+      return;
+    }
+    const payload = this.encoder.encode(text);
+    const frame = encodeBinaryMuxFrame({
+      channel: BinaryMuxChannel.Terminal,
+      streamId: this.streamId,
+      messageType: TerminalBinaryMessageType.InputUtf8,
+      offset: 0,
+      payload,
+    });
+    this.sendBinary(frame);
+  }
+
+  private enqueueInput(text: string) {
+    if (text.length === 0) {
+      return;
+    }
+
+    this.dropExpiredInput();
+
+    const byteLength = this.encoder.encode(text).byteLength;
+    if (byteLength > this.inputQueueConfig.maxBytes) {
+      return;
+    }
+
+    while (this.pendingInput.length >= this.inputQueueConfig.maxChunks) {
+      this.dropOldestInput();
+    }
+
+    while (
+      this.pendingInputBytes + byteLength > this.inputQueueConfig.maxBytes &&
+      this.pendingInput.length > 0
+    ) {
+      this.dropOldestInput();
+    }
+
+    if (this.pendingInputBytes + byteLength > this.inputQueueConfig.maxBytes) {
+      return;
+    }
+
+    this.pendingInput.push({
+      text,
+      byteLength,
+      enqueuedAt: this.now(),
+    });
+    this.pendingInputBytes += byteLength;
+  }
+
+  private dropExpiredInput() {
+    const expiresAt = this.now() - this.inputQueueConfig.ttlMs;
+    while (this.pendingInput.length > 0) {
+      const oldest = this.pendingInput[0];
+      if (oldest.enqueuedAt > expiresAt) {
+        break;
+      }
+      this.dropOldestInput();
+    }
+  }
+
+  private dropOldestInput() {
+    const dropped = this.pendingInput.shift();
+    if (!dropped) {
+      return;
+    }
+    this.pendingInputBytes = Math.max(0, this.pendingInputBytes - dropped.byteLength);
   }
 }
