@@ -3,21 +3,22 @@
 #1 DONE 0.0s
 
 #2 [internal] load build definition from Dockerfile
-#2 transferring dockerfile: 548B done
+#2 transferring dockerfile: 548B 0.0s done
 #2 DONE 0.0s
 
 #3 [internal] load metadata for docker.io/library/node:22-bookworm
-#3 DONE 0.7s
+#3 DONE 0.5s
 
 #4 [internal] load .dockerignore
 #4 transferring context: 102B done
 #4 DONE 0.0s
 
-#5 [1/6] FROM docker.io/library/node:22-bookworm@sha256:379c51ac7bbf9bffe16769cfda3eb027d59d9c66ac314383da3fcf71b46d026c
+#5 [1/6] FROM docker.io/library/node:22-bookworm@sha256:67475e9bf225f46c8629739f161928e1d3178983cf808f37af84798842f47ed4
+#5 resolve docker.io/library/node:22-bookworm@sha256:67475e9bf225f46c8629739f161928e1d3178983cf808f37af84798842f47ed4 0.0s done
 #5 DONE 0.0s
 
 #6 [internal] load build context
-#6 transferring context: 97.84kB 0.0s done
+#6 transferring context: 97.84kB 0.1s done
 #6 DONE 0.1s
 
 #7 [2/6] WORKDIR /workspace
@@ -37,7 +38,7 @@
 
 #12 exporting to image
 #12 exporting layers done
-#12 writing image sha256:604737265795cc9c8c8cecccfaa6b052e974c6433110e023ce8569687d24d04e done
+#12 writing image sha256:93acf70adbbe0bacb8f0800a51eaf67f2048632a0a71cb02a8d08b22889b212d done
 #12 naming to docker.io/library/oisin-ui-oisin-ui done
 #12 DONE 0.0s
 
@@ -54,24 +55,24 @@ oisin-ui-1  | Zombie processes will not be re-parented to Tini, so zombie reapin
 oisin-ui-1  | To fix the problem, use the -s option or set the environment variable TINI_SUBREAPER to register Tini as a child subreaper, or run Tini as PID 1.
 oisin-ui-1  | Starting daemon and web server...
 oisin-ui-1  | $ NODE_ENV=development tsx packages/server/scripts/daemon-runner.ts --dev --no-relay --no-mcp
-oisin-ui-1  | [DaemonRunner] Starting daemon worker (dev mode, crash restarts enabled)
 oisin-ui-1  | @oisin/web dev: 
-oisin-ui-1  | @oisin/web dev:   VITE v7.3.1  ready in 240 ms
+oisin-ui-1  | @oisin/web dev:   VITE v7.3.1  ready in 199 ms
 oisin-ui-1  | @oisin/web dev: 
 oisin-ui-1  | @oisin/web dev:   ➜  Local:   http://localhost:44285/
 oisin-ui-1  | @oisin/web dev:   ➜  Network: http://192.168.117.2:44285/
-oisin-ui-1  | [21:52:12.139] [32mINFO[39m: [36mLoaded daemon keypair[39m [90m{"module":"daemon-keypair","filePath":"/config/daemon-keypair.json"}[39m
-oisin-ui-1  | [21:52:12.160] [32mINFO[39m: [36mAgent registry loaded (0 records); agents will initialize on demand[39m [90m{"module":"bootstrap"}[39m
-oisin-ui-1  | [21:52:12.160] [32mINFO[39m: [36mVoice mode configured for agent-scoped resume flow (no dedicated voice assistant provider)[39m [90m{"module":"bootstrap"}[39m
-oisin-ui-1  | [21:52:12.160] [32mINFO[39m: [36mAgent MCP HTTP endpoint disabled[39m [90m{"module":"bootstrap"}[39m
-oisin-ui-1  | [21:52:12.160] [32mINFO[39m: [36mResolved voice MCP bridge command[39m [90m{"module":"bootstrap","source":"default-js-script","command":"/usr/local/bin/node","baseArgs":["/workspace/packages/server/scripts/mcp-stdio-socket-bridge-cli.mjs"]}[39m
-oisin-ui-1  | [21:52:12.160] [32mINFO[39m: [36mSpeech provider reconciliation started[39m [90m{"module":"speech-runtime","requestedProviders":{"dictationStt":{"provider":"local","enabled":false,"explicit":false},"voiceStt":{"provider":"local","enabled":false,"explicit":false},"voiceTts":{"provider":"local","enabled":false,"explicit":false}},"availability":{"openai":{"stt":false,"tts":false,"dictationStt":false}}}[39m
-oisin-ui-1  | [21:52:12.161] [32mINFO[39m: [36mSpeech provider reconciliation completed[39m [90m{"module":"speech-runtime","requestedProviders":{"dictationStt":{"provider":"local","enabled":false,"explicit":false},"voiceStt":{"provider":"local","enabled":false,"explicit":false},"voiceTts":{"provider":"local","enabled":false,"explicit":false}},"effectiveProviders":{"dictationStt":"unavailable","voiceStt":"unavailable","voiceTts":"unavailable"}}[39m
-oisin-ui-1  | [21:52:12.162] [32mINFO[39m: [36mWebSocket server initialized on /ws[39m [90m{"module":"websocket-server"}[39m
-oisin-ui-1  | [21:52:12.172] [32mINFO[39m: [36mLoaded thread registry[39m [90m{"module":"thread-registry","filePath":"/config/thread-registry.json"}[39m
-oisin-ui-1  | [21:52:12.194] [32mINFO[39m: [36mServer listening on http://0.0.0.0:6767[39m [90m{"module":"bootstrap","host":"0.0.0.0","port":6767}[39m
-oisin-ui-1  | [21:52:15.406] [32mINFO[39m: [36mLoaded thread registry[39m [90m{"module":"thread-registry","clientId":"client-1","transport":"direct","host":"localhost:6767","origin":"http://localhost:44285","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36","remoteAddress":"192.168.117.1","sessionId":"148517a6-4e1f-415e-95b8-b1be2c4103dd","filePath":"/config/thread-registry.json"}[39m
-oisin-ui-1  | [21:52:15.459] [32mINFO[39m: [36mLoaded thread registry[39m [90m{"module":"thread-registry","clientId":"client-2","transport":"direct","host":"localhost:6767","origin":"http://localhost:44285","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36","remoteAddress":"192.168.117.1","sessionId":"608f2512-b451-4299-87a3-ffbdaa50d63b","filePath":"/config/thread-registry.json"}[39m
+oisin-ui-1  | [DaemonRunner] Starting daemon worker (dev mode, crash restarts enabled)
+oisin-ui-1  | [03:10:21.716] [32mINFO[39m: [36mLoaded daemon keypair[39m [90m{"module":"daemon-keypair","filePath":"/config/runtime-gate/daemon-keypair.json"}[39m
+oisin-ui-1  | [03:10:21.729] [32mINFO[39m: [36mAgent registry loaded (0 records); agents will initialize on demand[39m [90m{"module":"bootstrap"}[39m
+oisin-ui-1  | [03:10:21.729] [32mINFO[39m: [36mVoice mode configured for agent-scoped resume flow (no dedicated voice assistant provider)[39m [90m{"module":"bootstrap"}[39m
+oisin-ui-1  | [03:10:21.729] [32mINFO[39m: [36mAgent MCP HTTP endpoint disabled[39m [90m{"module":"bootstrap"}[39m
+oisin-ui-1  | [03:10:21.729] [32mINFO[39m: [36mResolved voice MCP bridge command[39m [90m{"module":"bootstrap","source":"default-js-script","command":"/usr/local/bin/node","baseArgs":["/workspace/packages/server/scripts/mcp-stdio-socket-bridge-cli.mjs"]}[39m
+oisin-ui-1  | [03:10:21.730] [32mINFO[39m: [36mSpeech provider reconciliation started[39m [90m{"module":"speech-runtime","requestedProviders":{"dictationStt":{"provider":"local","enabled":false,"explicit":false},"voiceStt":{"provider":"local","enabled":false,"explicit":false},"voiceTts":{"provider":"local","enabled":false,"explicit":false}},"availability":{"openai":{"stt":false,"tts":false,"dictationStt":false}}}[39m
+oisin-ui-1  | [03:10:21.731] [32mINFO[39m: [36mSpeech provider reconciliation completed[39m [90m{"module":"speech-runtime","requestedProviders":{"dictationStt":{"provider":"local","enabled":false,"explicit":false},"voiceStt":{"provider":"local","enabled":false,"explicit":false},"voiceTts":{"provider":"local","enabled":false,"explicit":false}},"effectiveProviders":{"dictationStt":"unavailable","voiceStt":"unavailable","voiceTts":"unavailable"}}[39m
+oisin-ui-1  | [03:10:21.732] [32mINFO[39m: [36mWebSocket server initialized on /ws[39m [90m{"module":"websocket-server"}[39m
+oisin-ui-1  | [03:10:21.733] [32mINFO[39m: [36mLoaded thread registry[39m [90m{"module":"thread-registry","filePath":"/config/runtime-gate/thread-registry.json"}[39m
+oisin-ui-1  | [03:10:21.746] [32mINFO[39m: [36mServer listening on http://0.0.0.0:6767[39m [90m{"module":"bootstrap","host":"0.0.0.0","port":6767}[39m
+oisin-ui-1  | [03:10:24.726] [32mINFO[39m: [36mLoaded thread registry[39m [90m{"module":"thread-registry","clientId":"client-1","transport":"direct","host":"localhost:6767","origin":"http://localhost:44285","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36","remoteAddress":"192.168.117.1","sessionId":"b8fc4b64-9354-48ff-969a-6ab83ffbf579","filePath":"/config/runtime-gate/thread-registry.json"}[39m
+oisin-ui-1  | [03:10:24.787] [32mINFO[39m: [36mLoaded thread registry[39m [90m{"module":"thread-registry","clientId":"client-2","transport":"direct","host":"localhost:6767","origin":"http://localhost:44285","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36","remoteAddress":"192.168.117.1","sessionId":"29b5d3b3-7ccb-41c5-a3d5-352579d487ee","filePath":"/config/runtime-gate/thread-registry.json"}[39m
 Gracefully Stopping... press Ctrl+C again to force
  Container oisin-ui-oisin-ui-1  Stopping
  Container oisin-ui-oisin-ui-1  Stopped
