@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Check, ChevronDown, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   Dialog,
   DialogContent,
@@ -40,6 +42,8 @@ export function ThreadCreateDialog({ open, onOpenChange, initialProjectId }: Thr
   const [commandMode, setCommandMode] = useState<'default' | 'append' | 'replace'>('default')
   const [commandArgsRaw, setCommandArgsRaw] = useState('')
   const [baseBranch, setBaseBranch] = useState('')
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [copyState, setCopyState] = useState<'idle' | 'done' | 'error'>('idle')
 
   const providerOptions = useMemo(() => {
     if (snapshot.providers.list.length > 0) {
@@ -91,6 +95,8 @@ export function ThreadCreateDialog({ open, onOpenChange, initialProjectId }: Thr
   useEffect(() => {
     if (!open) {
       createRequestedRef.current = false
+      setDetailsOpen(false)
+      setCopyState('idle')
       return
     }
 
@@ -111,6 +117,17 @@ export function ThreadCreateDialog({ open, onOpenChange, initialProjectId }: Thr
   }, [snapshot.create.pending, snapshot.create.error, open, onOpenChange])
 
   useEffect(() => {
+    if (!snapshot.create.error) {
+      setDetailsOpen(false)
+      setCopyState('idle')
+      return
+    }
+
+    setCopyState('idle')
+    setDetailsOpen(Boolean(snapshot.create.error.details))
+  }, [snapshot.create.error?.summary, snapshot.create.error?.details, snapshot.create.error?.requestId])
+
+  useEffect(() => {
     if (!open) {
       return
     }
@@ -126,6 +143,20 @@ export function ThreadCreateDialog({ open, onOpenChange, initialProjectId }: Thr
     provider.trim().length === 0 ||
     baseBranch.trim().length === 0 ||
     (commandMode === 'replace' && parseCommandArgs(commandArgsRaw).length === 0)
+
+  async function handleCopyErrorDetails(): Promise<void> {
+    const payload = snapshot.create.error
+    if (!payload) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(payload.copyText)
+      setCopyState('done')
+    } catch {
+      setCopyState('error')
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -242,8 +273,36 @@ export function ThreadCreateDialog({ open, onOpenChange, initialProjectId }: Thr
           </div>
 
           {snapshot.create.error ? (
-            <div className="rounded-md border border-destructive/70 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {snapshot.create.error}
+            <div className="space-y-2 rounded-md border border-destructive/70 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <p>{snapshot.create.error.summary}</p>
+              {snapshot.create.error.details ? (
+                <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-destructive underline-offset-2 hover:underline"
+                    >
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform ${detailsOpen ? 'rotate-180' : ''}`}
+                      />
+                      Technical details
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <pre className="mt-2 max-h-40 overflow-auto rounded border border-destructive/40 bg-background/80 p-2 text-xs text-foreground">
+                      {snapshot.create.error.details}
+                    </pre>
+                  </CollapsibleContent>
+                </Collapsible>
+              ) : null}
+              <div className="flex items-center gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={handleCopyErrorDetails}>
+                  {copyState === 'done' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  Copy details
+                </Button>
+                {copyState === 'done' ? <span className="text-xs text-foreground">Copied</span> : null}
+                {copyState === 'error' ? <span className="text-xs text-foreground">Copy failed</span> : null}
+              </div>
             </div>
           ) : null}
         </div>
