@@ -8,12 +8,17 @@ RUN apt-get update && apt-get install -y \
     git \
     tini \
     tmux && \
-  npm install -g bun && \
+  curl -fsSL https://bun.sh/install | bash && \
   rm -rf /var/lib/apt/lists/*
+
+ENV BUN_INSTALL=/root/.bun
+ENV PATH=${BUN_INSTALL}/bin:${PATH}
 
 COPY . .
 
 RUN bun install
+
+RUN bun add -g opencode-ai@1.2.11 @openai/codex@0.104.0
 
 RUN chmod +x scripts/start.sh
 
