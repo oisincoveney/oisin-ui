@@ -5,14 +5,14 @@
 See: `.planning/PROJECT.md` (updated 2026-02-25)
 
 **Core value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current focus:** Define v1.1 milestone scope and requirements.
+**Current focus:** Defining requirements for milestone v1.1 Hardening.
 
 ## Current Position
 
-**Phase:** Not started (next milestone)
-**Plan:** Not started
-**Status:** Ready to plan
-**Last activity:** 2026-02-25 — v1 milestone archived and tagged
+**Phase:** Not started (defining requirements)
+**Plan:** —
+**Status:** Defining requirements
+**Last activity:** 2026-02-25 — Milestone v1.1 Hardening started
 
 ```
 Progress: [████████████████████] 100% (v1)
@@ -34,4 +34,4 @@ Progress: [████████████████████] 100% (v
 
 ---
 
-_State reset for next milestone: 2026-02-25_
+_State updated: 2026-02-25 after milestone v1.1 start_

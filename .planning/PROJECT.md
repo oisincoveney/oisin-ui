@@ -10,6 +10,15 @@ Oisin UI is now a shipped, Docker-first web app for managing coding-agent termin
 
 Work on your code from anywhere with your OpenCode instance and settings, reliably.
 
+## Current Milestone: v1.1 Hardening
+
+**Goal:** Eliminate remaining runtime reliability and verification debt so everyday thread workflows stay stable without manual recovery.
+
+**Target features:**
+- Deterministic reconnect/runtime behavior across restart, delete, and attach flows
+- Complete ensure-default metadata contract from server through web consumers
+- Deterministic active-thread fixture path for diff/terminal browser regressions
+
 ## Requirements
 
 ### Validated
@@ -25,9 +34,11 @@ Work on your code from anywhere with your OpenCode instance and settings, reliab
 
 ### Active
 
-- [ ] Define v1.1 goals and requirements (hardening + UX debt)
-- [ ] Close ensure-default metadata contract gap (`projectId` / `resolvedThreadId` emission)
-- [ ] Remove conditional diff e2e skip by provisioning deterministic active-thread fixture
+- [ ] Runtime reconnect and attach lifecycle is stable under restart/delete churn
+- [ ] Ensure-default response emits and wires `projectId` and `resolvedThreadId` end-to-end
+- [ ] Browser regression suite runs deterministically with active-thread fixture, no conditional skip paths
+- [ ] Thread create/delete UX remains bounded and actionable under websocket disruption
+- [ ] Docker startup/restart path remains self-healing without manual operator steps
 
 ### Out of Scope
 
@@ -38,8 +49,8 @@ Work on your code from anywhere with your OpenCode instance and settings, reliab
 ## Next Milestone Goals
 
 1. Harden runtime stability and reconnect ergonomics under kill/restart scenarios.
-2. Reduce known tech debt from v1 verification reports.
-3. Improve deterministic local and CI verification coverage.
+2. Close known cross-phase contract and attach lifecycle debt from v1 verification.
+3. Make local and CI verification deterministic for thread/diff critical paths.
 
 ## Context
 
@@ -59,4 +70,4 @@ Work on your code from anywhere with your OpenCode instance and settings, reliab
 | Evidence-gated runtime closure for DOCK-01 | Prevent false milestone closure and enforce operational truth | ✓ Good (v1) |
 
 ---
-*Last updated: 2026-02-25 after v1 milestone completion*
+*Last updated: 2026-02-25 after starting v1.1 Hardening milestone*
