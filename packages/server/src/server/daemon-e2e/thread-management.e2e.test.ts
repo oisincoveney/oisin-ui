@@ -13,7 +13,13 @@ import {
 const decoder = new TextDecoder();
 const shouldRun = !process.env.CI;
 
-function createRepoRoot(prefix: string, options?: { withBunFrozenMismatchSetup?: boolean }): string {
+function createRepoRoot(
+  prefix: string,
+  options?: {
+    withBunFrozenMismatchSetup?: boolean;
+    withCanonicalWorktreeSetup?: boolean;
+  }
+): string {
   const repoRoot = mkdtempSync(path.join(tmpdir(), prefix));
   execSync("git init -b main", { cwd: repoRoot, stdio: "pipe" });
   execSync("git config user.email 'thread-e2e@test.local'", { cwd: repoRoot, stdio: "pipe" });
@@ -92,6 +98,45 @@ function createRepoRoot(prefix: string, options?: { withBunFrozenMismatchSetup?:
       stdio: "pipe",
     });
     execSync("git commit -m 'seed bun worktree setup'", { cwd: repoRoot, stdio: "pipe" });
+  }
+
+  if (options?.withCanonicalWorktreeSetup) {
+    const depDir = path.join(repoRoot, "dep");
+    mkdirSync(depDir, { recursive: true });
+    writeFileSync(path.join(depDir, "package.json"), `${JSON.stringify({ name: "dep", version: "1.0.0" }, null, 2)}\n`);
+    writeFileSync(
+      path.join(repoRoot, "package.json"),
+      `${JSON.stringify(
+        {
+          name: "thread-e2e-canonical-setup",
+          private: true,
+          version: "1.0.0",
+          dependencies: { dep: "file:./dep" },
+        },
+        null,
+        2
+      )}\n`
+    );
+    writeFileSync(path.join(repoRoot, ".gitignore"), "node_modules/\n");
+    execSync("bun install --save-text-lockfile", { cwd: repoRoot, stdio: "pipe" });
+    writeFileSync(
+      path.join(repoRoot, "paseo.json"),
+      `${JSON.stringify(
+        {
+          worktree: {
+            setup: ["bun install --frozen-lockfile"],
+          },
+        },
+        null,
+        2
+      )}\n`
+    );
+    const lockfileName = existsSync(path.join(repoRoot, "bun.lock")) ? "bun.lock" : "bun.lockb";
+    execSync(`git add .gitignore dep/package.json package.json ${lockfileName} paseo.json`, {
+      cwd: repoRoot,
+      stdio: "pipe",
+    });
+    execSync("git commit -m 'seed canonical setup commands'", { cwd: repoRoot, stdio: "pipe" });
   }
 
   return repoRoot;
@@ -387,6 +432,38 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
       expect(listResult.threads.some((thread) => thread.title === "Thread Bun Bootstrap")).toBe(true);
     } finally {
       rmSync(bunRepoRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("create-thread setup does not surface npm workspace resolution failures", async () => {
+    const canonicalSetupRepoRoot = createRepoRoot("daemon-thread-mgmt-canonical-", {
+      withCanonicalWorktreeSetup: true,
+    });
+
+    try {
+      const projectId = "proj-thread-e2e-canonical";
+      const projectAdded = await ctx.client.addProject({
+        projectId,
+        displayName: "Thread E2E Canonical Setup Project",
+        repoRoot: canonicalSetupRepoRoot,
+        defaultBaseBranch: "main",
+      });
+      expect(projectAdded.accepted).toBe(true);
+      expect(projectAdded.error).toBeNull();
+
+      const createResult = await ctx.client.createThread({
+        projectId,
+        title: "Thread Canonical Setup",
+        baseBranch: "main",
+        launchConfig: { provider: "opencode" },
+      });
+
+      expect(createResult.accepted).toBe(true);
+      expect(createResult.error).toBeNull();
+      expect(createResult.error ?? "").not.toContain("No workspaces found");
+      expect(createResult.thread).toBeTruthy();
+    } finally {
+      rmSync(canonicalSetupRepoRoot, { recursive: true, force: true });
     }
   });
 });

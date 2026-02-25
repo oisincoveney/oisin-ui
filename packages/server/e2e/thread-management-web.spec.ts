@@ -354,6 +354,7 @@ test("thread sidebar supports create flow inline errors, active highlight, and C
   await page.getByRole("button", { name: "Create Thread" }).click();
   await expect(page.getByRole("dialog", { name: "Create New Thread" })).toHaveCount(0);
   await expect(page.locator("[data-sonner-toast]", { hasText: /failed|error/i })).toHaveCount(0);
+  await expect(page.getByText(/No workspaces found/i)).toHaveCount(0);
 
   await expect(
     page.locator("[data-sidebar='menu-button'][data-active='true']", { hasText: "thread-alpha" }),
@@ -367,6 +368,7 @@ test("thread sidebar supports create flow inline errors, active highlight, and C
   await page.getByRole("button", { name: "Create Thread" }).click();
   await expect(page.getByRole("dialog", { name: "Create New Thread" })).toHaveCount(0);
   await expect(page.locator("[data-sonner-toast]", { hasText: /failed|error/i })).toHaveCount(0);
+  await expect(page.getByText(/No workspaces found/i)).toHaveCount(0);
 
   await expect(
     page.locator("[data-sidebar='menu-button'][data-active='true']", { hasText: "thread-beta" }),

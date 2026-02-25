@@ -3,6 +3,7 @@ import {
   createWorktree,
   deriveWorktreeProjectHash,
   deletePaseoWorktree,
+  getWorktreeSetupCommands,
   getWorktreeTerminalSpecs,
   isPaseoOwnedWorktreeCwd,
   listPaseoWorktrees,
@@ -15,8 +16,9 @@ import {
 import { getPaseoWorktreeMetadataPath } from "./worktree-metadata.js";
 import { execSync } from "child_process";
 import { mkdtempSync, rmSync, existsSync, realpathSync, writeFileSync, readFileSync } from "fs";
-import { dirname, join } from "path";
+import { dirname, join, resolve } from "path";
 import { tmpdir } from "os";
+import { fileURLToPath } from "node:url";
 import net from "node:net";
 
 describe("createWorktree", () => {
@@ -743,5 +745,17 @@ describe("slugify", () => {
     const result = slugify(longInput);
     expect(result.length).toBe(50);
     expect(result.endsWith("-")).toBe(false);
+  });
+});
+
+describe("canonical worktree setup config", () => {
+  it("does not include npm workspace commands or removed relay build step", () => {
+    const testFileDir = dirname(fileURLToPath(import.meta.url));
+    const repoRoot = resolve(testFileDir, "../../../../");
+    const commands = getWorktreeSetupCommands(repoRoot);
+
+    expect(commands.length).toBeGreaterThan(0);
+    expect(commands.some((command) => /\bnpm\s+run\b/.test(command) && /--workspace=/.test(command))).toBe(false);
+    expect(commands.some((command) => command.includes("npm run build --workspace=@getpaseo/relay"))).toBe(false);
   });
 });
