@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { atom, getDefaultStore, useAtomValue } from 'jotai'
 import {
   sendWsMessage,
   subscribeConnectionStatus,
@@ -109,8 +109,25 @@ type PendingRequest =
   | { kind: 'provider-list' }
   | { kind: 'branch-suggestions'; projectId: string }
 
-const listeners = new Set<() => void>()
-const pendingRequests = new Map<string, PendingRequest>()
+type PendingRequestEntry = {
+  request: PendingRequest
+  timeoutId: ReturnType<typeof setTimeout> | null
+}
+
+type SendRequestOptions = {
+  timeoutMs?: number
+  onTimeout?: () => void
+  onSendFailure?: () => void
+}
+
+const jotaiStore = getDefaultStore()
+const pendingRequests = new Map<string, PendingRequestEntry>()
+
+const CREATE_THREAD_RESPONSE_TIMEOUT_MS = 8_000
+const CREATE_THREAD_DISCONNECTED_ERROR =
+  'Create Thread failed because the daemon connection is offline. Wait for reconnect, then try again.'
+const CREATE_THREAD_TIMEOUT_ERROR =
+  'Create Thread timed out waiting for daemon response. Confirm daemon health and try again.'
 
 let started = false
 let unsubscribeTextMessages: (() => void) | null = null
@@ -148,15 +165,11 @@ const initialState: ThreadStoreState = {
 
 let state: ThreadStoreState = initialState
 
-function notify(): void {
-  for (const listener of listeners) {
-    listener()
-  }
-}
+const threadStoreAtom = atom<ThreadStoreState>(initialState)
 
 function setState(nextState: ThreadStoreState): void {
   state = nextState
-  notify()
+  jotaiStore.set(threadStoreAtom, nextState)
 }
 
 function updateState(updater: (previous: ThreadStoreState) => ThreadStoreState): void {
@@ -177,6 +190,39 @@ function parseThreadKey(key: string): { projectId: string; threadId: string } {
     projectId,
     threadId: rest.join(':'),
   }
+}
+
+function clearPendingRequest(requestId: string): PendingRequest | null {
+  const pending = pendingRequests.get(requestId)
+  if (!pending) {
+    return null
+  }
+
+  if (pending.timeoutId !== null) {
+    clearTimeout(pending.timeoutId)
+  }
+
+  pendingRequests.delete(requestId)
+  return pending.request
+}
+
+function clearAllPendingRequests(): void {
+  for (const pending of pendingRequests.values()) {
+    if (pending.timeoutId !== null) {
+      clearTimeout(pending.timeoutId)
+    }
+  }
+  pendingRequests.clear()
+}
+
+function setCreateError(error: string): void {
+  updateState((previous) => ({
+    ...previous,
+    create: {
+      pending: false,
+      error,
+    },
+  }))
 }
 
 function sortThreads(threads: ThreadSummary[]): ThreadSummary[] {
@@ -240,10 +286,34 @@ function deriveActiveThreadKey(snapshot: ThreadStoreState): string | null {
   return null
 }
 
-function sendRequest(request: Record<string, unknown>, pendingRequest: PendingRequest): void {
+function sendRequest(
+  request: Record<string, unknown>,
+  pendingRequest: PendingRequest,
+  options?: SendRequestOptions
+): boolean {
   const requestId = String(request.requestId)
-  pendingRequests.set(requestId, pendingRequest)
-  sendWsMessage(request)
+  const pendingEntry: PendingRequestEntry = {
+    request: pendingRequest,
+    timeoutId: null,
+  }
+  pendingRequests.set(requestId, pendingEntry)
+
+  if (!sendWsMessage(request)) {
+    pendingRequests.delete(requestId)
+    options?.onSendFailure?.()
+    return false
+  }
+
+  if (options?.timeoutMs && options.timeoutMs > 0 && options.onTimeout) {
+    pendingEntry.timeoutId = setTimeout(() => {
+      if (!clearPendingRequest(requestId)) {
+        return
+      }
+      options.onTimeout?.()
+    }, options.timeoutMs)
+  }
+
+  return true
 }
 
 function refreshProjectList(): void {
@@ -348,11 +418,10 @@ function handleProjectListResponse(message: SessionMessage): void {
     return
   }
 
-  const pending = pendingRequests.get(requestId)
+  const pending = clearPendingRequest(requestId)
   if (!pending || pending.kind !== 'project-list') {
     return
   }
-  pendingRequests.delete(requestId)
 
   const error = typeof message.payload?.error === 'string' ? message.payload.error : null
   const projects = Array.isArray(message.payload?.projects)
@@ -403,11 +472,10 @@ function handleThreadListResponse(message: SessionMessage): void {
     return
   }
 
-  const pending = pendingRequests.get(requestId)
+  const pending = clearPendingRequest(requestId)
   if (!pending || pending.kind !== 'thread-list') {
     return
   }
-  pendingRequests.delete(requestId)
 
   const projectId = pending.projectId
   const threads = Array.isArray(message.payload?.threads)
@@ -444,11 +512,10 @@ function handleThreadCreateResponse(message: SessionMessage): void {
     return
   }
 
-  const pending = pendingRequests.get(requestId)
+  const pending = clearPendingRequest(requestId)
   if (!pending || pending.kind !== 'thread-create') {
     return
   }
-  pendingRequests.delete(requestId)
 
   const thread = message.payload?.thread as ThreadSummary | null | undefined
   const error = typeof message.payload?.error === 'string' ? message.payload.error : null
@@ -487,11 +554,10 @@ function handleThreadSwitchResponse(message: SessionMessage): void {
     return
   }
 
-  const pending = pendingRequests.get(requestId)
+  const pending = clearPendingRequest(requestId)
   if (!pending || pending.kind !== 'thread-switch') {
     return
   }
-  pendingRequests.delete(requestId)
 
   const error = typeof message.payload?.error === 'string' ? message.payload.error : null
   const accepted = Boolean(message.payload?.accepted)
@@ -525,11 +591,10 @@ function handleThreadDeleteResponse(message: SessionMessage): void {
     return
   }
 
-  const pending = pendingRequests.get(requestId)
+  const pending = clearPendingRequest(requestId)
   if (!pending || pending.kind !== 'thread-delete') {
     return
   }
-  pendingRequests.delete(requestId)
 
   const error = typeof message.payload?.error === 'string' ? message.payload.error : null
   const dirtyReason = parseDirtyDeleteError(error)
@@ -673,11 +738,10 @@ function handleProviderListResponse(message: SessionMessage): void {
     return
   }
 
-  const pending = pendingRequests.get(requestId)
+  const pending = clearPendingRequest(requestId)
   if (!pending || pending.kind !== 'provider-list') {
     return
   }
-  pendingRequests.delete(requestId)
 
   const providers = Array.isArray(message.payload?.providers)
     ? (message.payload.providers as ProviderAvailability[])
@@ -700,11 +764,10 @@ function handleBranchSuggestionsResponse(message: SessionMessage): void {
     return
   }
 
-  const pending = pendingRequests.get(requestId)
+  const pending = clearPendingRequest(requestId)
   if (!pending || pending.kind !== 'branch-suggestions') {
     return
   }
-  pendingRequests.delete(requestId)
 
   const branches = Array.isArray(message.payload?.branches)
     ? (message.payload.branches as string[])
@@ -838,13 +901,11 @@ export function stopThreadStore(): void {
   unsubscribeConnectionStatus?.()
   unsubscribeTextMessages = null
   unsubscribeConnectionStatus = null
+  clearAllPendingRequests()
 }
 
 export function subscribeThreadStore(listener: () => void): () => void {
-  listeners.add(listener)
-  return () => {
-    listeners.delete(listener)
-  }
+  return jotaiStore.sub(threadStoreAtom, listener)
 }
 
 export function getThreadStoreSnapshot(): ThreadStoreState {
@@ -853,7 +914,7 @@ export function getThreadStoreSnapshot(): ThreadStoreState {
 
 export function useThreadStoreSnapshot(): ThreadStoreState {
   ensureStarted()
-  return useSyncExternalStore(subscribeThreadStore, getThreadStoreSnapshot, getThreadStoreSnapshot)
+  return useAtomValue(threadStoreAtom)
 }
 
 export function getActiveThread(snapshot = state): ThreadSummary | null {
@@ -1068,6 +1129,15 @@ export function createThread(input: ThreadLaunchConfigInput): void {
     {
       kind: 'thread-create',
       title,
+    },
+    {
+      timeoutMs: CREATE_THREAD_RESPONSE_TIMEOUT_MS,
+      onSendFailure: () => {
+        setCreateError(CREATE_THREAD_DISCONNECTED_ERROR)
+      },
+      onTimeout: () => {
+        setCreateError(CREATE_THREAD_TIMEOUT_ERROR)
+      },
     }
   )
 }

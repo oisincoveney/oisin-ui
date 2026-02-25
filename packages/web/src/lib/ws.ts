@@ -183,15 +183,19 @@ function sendIfOpen(payload: PongMessage): void {
   }
 }
 
-export function sendWsMessage(message: unknown): void {
-  if (socket?.readyState === WebSocket.OPEN) {
-    socket.send(
-      JSON.stringify({
-        type: "session",
-        message,
-      } satisfies WrappedSessionMessage),
-    );
+export function sendWsMessage(message: unknown): boolean {
+  if (socket?.readyState !== WebSocket.OPEN) {
+    return false;
   }
+
+  socket.send(
+    JSON.stringify({
+      type: "session",
+      message,
+    } satisfies WrappedSessionMessage),
+  );
+
+  return true;
 }
 
 export function sendWsBinary(data: Uint8Array): void {
