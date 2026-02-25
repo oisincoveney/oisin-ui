@@ -509,9 +509,14 @@ function App() {
     }
 
     if (!activeThreadTerminalId) {
+      const activeThreadCleared = threadSnapshot.activeThreadKey === null
+      if (activeThreadCleared) {
+        attachCycleRef.current += 1
+      }
       resetAttachRecovery()
       pendingEnsureRef.current = null
       pendingAttachRef.current = null
+      forceRefreshOnAttachRef.current = false
       terminalIdRef.current = null
       setTerminalId(null)
       setAttachFailureReason(null)
@@ -533,7 +538,7 @@ function App() {
     clearUnreadForActiveThread()
     sendAttachRequest(activeThreadTerminalId, false)
     scheduleScrollToBottom()
-  }, [status, activeThreadTerminalId])
+  }, [status, activeThreadTerminalId, threadSnapshot.activeThreadKey])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
