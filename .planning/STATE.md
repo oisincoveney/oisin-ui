@@ -3,15 +3,15 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Phase 3 create-thread pending-leak gap closure for disconnected/no-response websocket paths.
+**Current Focus:** Phase 5 docker restart/runtime stability closure complete with stale-lock and websocket gate evidence.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
-**Phase:** 03 of 5 (Project and Thread Management)
-**Plan:** 09 of 09
-**Status:** Phase complete (supplemental gap closure).
-**Last activity:** 2026-02-25 - Completed 03-09-PLAN.md create-thread pending leak closure.
+**Phase:** 05 of 5 (Docker Runtime Verification Closure)
+**Plan:** 06 of 06
+**Status:** Phase complete.
+**Last activity:** 2026-02-25 - Completed 05-06-PLAN.md restart/runtime stability gap closure.
 
 ```
 Progress: [████████████████████] 100%
@@ -19,15 +19,15 @@ Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
 Phase 3:  ██████████ Complete (9/9)
 Phase 4:  ██████████ Complete (6/6)
-Phase 5:  ██████████ Complete (5/5)
+Phase 5:  ██████████ Complete (6/6)
 ```
 
 ## Performance Metrics
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 32    |
-| Plans passed           | 29    |
+| Plans executed         | 33    |
+| Plans passed           | 30    |
 | Plans failed           | 3     |
 | Total requirements     | 11    |
 | Requirements complete  | 11    |
@@ -93,6 +93,9 @@ Phase 5:  ██████████ Complete (5/5)
 | Make session send path report OPEN-socket send success and gate create-thread lifecycle on that result | Prevents disconnected submits from leaking pending state by failing fast with actionable inline error | 03-09 |
 | Bound create-thread pending lifecycle with explicit response timeout cleanup | Prevents silent hangs when request send appears successful but no matching response ever arrives | 03-09 |
 | Lock disconnect and no-response create-thread failures with browser regressions asserting `Creating…` clears | Keeps pending-leak regressions detectable in CI and prevents silent UI hangs from resurfacing | 03-09 |
+| Validate daemon lock ownership with process metadata (start time + command), not PID liveness alone | Prevents PID-reuse false conflicts while preserving hard block for real concurrent daemon owners | 05-06 |
+| Make startup stale-lock preflight default for compose runtime path | Removes operator-only env toggle dependence and keeps lock behavior explicit on stale-clear vs active-refusal | 05-06 |
+| Add dedicated restart-stability gate before runtime-gate closure evidence refresh | Ensures DOCK-01 pass-state includes restart websocket continuity and no lock-churn proof, not startup-only checks | 05-06 |
 
 ### Blockers
 
@@ -104,11 +107,11 @@ Phase 5:  ██████████ Complete (5/5)
 
 ## Session Continuity
 
-**Last session:** 2026-02-25 03:56 UTC
-**Stopped at:** Completed 03-09-PLAN.md
+**Last session:** 2026-02-25 04:19 UTC
+**Stopped at:** Completed 05-06-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-25T03:56:04Z_
+_Last updated: 2026-02-25T04:19:49Z_
