@@ -57,7 +57,7 @@ Explicitly excluded from v1.1.
 
 ## Traceability
 
-Updated during roadmap creation.
+Updated for v1.1 roadmap phase mapping.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
@@ -79,4 +79,4 @@ Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-25 after v1.1 milestone initialization*
+*Last updated: 2026-02-25 after v1.1 roadmap creation*

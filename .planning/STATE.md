@@ -5,17 +5,17 @@
 See: `.planning/PROJECT.md` (updated 2026-02-25)
 
 **Core value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current focus:** Defining requirements for milestone v1.1 Hardening.
+**Current focus:** Phase 06 - Runtime Reliability Hardening (v1.1).
 
 ## Current Position
 
-**Phase:** Not started (defining requirements)
-**Plan:** —
-**Status:** Defining requirements
-**Last activity:** 2026-02-25 — Milestone v1.1 Hardening started
+**Phase:** 06 of 08 (Runtime Reliability Hardening)
+**Plan:** 06-01 of TBD
+**Status:** Ready to plan
+**Last activity:** 2026-02-25 — v1.1 roadmap created; phase 06 queued
 
 ```
-Progress: [████████████████████] 100% (v1)
+Progress: [████████████░░░░░░░░] 62.5% (v1 shipped; v1.1 phases pending)
 ```
 
 ## Accumulated Context
@@ -34,4 +34,4 @@ Progress: [████████████████████] 100% (v
 
 ---
 
-_State updated: 2026-02-25 after milestone v1.1 start_
+_State updated: 2026-02-25 after v1.1 roadmap creation_
