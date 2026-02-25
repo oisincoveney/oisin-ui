@@ -50,6 +50,13 @@ export type ThreadLaunchConfigInput = {
   baseBranch: string
 }
 
+export type CreateThreadError = {
+  summary: string
+  details: string | null
+  copyText: string
+  requestId: string | null
+}
+
 type ProviderAvailability = {
   provider: string
   available: boolean
@@ -64,7 +71,7 @@ export type ThreadStoreState = {
   loadingProjects: boolean
   create: {
     pending: boolean
-    error: string | null
+    error: CreateThreadError | null
   }
   delete: {
     pending: boolean
@@ -125,10 +132,10 @@ const jotaiStore = getDefaultStore()
 const pendingRequests = new Map<string, PendingRequestEntry>()
 
 const CREATE_THREAD_RESPONSE_TIMEOUT_MS = 120_000
-const CREATE_THREAD_DISCONNECTED_ERROR =
-  'Create Thread failed because the daemon connection is offline. Wait for reconnect, then try again.'
-const CREATE_THREAD_TIMEOUT_ERROR =
-  'Create Thread timed out waiting for daemon response after 120s. Confirm daemon health and try again.'
+const CREATE_THREAD_DISCONNECTED_SUMMARY =
+  'Create Thread could not be sent because the daemon connection is offline.'
+const CREATE_THREAD_TIMEOUT_SUMMARY =
+  'Create Thread timed out waiting for daemon response after 120s.'
 
 let started = false
 let unsubscribeTextMessages: (() => void) | null = null
@@ -208,16 +215,57 @@ function clearPendingRequest(requestId: string): PendingRequest | null {
   return pending.request
 }
 
-function clearAllPendingRequests(): void {
+function clearAllPendingRequests(): { hadThreadCreatePending: boolean } {
+  let hadThreadCreatePending = false
   for (const pending of pendingRequests.values()) {
     if (pending.timeoutId !== null) {
       clearTimeout(pending.timeoutId)
     }
+    if (pending.request.kind === 'thread-create') {
+      hadThreadCreatePending = true
+    }
   }
   pendingRequests.clear()
+  return { hadThreadCreatePending }
 }
 
-function setCreateError(error: string): void {
+function buildCreateThreadError(input: {
+  summary: string
+  details?: string | null
+  requestId?: string | null
+}): CreateThreadError {
+  const details = input.details?.trim() ? input.details.trim() : null
+  const requestId = input.requestId ?? null
+  const copyText = [
+    `Summary: ${input.summary}`,
+    details ? `Details: ${details}` : null,
+    requestId ? `Request ID: ${requestId}` : null,
+  ]
+    .filter((segment): segment is string => Boolean(segment))
+    .join('\n')
+
+  return {
+    summary: input.summary,
+    details,
+    copyText,
+    requestId,
+  }
+}
+
+function toCreateThreadFailureFromServer(error: string, requestId: string): CreateThreadError {
+  const normalized = error.toLowerCase()
+  const summary = normalized.includes('bootstrap')
+    ? 'Create Thread failed during bootstrap.'
+    : 'Create Thread failed while preparing the thread.'
+
+  return buildCreateThreadError({
+    summary,
+    details: error,
+    requestId,
+  })
+}
+
+function setCreateError(error: CreateThreadError): void {
   updateState((previous) => ({
     ...previous,
     create: {
@@ -521,13 +569,14 @@ function handleThreadCreateResponse(message: SessionMessage): void {
 
   const thread = message.payload?.thread as ThreadSummary | null | undefined
   const error = typeof message.payload?.error === 'string' ? message.payload.error : null
+  const createError = error ? toCreateThreadFailureFromServer(error, requestId) : null
 
   updateState((previous) => {
     const nextState: ThreadStoreState = {
       ...previous,
       create: {
         pending: false,
-        error,
+        error: createError,
       },
     }
 
@@ -907,7 +956,16 @@ export function stopThreadStore(): void {
   unsubscribeConnectionStatus?.()
   unsubscribeTextMessages = null
   unsubscribeConnectionStatus = null
-  clearAllPendingRequests()
+  const { hadThreadCreatePending } = clearAllPendingRequests()
+  if (hadThreadCreatePending || state.create.pending) {
+    updateState((previous) => ({
+      ...previous,
+      create: {
+        ...previous.create,
+        pending: false,
+      },
+    }))
+  }
 }
 
 export function subscribeThreadStore(listener: () => void): () => void {
@@ -1080,7 +1138,9 @@ export function createThread(input: ThreadLaunchConfigInput): void {
       ...previous,
       create: {
         pending: false,
-        error: 'Project, thread name, provider, and base branch are required.',
+        error: buildCreateThreadError({
+          summary: 'Project, thread name, provider, and base branch are required.',
+        }),
       },
     }))
     return
@@ -1091,7 +1151,9 @@ export function createThread(input: ThreadLaunchConfigInput): void {
       ...previous,
       create: {
         pending: false,
-        error: 'Custom command is required when command mode is replace.',
+        error: buildCreateThreadError({
+          summary: 'Custom command is required when command mode is replace.',
+        }),
       },
     }))
     return
@@ -1139,10 +1201,22 @@ export function createThread(input: ThreadLaunchConfigInput): void {
     {
       timeoutMs: CREATE_THREAD_RESPONSE_TIMEOUT_MS,
       onSendFailure: () => {
-        setCreateError(CREATE_THREAD_DISCONNECTED_ERROR)
+        setCreateError(
+          buildCreateThreadError({
+            summary: CREATE_THREAD_DISCONNECTED_SUMMARY,
+            details: 'WebSocket readyState was not OPEN, so the request was not sent.',
+            requestId,
+          })
+        )
       },
       onTimeout: () => {
-        setCreateError(CREATE_THREAD_TIMEOUT_ERROR)
+        setCreateError(
+          buildCreateThreadError({
+            summary: CREATE_THREAD_TIMEOUT_SUMMARY,
+            details: `No thread_create_response received within ${CREATE_THREAD_RESPONSE_TIMEOUT_MS / 1000}s.`,
+            requestId,
+          })
+        )
       },
     }
   )
