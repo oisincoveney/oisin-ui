@@ -9,12 +9,47 @@ type ConnectionOverlayProps = {
     wsFailureReason: string | null
     wsFailureHint: string | null
     attachFailureReason: string | null
+    attachRecovery: {
+      phase: 'idle' | 'retrying' | 'failed'
+      attempt: number
+      deadlineAt: number | null
+      remainingMs: number | null
+      lastError: string | null
+    }
   }
 }
 
 export function ConnectionOverlay({ status, diagnostics }: ConnectionOverlayProps): ReactElement | null {
-  if (status === 'connected') {
+  const attachRecovery = diagnostics.attachRecovery
+  const showAttachRecoveryBanner =
+    status === 'connected' && (attachRecovery.phase === 'retrying' || attachRecovery.phase === 'failed')
+
+  if (status === 'connected' && !showAttachRecoveryBanner) {
     return null
+  }
+
+  if (showAttachRecoveryBanner) {
+    const remainingSeconds = Math.max(0, Math.ceil((attachRecovery.remainingMs ?? 0) / 1_000))
+    const recoveryLabel =
+      attachRecovery.phase === 'retrying'
+        ? `Reattaching terminal (attempt ${attachRecovery.attempt})`
+        : 'Terminal attach retry window expired'
+    const recoveryHint =
+      attachRecovery.phase === 'retrying'
+        ? `${remainingSeconds}s remaining in the 60s recovery window.`
+        : 'Switch threads or restart the daemon, then retry to get a fresh terminal mapping.'
+
+    return (
+      <div className="pointer-events-none fixed inset-x-0 top-3 z-50 flex justify-center px-3">
+        <div className="w-full max-w-[min(760px,98vw)] rounded-lg border border-amber-300/40 bg-amber-950/85 p-3 text-sm text-amber-100 shadow-lg">
+          <div className="font-semibold">{recoveryLabel}</div>
+          <div className="mt-1 text-xs text-amber-100/90">{recoveryHint}</div>
+          {attachRecovery.lastError ? (
+            <div className="mt-2 text-xs font-normal text-amber-100/90">last error: {attachRecovery.lastError}</div>
+          ) : null}
+        </div>
+      </div>
+    )
   }
 
   // Keep pointer events disabled so terminal selection/copy still works while disconnected.
