@@ -13,10 +13,11 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { switchToThread, useThreadStoreSnapshot } from '@/thread/thread-store'
+import { switchToThread, useThreadStoreSnapshot, getThreadActionLockReason } from '@/thread/thread-store'
 import { cn } from '@/lib/utils'
 import { ThreadCreateDialog } from '@/components/thread-create-dialog'
 import { ThreadDeleteDialog } from '@/components/thread-delete-dialog'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 function statusTone(status: string): string {
   switch (status) {
@@ -64,6 +65,8 @@ function formatRelativeTime(isoTime: string | null | undefined): string {
 
 export function AppSidebar() {
   const snapshot = useThreadStoreSnapshot()
+  const actionLockReason = getThreadActionLockReason(snapshot)
+  const actionsLocked = Boolean(actionLockReason)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createProjectId, setCreateProjectId] = useState<string | null>(null)
   const [deleteDialogTarget, setDeleteDialogTarget] = useState<{
@@ -74,25 +77,45 @@ export function AppSidebar() {
 
   return (
     <>
-      <Sidebar>
+      <TooltipProvider delayDuration={100}>
+        <Sidebar>
         <SidebarHeader>
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Threads</p>
-              <p className="text-sm font-semibold text-foreground">Projects</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold text-foreground">Projects</p>
+                {actionsLocked ? (
+                  <span
+                    className="inline-flex items-center rounded-full border border-amber-500/35 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-300"
+                    aria-label="Warm-up in progress"
+                  >
+                    Warm-up
+                  </span>
+                ) : null}
+              </div>
             </div>
-            <Button
-              size="sm"
-              className="h-8"
-              aria-label="Create new thread"
-              onClick={() => {
-                setCreateProjectId(snapshot.projects[0]?.projectId ?? null)
-                setCreateDialogOpen(true)
-              }}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New Thread
-            </Button>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    size="sm"
+                    className="h-8"
+                    aria-label="Create new thread"
+                    disabled={actionsLocked}
+                    onClick={() => {
+                      setCreateProjectId(snapshot.projects[0]?.projectId ?? null)
+                      setCreateDialogOpen(true)
+                    }}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    New Thread
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
+            </Tooltip>
           </div>
         </SidebarHeader>
 
@@ -122,18 +145,26 @@ export function AppSidebar() {
 
                         <CollapsibleContent className="pt-1">
                           <div className="mb-1 pl-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 w-full justify-start text-xs"
-                              onClick={() => {
-                                setCreateProjectId(project.projectId)
-                                setCreateDialogOpen(true)
-                              }}
-                            >
-                              <Plus className="h-3.5 w-3.5" />
-                              New Thread
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 w-full justify-start text-xs"
+                                    disabled={actionsLocked}
+                                    onClick={() => {
+                                      setCreateProjectId(project.projectId)
+                                      setCreateDialogOpen(true)
+                                    }}
+                                  >
+                                    <Plus className="h-3.5 w-3.5" />
+                                    New Thread
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
+                            </Tooltip>
                           </div>
 
                           <SidebarMenu className="space-y-1 pl-2">
@@ -146,6 +177,8 @@ export function AppSidebar() {
                                   <div className="group flex items-start gap-1">
                                     <SidebarMenuButton
                                       isActive={isActive}
+                                      disabled={actionsLocked}
+                                      title={actionsLocked ? actionLockReason ?? undefined : undefined}
                                       onClick={() => {
                                         switchToThread(project.projectId, thread.threadId)
                                       }}
@@ -166,22 +199,30 @@ export function AppSidebar() {
                                       </div>
                                     </SidebarMenuButton>
 
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="mt-1 h-6 w-6 opacity-0 group-hover:opacity-100"
-                                      onClick={() => {
-                                        setDeleteDialogTarget({
-                                          projectId: project.projectId,
-                                          threadId: thread.threadId,
-                                          title: thread.title,
-                                        })
-                                      }}
-                                      aria-label={`Delete ${thread.title}`}
-                                      title={`Delete ${thread.title}`}
-                                    >
-                                      <span className="text-xs">x</span>
-                                    </Button>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            disabled={actionsLocked}
+                                            className="mt-1 h-6 w-6 opacity-0 group-hover:opacity-100"
+                                            onClick={() => {
+                                              setDeleteDialogTarget({
+                                                projectId: project.projectId,
+                                                threadId: thread.threadId,
+                                                title: thread.title,
+                                              })
+                                            }}
+                                            aria-label={`Delete ${thread.title}`}
+                                            title={actionsLocked ? actionLockReason ?? undefined : `Delete ${thread.title}`}
+                                          >
+                                            <span className="text-xs">x</span>
+                                          </Button>
+                                        </span>
+                                      </TooltipTrigger>
+                                      {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
+                                    </Tooltip>
                                   </div>
                                 </SidebarMenuItem>
                               )
@@ -196,7 +237,8 @@ export function AppSidebar() {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-      </Sidebar>
+        </Sidebar>
+      </TooltipProvider>
 
       <ThreadCreateDialog
         open={createDialogOpen}
