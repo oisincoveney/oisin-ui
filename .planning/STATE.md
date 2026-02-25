@@ -3,21 +3,21 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Milestone v1 closure complete; runtime closure evidence refreshed with browser-origin websocket and tmux-live proofs.
+**Current Focus:** Project/thread runtime path hardened for Bun lockfile thread creation in configured repos.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
-**Phase:** 05 of 5 (Docker Runtime Verification Closure)
-**Plan:** 04 of 04 (re-executed)
+**Phase:** 03 of 5 (Project and Thread Management)
+**Plan:** 06 of 06
 **Status:** Phase complete.
-**Last activity:** 2026-02-24 - Completed 05-04-PLAN.md verification and milestone provenance propagation.
+**Last activity:** 2026-02-25 - Completed 03-06-PLAN.md Bun lockfile thread-create runtime closure.
 
 ```
 Progress: [████████████████████] 100%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
-Phase 3:  █████ Complete (5/5)
+Phase 3:  ██████████ Complete (6/6)
 Phase 4:  ██████████ Complete (6/6)
 Phase 5:  ██████████ Complete (4/4)
 ```
@@ -26,8 +26,8 @@ Phase 5:  ██████████ Complete (4/4)
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 29    |
-| Plans passed           | 26    |
+| Plans executed         | 30    |
+| Plans passed           | 27    |
 | Plans failed           | 3     |
 | Total requirements     | 11    |
 | Requirements complete  | 11    |
@@ -84,6 +84,8 @@ Phase 5:  ██████████ Complete (4/4)
 | Enable compose `init` in runtime verification service | Improves signal forwarding and deterministic stop behavior during runtime gate runs | 05-03 |
 | Promote verification and milestone docs to pass-state only from fresh runtime artifacts | Prevents stale blocker language and keeps DOCK-01 closure evidence-backed | 05-04 |
 | Preserve non-critical tech debt entries while clearing critical DOCK-01 blocker | Keeps milestone audit truthful by separating blocker closure from debt cleanup | 05-04 |
+| Use bun install --frozen-lockfile as canonical worktree bootstrap command for this repo runtime | Aligns thread bootstrap with bun.lock strategy and removes npm lockfile dependency from create-thread flow | 03-06 |
+| Seed bun-lockfile runtime fixtures with local file dependency plus node_modules ignore | Keeps frozen-lockfile create-thread regressions deterministic and preserves delete-flow cleanliness in web e2e | 03-06 |
 
 ### Blockers
 
@@ -95,11 +97,11 @@ Phase 5:  ██████████ Complete (4/4)
 
 ## Session Continuity
 
-**Last session:** 2026-02-24 22:10 UTC
-**Stopped at:** Completed 05-04-PLAN.md (re-execution)
+**Last session:** 2026-02-25 02:58 UTC
+**Stopped at:** Completed 03-06-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-24T22:10:28Z_
+_Last updated: 2026-02-25T02:58:15Z_
