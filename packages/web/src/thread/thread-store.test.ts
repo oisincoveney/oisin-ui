@@ -247,3 +247,164 @@ describe('thread delete reliability', () => {
     expect(snapshot.delete.error).toBe('Delete failed')
   })
 })
+
+describe('runtime warm-up recovery', () => {
+  it('restores previous active thread after restart warm-up completes', async () => {
+    wsMocks.sendWsMessage.mockReturnValue(true)
+    const store = await loadThreadStore()
+
+    await seedStoreWithThreads(store, 'thread-active', [
+      { threadId: 'thread-active', title: 'Active thread', terminalId: 'term-a' },
+      { threadId: 'thread-other', title: 'Other thread', terminalId: 'term-b' },
+    ])
+
+    store.noteDaemonServerId('server-a')
+    store.noteDaemonServerId('server-b')
+    expect(store.getThreadStoreSnapshot().runtimeRecovery.warmup.active).toBe(true)
+
+    wsMocks.connectionListener?.('connected')
+    const projectListRequest = getLastSentRequestByType<{ type: string; requestId: string }>('project_list_request')
+    wsMocks.textListener?.({
+      type: 'project_list_response',
+      payload: {
+        requestId: projectListRequest.requestId,
+        projects: [
+          {
+            projectId: 'proj-1',
+            displayName: 'Project 1',
+            repoRoot: '/tmp/proj-1',
+            activeThreadId: 'thread-other',
+          },
+        ],
+      },
+    })
+
+    const threadListRequest = getLastSentRequestByType<{ type: string; requestId: string }>('thread_list_request')
+    wsMocks.textListener?.({
+      type: 'thread_list_response',
+      payload: {
+        requestId: threadListRequest.requestId,
+        activeThreadId: 'thread-other',
+        threads: [
+          {
+            projectId: 'proj-1',
+            threadId: 'thread-other',
+            title: 'Other thread',
+            terminalId: 'term-b',
+            status: 'running',
+            unreadCount: 0,
+            updatedAt: new Date(Date.now()).toISOString(),
+          },
+          {
+            projectId: 'proj-1',
+            threadId: 'thread-active',
+            title: 'Active thread',
+            terminalId: 'term-a',
+            status: 'running',
+            unreadCount: 0,
+            updatedAt: new Date(Date.now() - 1_000).toISOString(),
+          },
+        ],
+      },
+    })
+
+    expect(store.getThreadStoreSnapshot().activeThreadKey).toBe('proj-1:thread-active')
+
+    store.markRuntimeWarmupAttachSettled()
+    const snapshot = store.getThreadStoreSnapshot()
+    expect(snapshot.runtimeRecovery.warmup.active).toBe(false)
+    expect(snapshot.activeThreadKey).toBe('proj-1:thread-active')
+    expect(snapshot.runtimeRecovery.reconnectedToastPending).toBe(true)
+
+    store.clearRuntimeRecoveryToast()
+    expect(store.getThreadStoreSnapshot().runtimeRecovery.reconnectedToastPending).toBe(false)
+  })
+
+  it('falls back to newest available thread when previous active thread is missing', async () => {
+    wsMocks.sendWsMessage.mockReturnValue(true)
+    const store = await loadThreadStore()
+
+    await seedStoreWithThreads(store, 'thread-active', [
+      { threadId: 'thread-active', title: 'Active thread', terminalId: 'term-a' },
+      { threadId: 'thread-old', title: 'Old thread', terminalId: 'term-old' },
+    ])
+
+    store.noteDaemonServerId('server-a')
+    store.noteDaemonServerId('server-b')
+
+    wsMocks.connectionListener?.('connected')
+    const projectListRequest = getLastSentRequestByType<{ type: string; requestId: string }>('project_list_request')
+    wsMocks.textListener?.({
+      type: 'project_list_response',
+      payload: {
+        requestId: projectListRequest.requestId,
+        projects: [
+          {
+            projectId: 'proj-1',
+            displayName: 'Project 1',
+            repoRoot: '/tmp/proj-1',
+            activeThreadId: 'thread-new',
+          },
+        ],
+      },
+    })
+
+    const threadListRequest = getLastSentRequestByType<{ type: string; requestId: string }>('thread_list_request')
+    wsMocks.textListener?.({
+      type: 'thread_list_response',
+      payload: {
+        requestId: threadListRequest.requestId,
+        activeThreadId: 'thread-new',
+        threads: [
+          {
+            projectId: 'proj-1',
+            threadId: 'thread-new',
+            title: 'New thread',
+            terminalId: 'term-new',
+            status: 'running',
+            unreadCount: 0,
+            updatedAt: '2026-02-25T23:59:30.000Z',
+          },
+          {
+            projectId: 'proj-1',
+            threadId: 'thread-old',
+            title: 'Old thread',
+            terminalId: 'term-old',
+            status: 'running',
+            unreadCount: 0,
+            updatedAt: '2026-02-25T23:20:00.000Z',
+          },
+        ],
+      },
+    })
+
+    store.markRuntimeWarmupAttachSettled()
+    const snapshot = store.getThreadStoreSnapshot()
+    expect(snapshot.runtimeRecovery.warmup.active).toBe(false)
+    expect(snapshot.activeThreadKey).toBe('proj-1:thread-new')
+  })
+
+  it('blocks create, switch, and delete actions while warm-up is active', async () => {
+    wsMocks.sendWsMessage.mockReturnValue(true)
+    const store = await loadThreadStore()
+
+    await seedStoreWithThreads(store, 'thread-active', [
+      { threadId: 'thread-active', title: 'Active thread', terminalId: 'term-a' },
+      { threadId: 'thread-other', title: 'Other thread', terminalId: 'term-b' },
+    ])
+
+    store.noteDaemonServerId('server-a')
+    store.noteDaemonServerId('server-b')
+
+    const sendCallsBefore = wsMocks.sendWsMessage.mock.calls.length
+    store.createThread(validCreateInput)
+    store.switchToThread('proj-1', 'thread-other')
+    store.requestDeleteThread('proj-1', 'thread-active', false)
+
+    const snapshot = store.getThreadStoreSnapshot()
+    expect(snapshot.create.error?.summary).toContain('Actions are temporarily locked')
+    expect(snapshot.switch.error).toContain('Actions are temporarily locked')
+    expect(snapshot.delete.error).toContain('Actions are temporarily locked')
+    expect(wsMocks.sendWsMessage.mock.calls.length).toBe(sendCallsBefore)
+  })
+})

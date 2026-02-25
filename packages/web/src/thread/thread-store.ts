@@ -154,6 +154,7 @@ const CREATE_THREAD_DISCONNECTED_SUMMARY =
 const CREATE_THREAD_TIMEOUT_SUMMARY =
   'Create Thread timed out waiting for daemon response after 120s.'
 const RESTART_WARMUP_REASON = 'Daemon restarted. Actions are temporarily locked until thread recovery completes.'
+const PROJECT_LIST_REFRESH_PENDING_KEY = '__project-list__'
 
 let started = false
 let unsubscribeTextMessages: (() => void) | null = null
@@ -431,6 +432,19 @@ function completeRuntimeWarmup(snapshot: ThreadStoreState): ThreadStoreState {
     ...snapshot,
     activeThreadKey: restoreKey,
     activeThreadClearedByDelete: restoreKey === null ? snapshot.activeThreadClearedByDelete : false,
+    create: {
+      ...snapshot.create,
+      error:
+        snapshot.create.error?.summary === RESTART_WARMUP_REASON ? null : snapshot.create.error,
+    },
+    switch: {
+      ...snapshot.switch,
+      error: snapshot.switch.error === RESTART_WARMUP_REASON ? null : snapshot.switch.error,
+    },
+    delete: {
+      ...snapshot.delete,
+      error: snapshot.delete.error === RESTART_WARMUP_REASON ? null : snapshot.delete.error,
+    },
     runtimeRecovery: {
       ...snapshot.runtimeRecovery,
       warmup: {
@@ -1304,7 +1318,8 @@ export function noteDaemonServerId(serverId: string): void {
           reason: RESTART_WARMUP_REASON,
           detectedAtMs: Date.now(),
           previousActiveThreadKey: previous.activeThreadKey,
-          pendingProjectIds,
+          pendingProjectIds:
+            pendingProjectIds.length > 0 ? pendingProjectIds : [PROJECT_LIST_REFRESH_PENDING_KEY],
           attachSettled: false,
         },
         reconnectedToastPending: false,

@@ -227,6 +227,7 @@ function App() {
   const attachRecoveryRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const attachRecoveryToastTokenRef = useRef<number | null>(null)
   const hadConnectedOnceRef = useRef(false)
+  const runtimeWarmupActiveRef = useRef(threadSnapshot.runtimeRecovery.warmup.active)
   const forceRefreshOnAttachRef = useRef(false)
   const pendingScrollToBottomRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const panelWidthStorageKey = 'paseo.diff-panel.width-percent'
@@ -402,6 +403,10 @@ function App() {
   useEffect(() => {
     attachRecoveryRef.current = attachRecovery
   }, [attachRecovery])
+
+  useEffect(() => {
+    runtimeWarmupActiveRef.current = threadSnapshot.runtimeRecovery.warmup.active
+  }, [threadSnapshot.runtimeRecovery.warmup.active])
 
   useEffect(() => {
     if (attachRecovery.phase !== 'retrying') {
@@ -696,7 +701,7 @@ function App() {
       )
       setAttachRecoveryState(recoveryResolution.nextState)
       attachRecoveryToastTokenRef.current = recoveryResolution.nextToastToken
-      if (recoveryResolution.emitToast) {
+      if (recoveryResolution.emitToast && !runtimeWarmupActiveRef.current) {
         toast.success('Reconnected')
       }
       clearAttachRecoveryRetryTimer()
