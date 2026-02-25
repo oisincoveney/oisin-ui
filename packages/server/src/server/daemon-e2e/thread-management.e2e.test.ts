@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { execFileSync, execSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -13,7 +13,7 @@ import {
 const decoder = new TextDecoder();
 const shouldRun = !process.env.CI;
 
-function createRepoRoot(prefix: string): string {
+function createRepoRoot(prefix: string, options?: { withBunWorktreeSetup?: boolean }): string {
   const repoRoot = mkdtempSync(path.join(tmpdir(), prefix));
   execSync("git init -b main", { cwd: repoRoot, stdio: "pipe" });
   execSync("git config user.email 'thread-e2e@test.local'", { cwd: repoRoot, stdio: "pipe" });
@@ -26,6 +26,38 @@ function createRepoRoot(prefix: string): string {
   execSync("git add release-only.txt", { cwd: repoRoot, stdio: "pipe" });
   execSync("git commit -m 'release branch seed'", { cwd: repoRoot, stdio: "pipe" });
   execSync("git checkout main", { cwd: repoRoot, stdio: "pipe" });
+
+  if (options?.withBunWorktreeSetup) {
+    const depDir = path.join(repoRoot, "dep");
+    mkdirSync(depDir, { recursive: true });
+    writeFileSync(path.join(depDir, "package.json"), `${JSON.stringify({ name: "dep", version: "1.0.0" }, null, 2)}\n`);
+    writeFileSync(
+      path.join(repoRoot, "package.json"),
+      `${JSON.stringify(
+        {
+          name: "thread-e2e-bun",
+          private: true,
+          version: "1.0.0",
+          dependencies: { dep: "file:./dep" },
+        },
+        null,
+        2
+      )}\n`
+    );
+    writeFileSync(path.join(repoRoot, ".gitignore"), "node_modules/\n");
+    execSync("bun install --save-text-lockfile", { cwd: repoRoot, stdio: "pipe" });
+    writeFileSync(
+      path.join(repoRoot, "paseo.json"),
+      `${JSON.stringify({ worktree: { setup: ["bun install --frozen-lockfile"] } }, null, 2)}\n`
+    );
+    const lockfileName = existsSync(path.join(repoRoot, "bun.lock")) ? "bun.lock" : "bun.lockb";
+    execSync(`git add .gitignore dep/package.json package.json ${lockfileName} paseo.json`, {
+      cwd: repoRoot,
+      stdio: "pipe",
+    });
+    execSync("git commit -m 'seed bun worktree setup'", { cwd: repoRoot, stdio: "pipe" });
+  }
+
   return repoRoot;
 }
 
@@ -103,6 +135,7 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
         },
       });
       expect(createA.accepted).toBe(true);
+      expect(createA.error).toBeNull();
       expect(createA.thread?.terminalId).toBeTruthy();
       expect(createA.thread?.agentId).toBeTruthy();
       const threadA = createA.thread!;
@@ -270,6 +303,41 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
     },
     120000
   );
+
+  test("creates a thread successfully when worktree setup uses bun.lock bootstrap", async () => {
+    const bunRepoRoot = createRepoRoot("daemon-thread-mgmt-bun-", {
+      withBunWorktreeSetup: true,
+    });
+
+    try {
+      const projectId = "proj-thread-e2e-bun";
+      const projectAdded = await ctx.client.addProject({
+        projectId,
+        displayName: "Thread E2E Bun Project",
+        repoRoot: bunRepoRoot,
+        defaultBaseBranch: "main",
+      });
+      expect(projectAdded.accepted).toBe(true);
+      expect(projectAdded.error).toBeNull();
+
+      const createResult = await ctx.client.createThread({
+        projectId,
+        title: "Thread Bun Bootstrap",
+        baseBranch: "main",
+        launchConfig: { provider: "opencode" },
+      });
+
+      expect(createResult.accepted).toBe(true);
+      expect(createResult.error).toBeNull();
+      expect(createResult.thread).toBeTruthy();
+
+      const listResult = await ctx.client.listThreads(projectId);
+      expect(listResult.error).toBeNull();
+      expect(listResult.threads.some((thread) => thread.title === "Thread Bun Bootstrap")).toBe(true);
+    } finally {
+      rmSync(bunRepoRoot, { recursive: true, force: true });
+    }
+  });
 });
 
 function deriveSessionKey(thread: { projectId: string; threadId: string }): string {

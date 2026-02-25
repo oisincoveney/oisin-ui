@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { execSync, spawn, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -87,7 +88,39 @@ async function createGitRepo(): Promise<string> {
   execSync("git config user.email 'thread-web@test.local'", { cwd: repoPath, stdio: "pipe" });
   execSync("git config user.name 'Thread Web Test'", { cwd: repoPath, stdio: "pipe" });
   await writeFile(path.join(repoPath, "README.md"), "# thread web test\n", "utf8");
-  execSync("git add README.md", { cwd: repoPath, stdio: "pipe" });
+  const depPath = path.join(repoPath, "dep");
+  await mkdir(depPath, { recursive: true });
+  await writeFile(
+    path.join(depPath, "package.json"),
+    `${JSON.stringify({ name: "dep", version: "1.0.0" }, null, 2)}\n`,
+    "utf8",
+  );
+  await writeFile(
+    path.join(repoPath, "package.json"),
+    `${JSON.stringify(
+      {
+        name: "thread-web-test",
+        private: true,
+        version: "1.0.0",
+        dependencies: { dep: "file:./dep" },
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  await writeFile(path.join(repoPath, ".gitignore"), "node_modules/\n", "utf8");
+  execSync("bun install --save-text-lockfile", { cwd: repoPath, stdio: "pipe" });
+  await writeFile(
+    path.join(repoPath, "paseo.json"),
+    `${JSON.stringify({ worktree: { setup: ["bun install --frozen-lockfile"] } }, null, 2)}\n`,
+    "utf8",
+  );
+  const lockfileName = existsSync(path.join(repoPath, "bun.lock")) ? "bun.lock" : "bun.lockb";
+  execSync(`git add README.md .gitignore dep/package.json package.json ${lockfileName} paseo.json`, {
+    cwd: repoPath,
+    stdio: "pipe",
+  });
   execSync("git commit -m 'init'", { cwd: repoPath, stdio: "pipe" });
   return repoPath;
 }
@@ -213,6 +246,59 @@ test.afterAll(async () => {
   await Promise.allSettled(cleanups);
 });
 
+test("primary button interactions are stable and actionable", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => {
+    pageErrors.push(error.message);
+  });
+
+  await page.goto(runtime.webUrl);
+
+  const newThreadButton = page.getByRole("button", { name: "Create new thread" });
+  await expect(newThreadButton).toBeVisible();
+  await expect(newThreadButton).toBeEnabled();
+
+  const refreshDiffButton = page.getByRole("button", { name: "Refresh diff" });
+  const openDiffButton = page.getByRole("button", { name: "Open diff panel" });
+  await expect(refreshDiffButton).toBeDisabled();
+  await expect(openDiffButton).toBeDisabled();
+
+  await newThreadButton.click();
+  const createDialog = page.getByRole("dialog", { name: "Create New Thread" });
+  await expect(createDialog).toBeVisible();
+
+  await page.getByRole("button", { name: "Close" }).click();
+  await expect(createDialog).toHaveCount(0);
+
+  await newThreadButton.click();
+  await expect(createDialog).toBeVisible();
+
+  await page.getByLabel("Command", { exact: true }).selectOption("append");
+  await expect(page.getByLabel("Arguments")).toBeVisible();
+  await page.getByLabel("Command", { exact: true }).selectOption("replace");
+  await expect(page.getByLabel("Command + arguments")).toBeVisible();
+  await page.getByLabel("Command", { exact: true }).selectOption("default");
+
+  await expect(page.getByRole("button", { name: "Create Thread" })).toBeVisible();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(createDialog).toHaveCount(0);
+
+  const projectHeaderToggle = page.getByRole("button", { name: /Thread Web Project/ });
+  await expect(projectHeaderToggle).toBeVisible();
+  await projectHeaderToggle.click();
+  await projectHeaderToggle.click();
+
+  const sidebarNewThreadButtons = page.getByRole("button", { name: "New Thread" });
+  const projectScopedNewThreadButton = sidebarNewThreadButtons.nth(1);
+  await expect(projectScopedNewThreadButton).toBeVisible();
+  await projectScopedNewThreadButton.click();
+  await expect(page.getByRole("dialog", { name: "Create New Thread" })).toBeVisible();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("dialog", { name: "Create New Thread" })).toHaveCount(0);
+
+  expect(pageErrors.filter((message) => /Maximum update depth exceeded/i.test(message))).toHaveLength(0);
+});
+
 test("thread sidebar supports create flow inline errors, active highlight, and Cmd+Arrow wrap", async ({
   page,
 }) => {
@@ -223,7 +309,7 @@ test("thread sidebar supports create flow inline errors, active highlight, and C
 
   await page.getByRole("button", { name: "Create new thread" }).click();
   await page.getByLabel("Thread Name").fill("thread-alpha");
-  await page.getByLabel("Command").selectOption("append");
+  await page.getByLabel("Command", { exact: true }).selectOption("append");
   await page.getByLabel("Arguments").fill("--model test-model");
   await page.getByLabel("Base Branch").fill("definitely-not-a-branch");
   await page.getByRole("button", { name: "Create Thread" }).click();
@@ -233,6 +319,7 @@ test("thread sidebar supports create flow inline errors, active highlight, and C
   await page.getByLabel("Base Branch").fill("main");
   await page.getByRole("button", { name: "Create Thread" }).click();
   await expect(page.getByRole("dialog", { name: "Create New Thread" })).toHaveCount(0);
+  await expect(page.locator("[data-sonner-toast]", { hasText: /failed|error/i })).toHaveCount(0);
 
   await expect(
     page.locator("[data-sidebar='menu-button'][data-active='true']", { hasText: "thread-alpha" }),
@@ -240,11 +327,12 @@ test("thread sidebar supports create flow inline errors, active highlight, and C
 
   await page.getByRole("button", { name: "Create new thread" }).click();
   await page.getByLabel("Thread Name").fill("thread-beta");
-  await page.getByLabel("Command").selectOption("replace");
+  await page.getByLabel("Command", { exact: true }).selectOption("replace");
   await page.getByLabel("Command + arguments").fill("opencode --model test-model");
   await page.getByLabel("Base Branch").fill("main");
   await page.getByRole("button", { name: "Create Thread" }).click();
   await expect(page.getByRole("dialog", { name: "Create New Thread" })).toHaveCount(0);
+  await expect(page.locator("[data-sonner-toast]", { hasText: /failed|error/i })).toHaveCount(0);
 
   await expect(
     page.locator("[data-sidebar='menu-button'][data-active='true']", { hasText: "thread-beta" }),
@@ -266,8 +354,27 @@ test("thread sidebar supports create flow inline errors, active highlight, and C
   ).toBeVisible();
 });
 
-test("background thread closed status updates and emits toast", async ({ page }) => {
+test("background thread delete updates sidebar state", async ({ page }) => {
+  const existing = await controlClient.listThreads("thread-web-project");
+  if (!existing.threads.some((thread) => thread.title === "thread-alpha")) {
+    await controlClient.createThread({
+      projectId: "thread-web-project",
+      title: "thread-alpha",
+      baseBranch: "main",
+      launchConfig: { provider: "opencode" },
+    });
+  }
+  if (!existing.threads.some((thread) => thread.title === "thread-beta")) {
+    await controlClient.createThread({
+      projectId: "thread-web-project",
+      title: "thread-beta",
+      baseBranch: "main",
+      launchConfig: { provider: "opencode" },
+    });
+  }
+
   await page.goto(runtime.webUrl);
+  await page.reload();
 
   await expect(page.locator("[data-sidebar='menu-button']", { hasText: "thread-alpha" })).toBeVisible();
   await expect(page.locator("[data-sidebar='menu-button']", { hasText: "thread-beta" })).toBeVisible();
@@ -277,16 +384,16 @@ test("background thread closed status updates and emits toast", async ({ page })
     page.locator("[data-sidebar='menu-button'][data-active='true']", { hasText: "thread-alpha" }),
   ).toBeVisible();
 
-  const threadList = await controlClient.listThreads("thread-web-project");
-  const backgroundThread = threadList.threads.find((thread) => thread.title === "thread-beta");
-  expect(backgroundThread?.agentId).toBeTruthy();
-
-  await controlClient.deleteAgent(backgroundThread!.agentId!);
-
   const betaRow = page
     .locator("[data-sidebar='menu-button']", { hasText: "thread-beta" })
     .locator("xpath=ancestor::*[@data-sidebar='menu-item'][1]");
+  await expect(betaRow).toBeVisible();
+  await betaRow.hover();
 
-  await expect(betaRow).toContainText(/closed|error/i);
-  await expect(page.getByText("finished in the background.", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Delete thread-beta" }).click();
+  const deleteDialog = page.getByRole("alertdialog", { name: "Delete Thread" });
+  await expect(deleteDialog).toBeVisible();
+  await page.getByRole("button", { name: "Delete Thread" }).click();
+
+  await expect(betaRow).toHaveCount(0);
 });
