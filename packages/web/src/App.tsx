@@ -17,6 +17,7 @@ import {
 } from './diff/diff-store'
 import {
   type ConnectionStatus,
+  getServerInfoFromSessionMessage,
   useConnectionDiagnostics,
   useConnectionStatus,
   sendWsMessage,
@@ -29,8 +30,11 @@ import { TerminalStreamAdapter } from './terminal/terminal-stream'
 import { decodeBinaryMuxFrame } from './terminal/binary-mux'
 import {
   clearUnreadForActiveThread,
+  clearRuntimeRecoveryToast,
   dismissThreadToast,
   getActiveThread,
+  markRuntimeWarmupAttachSettled,
+  noteDaemonServerId,
   switchRelativeThread,
   useThreadStoreSnapshot,
 } from './thread/thread-store'
@@ -257,6 +261,7 @@ function App() {
     clearAttachRecoveryRetryTimer()
     setAttachRecoveryState(next)
     setAttachRecoveryNow(Date.now())
+    markRuntimeWarmupAttachSettled()
     setAttachFailureReason(
       `Attach recovery timed out after 60s. Last error: ${next.lastError ?? 'attach failed'}. Try switching threads or restarting the daemon.`
     )
@@ -500,6 +505,15 @@ function App() {
   }, [threadSnapshot.toasts])
 
   useEffect(() => {
+    if (!threadSnapshot.runtimeRecovery.reconnectedToastPending) {
+      return
+    }
+
+    toast.success('Reconnected')
+    clearRuntimeRecoveryToast()
+  }, [threadSnapshot.runtimeRecovery.reconnectedToastPending])
+
+  useEffect(() => {
     if (status !== 'connected') {
       return
     }
@@ -513,6 +527,7 @@ function App() {
       if (activeThreadCleared) {
         attachCycleRef.current += 1
       }
+      markRuntimeWarmupAttachSettled()
       resetAttachRecovery()
       pendingEnsureRef.current = null
       pendingAttachRef.current = null
@@ -578,6 +593,11 @@ function App() {
     const unsubText = subscribeTextMessages((data) => {
       const msg = data as SessionMessage
 
+      const serverInfo = getServerInfoFromSessionMessage(msg)
+      if (serverInfo) {
+        noteDaemonServerId(serverInfo.serverId)
+      }
+
       if (msg.type === 'terminal_stream_exit') {
         const terminalId = msg.payload?.terminalId
         const streamId = msg.payload?.streamId
@@ -625,6 +645,7 @@ function App() {
 
         const terminal = msg.payload?.terminal
         if (!terminal?.id) {
+          markRuntimeWarmupAttachSettled()
           setAttachFailureReason('Daemon did not return a terminal id during ensure')
           return
         }
@@ -666,6 +687,8 @@ function App() {
         console.error('[terminal] attach failed', msg.payload?.error)
         return
       }
+
+      markRuntimeWarmupAttachSettled()
 
       const recoveryResolution = resolveAttachRecoverySuccess(
         attachRecoveryRef.current,

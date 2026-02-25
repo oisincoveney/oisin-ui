@@ -32,6 +32,18 @@ type WrappedSessionMessage = {
   message: unknown;
 };
 
+type StatusMessage = {
+  type: "status";
+  payload?: unknown;
+};
+
+export type ServerInfoStatusPayload = {
+  status: "server_info";
+  serverId: string;
+  hostname?: string | null;
+  version?: string | null;
+};
+
 const DEFAULT_DAEMON_PORT = 6767;
 
 function resolveDaemonPort(): string {
@@ -93,6 +105,46 @@ function isPingMessage(message: unknown): message is PingMessage {
     message !== null &&
     (message as { type?: unknown }).type === "ping"
   );
+}
+
+function isStatusMessage(message: unknown): message is StatusMessage {
+  return (
+    typeof message === "object" &&
+    message !== null &&
+    (message as { type?: unknown }).type === "status"
+  );
+}
+
+export function getServerInfoFromSessionMessage(
+  message: unknown,
+): ServerInfoStatusPayload | null {
+  if (!isStatusMessage(message)) {
+    return null;
+  }
+
+  const payload = message.payload;
+  if (typeof payload !== "object" || payload === null) {
+    return null;
+  }
+
+  const status = (payload as { status?: unknown }).status;
+  const serverId = (payload as { serverId?: unknown }).serverId;
+  if (status !== "server_info" || typeof serverId !== "string") {
+    return null;
+  }
+
+  return {
+    status: "server_info",
+    serverId,
+    hostname:
+      typeof (payload as { hostname?: unknown }).hostname === "string"
+        ? ((payload as { hostname?: string }).hostname ?? null)
+        : null,
+    version:
+      typeof (payload as { version?: unknown }).version === "string"
+        ? ((payload as { version?: string }).version ?? null)
+        : null,
+  };
 }
 
 function emit(status: ConnectionStatus): void {

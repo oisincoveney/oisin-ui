@@ -57,6 +57,21 @@ export type CreateThreadError = {
   requestId: string | null
 }
 
+export type RuntimeWarmupState = {
+  active: boolean
+  reason: string | null
+  detectedAtMs: number | null
+  previousActiveThreadKey: string | null
+  pendingProjectIds: string[]
+  attachSettled: boolean
+}
+
+export type RuntimeRecoveryState = {
+  serverId: string | null
+  warmup: RuntimeWarmupState
+  reconnectedToastPending: boolean
+}
+
 type ProviderAvailability = {
   provider: string
   available: boolean
@@ -107,6 +122,7 @@ export type ThreadStoreState = {
     status: 'error' | 'closed'
     message: string
   }>
+  runtimeRecovery: RuntimeRecoveryState
 }
 
 type PendingRequest =
@@ -137,6 +153,7 @@ const CREATE_THREAD_DISCONNECTED_SUMMARY =
   'Create Thread could not be sent because the daemon connection is offline.'
 const CREATE_THREAD_TIMEOUT_SUMMARY =
   'Create Thread timed out waiting for daemon response after 120s.'
+const RESTART_WARMUP_REASON = 'Daemon restarted. Actions are temporarily locked until thread recovery completes.'
 
 let started = false
 let unsubscribeTextMessages: (() => void) | null = null
@@ -172,6 +189,18 @@ const initialState: ThreadStoreState = {
   },
   branchSuggestionsByProjectId: {},
   toasts: [],
+  runtimeRecovery: {
+    serverId: null,
+    warmup: {
+      active: false,
+      reason: null,
+      detectedAtMs: null,
+      previousActiveThreadKey: null,
+      pendingProjectIds: [],
+      attachSettled: true,
+    },
+    reconnectedToastPending: false,
+  },
 }
 
 let state: ThreadStoreState = initialState
@@ -338,6 +367,100 @@ function deriveActiveThreadKey(snapshot: ThreadStoreState): string | null {
   return null
 }
 
+function isThreadKeyPresent(snapshot: ThreadStoreState, threadKey: string): boolean {
+  const { projectId, threadId } = parseThreadKey(threadKey)
+  const threads = snapshot.threadsByProjectId[projectId] ?? []
+  return threads.some((thread) => thread.threadId === threadId)
+}
+
+function pickNewestThreadKey(snapshot: ThreadStoreState): string | null {
+  let newest: { projectId: string; threadId: string; timestamp: number; title: string } | null = null
+  for (const project of snapshot.projects) {
+    const threads = snapshot.threadsByProjectId[project.projectId] ?? []
+    for (const thread of threads) {
+      const timestamp = Date.parse(thread.updatedAt)
+      const safeTimestamp = Number.isFinite(timestamp) ? timestamp : 0
+      if (
+        !newest ||
+        safeTimestamp > newest.timestamp ||
+        (safeTimestamp === newest.timestamp && thread.title.localeCompare(newest.title) < 0)
+      ) {
+        newest = {
+          projectId: project.projectId,
+          threadId: thread.threadId,
+          timestamp: safeTimestamp,
+          title: thread.title,
+        }
+      }
+    }
+  }
+
+  if (!newest) {
+    return null
+  }
+
+  return toThreadKey(newest.projectId, newest.threadId)
+}
+
+function resolveWarmupRestoreThreadKey(snapshot: ThreadStoreState): string | null {
+  const preferred = snapshot.runtimeRecovery.warmup.previousActiveThreadKey
+  if (preferred && isThreadKeyPresent(snapshot, preferred)) {
+    return preferred
+  }
+  return pickNewestThreadKey(snapshot)
+}
+
+function isWarmupActive(snapshot: ThreadStoreState): boolean {
+  return snapshot.runtimeRecovery.warmup.active
+}
+
+function getWarmupLockReason(snapshot: ThreadStoreState): string | null {
+  if (!snapshot.runtimeRecovery.warmup.active) {
+    return null
+  }
+  return snapshot.runtimeRecovery.warmup.reason ?? RESTART_WARMUP_REASON
+}
+
+function completeRuntimeWarmup(snapshot: ThreadStoreState): ThreadStoreState {
+  if (!snapshot.runtimeRecovery.warmup.active) {
+    return snapshot
+  }
+
+  const restoreKey = resolveWarmupRestoreThreadKey(snapshot)
+  return {
+    ...snapshot,
+    activeThreadKey: restoreKey,
+    activeThreadClearedByDelete: restoreKey === null ? snapshot.activeThreadClearedByDelete : false,
+    runtimeRecovery: {
+      ...snapshot.runtimeRecovery,
+      warmup: {
+        ...snapshot.runtimeRecovery.warmup,
+        active: false,
+        reason: null,
+        pendingProjectIds: [],
+      },
+      reconnectedToastPending: true,
+    },
+  }
+}
+
+function maybeCompleteRuntimeWarmup(snapshot: ThreadStoreState): ThreadStoreState {
+  if (!snapshot.runtimeRecovery.warmup.active) {
+    return snapshot
+  }
+
+  const pendingProjectIds = snapshot.runtimeRecovery.warmup.pendingProjectIds
+  if (pendingProjectIds.length > 0) {
+    return snapshot
+  }
+
+  if (!snapshot.runtimeRecovery.warmup.attachSettled) {
+    return snapshot
+  }
+
+  return completeRuntimeWarmup(snapshot)
+}
+
 function sendRequest(
   request: Record<string, unknown>,
   pendingRequest: PendingRequest,
@@ -488,11 +611,10 @@ function handleProjectListResponse(message: SessionMessage): void {
     }
 
     let nextActiveThreadKey = previous.activeThreadKey
-    if (
-      nextActiveThreadKey &&
-      !nextProjectIds.has(parseThreadKey(nextActiveThreadKey).projectId)
-    ) {
-      nextActiveThreadKey = null
+    if (!isWarmupActive(previous) && nextActiveThreadKey) {
+      if (!nextProjectIds.has(parseThreadKey(nextActiveThreadKey).projectId)) {
+        nextActiveThreadKey = null
+      }
     }
 
     const nextState: ThreadStoreState = {
@@ -501,6 +623,15 @@ function handleProjectListResponse(message: SessionMessage): void {
       projects,
       threadsByProjectId: nextThreadsByProjectId,
       activeThreadKey: nextActiveThreadKey,
+      runtimeRecovery: previous.runtimeRecovery.warmup.active
+        ? {
+            ...previous.runtimeRecovery,
+            warmup: {
+              ...previous.runtimeRecovery.warmup,
+              pendingProjectIds: projects.map((project) => project.projectId),
+            },
+          }
+        : previous.runtimeRecovery,
     }
 
     if (error) {
@@ -510,7 +641,7 @@ function handleProjectListResponse(message: SessionMessage): void {
       }
     }
 
-    return nextState
+    return maybeCompleteRuntimeWarmup(nextState)
   })
 
   for (const project of projects) {
@@ -555,7 +686,32 @@ function handleThreadListResponse(message: SessionMessage): void {
 
     if (previous.activeThreadClearedByDelete && previous.activeThreadKey === null) {
       nextState.activeThreadKey = null
-      return nextState
+      if (previous.runtimeRecovery.warmup.active) {
+        nextState.runtimeRecovery = {
+          ...previous.runtimeRecovery,
+          warmup: {
+            ...previous.runtimeRecovery.warmup,
+            pendingProjectIds: previous.runtimeRecovery.warmup.pendingProjectIds.filter(
+              (pendingProjectId) => pendingProjectId !== projectId
+            ),
+          },
+        }
+      }
+      return maybeCompleteRuntimeWarmup(nextState)
+    }
+
+    if (previous.runtimeRecovery.warmup.active) {
+      nextState.activeThreadKey = previous.activeThreadKey
+      nextState.runtimeRecovery = {
+        ...previous.runtimeRecovery,
+        warmup: {
+          ...previous.runtimeRecovery.warmup,
+          pendingProjectIds: previous.runtimeRecovery.warmup.pendingProjectIds.filter(
+            (pendingProjectId) => pendingProjectId !== projectId
+          ),
+        },
+      }
+      return maybeCompleteRuntimeWarmup(nextState)
     }
 
     nextState.activeThreadKey = deriveActiveThreadKey(nextState)
@@ -1041,6 +1197,18 @@ export function getActiveThreadDiffTarget(snapshot = state): ActiveThreadDiffTar
 }
 
 export function switchToThread(projectId: string, threadId: string): void {
+  const warmupLockReason = getWarmupLockReason(state)
+  if (warmupLockReason) {
+    updateState((previous) => ({
+      ...previous,
+      switch: {
+        pending: false,
+        error: warmupLockReason,
+      },
+    }))
+    return
+  }
+
   const nextThreadKey = toThreadKey(projectId, threadId)
   const previousActiveThreadKey = state.activeThreadKey
   if (previousActiveThreadKey === nextThreadKey) {
@@ -1103,6 +1271,96 @@ export function refreshThreads(): void {
   refreshProjectList()
 }
 
+export function noteDaemonServerId(serverId: string): void {
+  const normalized = serverId.trim()
+  if (!normalized) {
+    return
+  }
+
+  updateState((previous) => {
+    const previousServerId = previous.runtimeRecovery.serverId
+    if (!previousServerId) {
+      return {
+        ...previous,
+        runtimeRecovery: {
+          ...previous.runtimeRecovery,
+          serverId: normalized,
+        },
+      }
+    }
+
+    if (previousServerId === normalized) {
+      return previous
+    }
+
+    const pendingProjectIds = previous.projects.map((project) => project.projectId)
+    return {
+      ...previous,
+      runtimeRecovery: {
+        ...previous.runtimeRecovery,
+        serverId: normalized,
+        warmup: {
+          active: true,
+          reason: RESTART_WARMUP_REASON,
+          detectedAtMs: Date.now(),
+          previousActiveThreadKey: previous.activeThreadKey,
+          pendingProjectIds,
+          attachSettled: false,
+        },
+        reconnectedToastPending: false,
+      },
+      switch: {
+        ...previous.switch,
+        error: null,
+      },
+      delete: {
+        ...previous.delete,
+        error: null,
+      },
+    }
+  })
+}
+
+export function markRuntimeWarmupAttachSettled(): void {
+  updateState((previous) => {
+    if (!previous.runtimeRecovery.warmup.active) {
+      return previous
+    }
+
+    const nextState: ThreadStoreState = {
+      ...previous,
+      runtimeRecovery: {
+        ...previous.runtimeRecovery,
+        warmup: {
+          ...previous.runtimeRecovery.warmup,
+          attachSettled: true,
+        },
+      },
+    }
+    return maybeCompleteRuntimeWarmup(nextState)
+  })
+}
+
+export function clearRuntimeRecoveryToast(): void {
+  updateState((previous) => {
+    if (!previous.runtimeRecovery.reconnectedToastPending) {
+      return previous
+    }
+
+    return {
+      ...previous,
+      runtimeRecovery: {
+        ...previous.runtimeRecovery,
+        reconnectedToastPending: false,
+      },
+    }
+  })
+}
+
+export function getThreadActionLockReason(snapshot = state): string | null {
+  return getWarmupLockReason(snapshot)
+}
+
 export function listProviders(): void {
   updateState((previous) => ({
     ...previous,
@@ -1155,6 +1413,16 @@ export function listBranchSuggestions(projectId: string, query?: string): void {
 }
 
 export function createThread(input: ThreadLaunchConfigInput): void {
+  const warmupLockReason = getWarmupLockReason(state)
+  if (warmupLockReason) {
+    setCreateError(
+      buildCreateThreadError({
+        summary: warmupLockReason,
+      })
+    )
+    return
+  }
+
   const title = input.title.trim()
   const provider = input.provider.trim()
   const baseBranch = input.baseBranch.trim()
@@ -1259,6 +1527,19 @@ export function clearCreateThreadError(): void {
 }
 
 export function requestDeleteThread(projectId: string, threadId: string, force: boolean): void {
+  const warmupLockReason = getWarmupLockReason(state)
+  if (warmupLockReason) {
+    updateState((previous) => ({
+      ...previous,
+      delete: {
+        ...previous.delete,
+        pending: false,
+        error: warmupLockReason,
+      },
+    }))
+    return
+  }
+
   updateState((previous) => {
     const targetThreadKey = toThreadKey(projectId, threadId)
     const isDeletingActiveThread = previous.activeThreadKey === targetThreadKey
