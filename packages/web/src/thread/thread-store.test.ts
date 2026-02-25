@@ -33,6 +33,59 @@ async function loadThreadStore(): Promise<ThreadStoreModule> {
   return import('./thread-store')
 }
 
+function getLastSentRequestByType<T extends { type: string }>(type: string): T {
+  for (let index = wsMocks.sendWsMessage.mock.calls.length - 1; index >= 0; index -= 1) {
+    const candidate = wsMocks.sendWsMessage.mock.calls[index]?.[0] as T | undefined
+    if (candidate?.type === type) {
+      return candidate
+    }
+  }
+  throw new Error(`No websocket request found for type ${type}`)
+}
+
+async function seedStoreWithThreads(
+  store: ThreadStoreModule,
+  activeThreadId: string,
+  threads: Array<{ threadId: string; title: string; terminalId: string }>
+): Promise<void> {
+  store.startThreadStore()
+  wsMocks.connectionListener?.('connected')
+
+  const projectListRequest = getLastSentRequestByType<{ type: string; requestId: string }>('project_list_request')
+  wsMocks.textListener?.({
+    type: 'project_list_response',
+    payload: {
+      requestId: projectListRequest.requestId,
+      projects: [
+        {
+          projectId: 'proj-1',
+          displayName: 'Project 1',
+          repoRoot: '/tmp/proj-1',
+          activeThreadId,
+        },
+      ],
+    },
+  })
+
+  const threadListRequest = getLastSentRequestByType<{ type: string; requestId: string }>('thread_list_request')
+  wsMocks.textListener?.({
+    type: 'thread_list_response',
+    payload: {
+      requestId: threadListRequest.requestId,
+      activeThreadId,
+      threads: threads.map((thread, index) => ({
+        projectId: 'proj-1',
+        threadId: thread.threadId,
+        title: thread.title,
+        terminalId: thread.terminalId,
+        status: 'running',
+        unreadCount: 0,
+        updatedAt: new Date(Date.now() - index * 1_000).toISOString(),
+      })),
+    },
+  })
+}
+
 beforeEach(() => {
   wsMocks.sendWsMessage.mockReset()
   wsMocks.subscribeTextMessages.mockReset()
@@ -139,5 +192,58 @@ describe('thread create lifecycle', () => {
 
     store.stopThreadStore()
     expect(store.getThreadStoreSnapshot().create.pending).toBe(false)
+  })
+})
+
+describe('thread delete reliability', () => {
+  it('keeps no active thread after successful active delete and removes sidebar row', async () => {
+    wsMocks.sendWsMessage.mockReturnValue(true)
+    const store = await loadThreadStore()
+
+    await seedStoreWithThreads(store, 'thread-active', [
+      { threadId: 'thread-active', title: 'Active thread', terminalId: 'term-a' },
+      { threadId: 'thread-other', title: 'Other thread', terminalId: 'term-b' },
+    ])
+
+    store.requestDeleteThread('proj-1', 'thread-active', false)
+    expect(store.getThreadStoreSnapshot().activeThreadKey).toBeNull()
+
+    const deleteRequest = getLastSentRequestByType<{ type: string; requestId: string }>('thread_delete_request')
+    wsMocks.textListener?.({
+      type: 'thread_delete_response',
+      payload: {
+        requestId: deleteRequest.requestId,
+      },
+    })
+
+    const snapshot = store.getThreadStoreSnapshot()
+    expect(snapshot.activeThreadKey).toBeNull()
+    expect(snapshot.threadsByProjectId['proj-1']?.map((thread) => thread.threadId)).toEqual(['thread-other'])
+  })
+
+  it('restores previous active thread when active delete fails', async () => {
+    wsMocks.sendWsMessage.mockReturnValue(true)
+    const store = await loadThreadStore()
+
+    await seedStoreWithThreads(store, 'thread-active', [
+      { threadId: 'thread-active', title: 'Active thread', terminalId: 'term-a' },
+      { threadId: 'thread-other', title: 'Other thread', terminalId: 'term-b' },
+    ])
+
+    store.requestDeleteThread('proj-1', 'thread-active', false)
+    expect(store.getThreadStoreSnapshot().activeThreadKey).toBeNull()
+
+    const deleteRequest = getLastSentRequestByType<{ type: string; requestId: string }>('thread_delete_request')
+    wsMocks.textListener?.({
+      type: 'thread_delete_response',
+      payload: {
+        requestId: deleteRequest.requestId,
+        error: 'Delete failed',
+      },
+    })
+
+    const snapshot = store.getThreadStoreSnapshot()
+    expect(snapshot.activeThreadKey).toBe('proj-1:thread-active')
+    expect(snapshot.delete.error).toBe('Delete failed')
   })
 })
