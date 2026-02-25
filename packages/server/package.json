@@ -23,6 +23,20 @@
         "./src/server/exports.ts"
       ]
     },
+    "./shared/binary-mux": {
+      "types": "./dist/server/shared/binary-mux.d.ts",
+      "default": [
+        "./dist/server/shared/binary-mux.js",
+        "./src/shared/binary-mux.ts"
+      ]
+    },
+    "./client/daemon-client": {
+      "types": "./dist/server/client/daemon-client.d.ts",
+      "default": [
+        "./dist/server/client/daemon-client.js",
+        "./src/client/daemon-client.ts"
+      ]
+    },
     "./utils/tool-call-parsers": {
       "types": "./dist/server/utils/tool-call-parsers.d.ts",
       "default": [
