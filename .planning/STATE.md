@@ -3,21 +3,21 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Docker runtime gate closure completed with deterministic duplicate-lock-free evidence chain for DOCK-01.
+**Current Focus:** Phase 3 create-thread setup compatibility gap closure with deterministic no-workspace-failure regressions.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
-**Phase:** 05 of 5 (Docker Runtime Verification Closure)
-**Plan:** 05 of 05
-**Status:** Phase complete.
-**Last activity:** 2026-02-25 - Completed 03-07-PLAN.md bun frozen-lockfile create-thread recovery closure.
+**Phase:** 03 of 5 (Project and Thread Management)
+**Plan:** 08 of 08
+**Status:** Phase complete (supplemental gap closure).
+**Last activity:** 2026-02-25 - Completed 03-08-PLAN.md create-thread npm workspace setup failure closure.
 
 ```
 Progress: [████████████████████] 100%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
-Phase 3:  ██████████ Complete (7/7)
+Phase 3:  ██████████ Complete (8/8)
 Phase 4:  ██████████ Complete (6/6)
 Phase 5:  ██████████ Complete (5/5)
 ```
@@ -26,8 +26,8 @@ Phase 5:  ██████████ Complete (5/5)
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 30    |
-| Plans passed           | 27    |
+| Plans executed         | 31    |
+| Plans passed           | 28    |
 | Plans failed           | 3     |
 | Total requirements     | 11    |
 | Requirements complete  | 11    |
@@ -89,6 +89,7 @@ Phase 5:  ██████████ Complete (5/5)
 | Use bun install --frozen-lockfile as canonical worktree bootstrap command for this repo runtime | Aligns thread bootstrap with bun.lock strategy and removes npm lockfile dependency from create-thread flow | 03-06 |
 | Seed bun-lockfile runtime fixtures with local file dependency plus node_modules ignore | Keeps frozen-lockfile create-thread regressions deterministic and preserves delete-flow cleanliness in web e2e | 03-06 |
 | Retry only explicit bun frozen-lockfile mismatch signature and restore tracked files after fallback | Closes create-thread failure path without broad retries or tracked-state drift | 03-07 |
+| Remove npm workspace relay setup command from canonical bootstrap and guard create-thread flow against `No workspaces found` | Keeps worktree setup deterministic in this bun workspace repo and prevents workspace-resolution regressions in daemon/web create path | 03-08 |
 
 ### Blockers
 
@@ -100,11 +101,11 @@ Phase 5:  ██████████ Complete (5/5)
 
 ## Session Continuity
 
-**Last session:** 2026-02-25 03:33 UTC
-**Stopped at:** Completed 03-07-PLAN.md
+**Last session:** 2026-02-25 03:43 UTC
+**Stopped at:** Completed 03-08-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-25T03:33:53Z_
+_Last updated: 2026-02-25T03:43:36Z_
