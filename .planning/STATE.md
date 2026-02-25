@@ -11,13 +11,13 @@
 **Phase:** 05 of 5 (Docker Runtime Verification Closure)
 **Plan:** 05 of 05
 **Status:** Phase complete.
-**Last activity:** 2026-02-25 - Completed 05-05-PLAN.md duplicate-daemon runtime gate determinism closure.
+**Last activity:** 2026-02-25 - Completed 03-07-PLAN.md bun frozen-lockfile create-thread recovery closure.
 
 ```
 Progress: [████████████████████] 100%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
-Phase 3:  ██████████ Complete (6/6)
+Phase 3:  ██████████ Complete (7/7)
 Phase 4:  ██████████ Complete (6/6)
 Phase 5:  ██████████ Complete (5/5)
 ```
@@ -88,6 +88,7 @@ Phase 5:  ██████████ Complete (5/5)
 | Keep prestart lock cleanup opt-in and gate-scoped via `PASEO_PRESTART_CLEAN_LOCK=1` | Maintains normal daemon lock behavior while making verification startup deterministic | 05-05 |
 | Use bun install --frozen-lockfile as canonical worktree bootstrap command for this repo runtime | Aligns thread bootstrap with bun.lock strategy and removes npm lockfile dependency from create-thread flow | 03-06 |
 | Seed bun-lockfile runtime fixtures with local file dependency plus node_modules ignore | Keeps frozen-lockfile create-thread regressions deterministic and preserves delete-flow cleanliness in web e2e | 03-06 |
+| Retry only explicit bun frozen-lockfile mismatch signature and restore tracked files after fallback | Closes create-thread failure path without broad retries or tracked-state drift | 03-07 |
 
 ### Blockers
 
@@ -99,11 +100,11 @@ Phase 5:  ██████████ Complete (5/5)
 
 ## Session Continuity
 
-**Last session:** 2026-02-25 03:11 UTC
-**Stopped at:** Completed 05-05-PLAN.md
+**Last session:** 2026-02-25 03:33 UTC
+**Stopped at:** Completed 03-07-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-25T03:11:51Z_
+_Last updated: 2026-02-25T03:33:53Z_
