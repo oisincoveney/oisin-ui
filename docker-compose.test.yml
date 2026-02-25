@@ -1,0 +1,12 @@
+services:
+  oisin-ui:
+    build: .
+    ports:
+      # - "3000:3000"
+      - "44285:44285"
+    volumes:
+      - oisin-ui-config:/config
+      - ./packages/web/src:/workspace/packages/web/src
+
+volumes:
+  oisin-ui-config:

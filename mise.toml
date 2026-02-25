@@ -1,0 +1,12 @@
+[tasks."docker:start"]
+description = "Build and start the Docker Compose services"
+run = "docker compose up -d --build"
+
+[tasks."docker:stop"]
+description = "Stop and remove the Docker Compose services"
+run = "docker compose down"
+
+
+[tasks."docker:restart"]
+description = "Restart the Docker Compose services"
+run = "mise run docker:stop && mise run docker:start"

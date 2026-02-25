@@ -15,13 +15,13 @@ cp .env.example .env
 # Run development servers
 npm run dev
 
-# Open browser to http://localhost:5173
+# Open browser to http://localhost:44285
 ```
 
 ## Architecture
 
 - **Express Server** (port 3000) - Serves API and built UI in production
-- **Vite Dev Server** (port 5173) - Hot-reload React UI in development
+- **Vite Dev Server** (port 44285) - Hot-reload React UI in development
 - **WebSocket** (`/ws`) - Real-time bidirectional communication
 - **Agent** - STT → LLM → TTS pipeline with terminal control
 - **Daemon** - tmux-based terminal management (in-process)
@@ -34,7 +34,7 @@ npm run dev
 
 # Or run separately:
 npm run dev:server  # Express on port 3000
-npm run dev:ui      # Vite on port 5173
+npm run dev:ui      # Vite on port 44285
 
 # Type checking
 npm run typecheck
@@ -96,7 +96,7 @@ PASEO_HOME=~/.paseo-blue PASEO_LISTEN=127.0.0.1:7777 npm run dev
 
 Currently manual testing via:
 1. Start servers: `npm run dev`
-2. Open http://localhost:5173
+2. Open http://localhost:44285
 3. Test WebSocket connection (green status indicator)
 4. Click "Send Ping" button to test communication
 

@@ -11,4 +11,3 @@ if (!hasDraggableFlatlist) {
 const cmd = process.platform === "win32" ? "patch-package.cmd" : "patch-package";
 const result = spawnSync(cmd, { stdio: "inherit" });
 process.exit(result.status ?? 1);
-

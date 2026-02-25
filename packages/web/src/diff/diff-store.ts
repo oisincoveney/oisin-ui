@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { atom, getDefaultStore, useAtomValue } from 'jotai'
 import {
   getConnectionStatus,
   sendWsMessage,
@@ -17,7 +17,7 @@ const MIN_PANEL_WIDTH_PERCENT = 30
 const MAX_PANEL_WIDTH_PERCENT = 60
 const DEFAULT_PANEL_WIDTH_PERCENT = 40
 
-const listeners = new Set<() => void>()
+const jotaiStore = getDefaultStore()
 
 let started = false
 let unsubscribeTextMessages: (() => void) | null = null
@@ -39,15 +39,11 @@ const initialState: DiffStoreState = {
 
 let state: DiffStoreState = initialState
 
-function notify(): void {
-  for (const listener of listeners) {
-    listener()
-  }
-}
+const diffStoreAtom = atom<DiffStoreState>(initialState)
 
 function setState(nextState: DiffStoreState): void {
   state = nextState
-  notify()
+  jotaiStore.set(diffStoreAtom, nextState)
 }
 
 function updateState(updater: (previous: DiffStoreState) => DiffStoreState): void {
@@ -234,10 +230,7 @@ export function stopDiffStore(): void {
 }
 
 export function subscribeDiffStore(listener: () => void): () => void {
-  listeners.add(listener)
-  return () => {
-    listeners.delete(listener)
-  }
+  return jotaiStore.sub(diffStoreAtom, listener)
 }
 
 export function getDiffStoreSnapshot(): DiffStoreState {
@@ -246,7 +239,7 @@ export function getDiffStoreSnapshot(): DiffStoreState {
 
 export function useDiffStoreSnapshot(): DiffStoreState {
   ensureStarted()
-  return useSyncExternalStore(subscribeDiffStore, getDiffStoreSnapshot, getDiffStoreSnapshot)
+  return useAtomValue(diffStoreAtom)
 }
 
 export function getActiveDiffEntry(snapshot = state): DiffCacheEntry | null {

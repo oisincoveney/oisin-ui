@@ -18,11 +18,11 @@ RUN bun install
 RUN chmod +x scripts/start.sh
 
 ENV PASEO_HOME=/config
-ENV PASEO_LISTEN=0.0.0.0:3000
-ENV PASEO_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://0.0.0.0:5173
+ENV PASEO_LISTEN=0.0.0.0:6767
+ENV PASEO_CORS_ORIGINS=http://localhost:44285,http://127.0.0.1:44285,http://0.0.0.0:44285
 
-EXPOSE 3000
-EXPOSE 5173
+EXPOSE 6767
+EXPOSE 44285
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["bash", "./scripts/start.sh"]
