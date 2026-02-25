@@ -157,6 +157,10 @@ async function waitForCondition(
   throw new Error(`Timed out after ${timeoutMs}ms waiting for condition`);
 }
 
+async function waitFor(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
   try {
     execFileSync("tmux", ["-S", socketPath, "has-session", "-t", sessionKey], {
@@ -384,6 +388,133 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
     },
     120000
   );
+
+  test("bounds attach failures and does not emit infinite retry state for missing terminals", async () => {
+    const projectId = `proj-thread-attach-bounds-${Date.now()}`;
+    const projectAdded = await ctx.client.addProject({
+      projectId,
+      displayName: "Thread Attach Bounds Project",
+      repoRoot,
+      defaultBaseBranch: "main",
+    });
+    expect(projectAdded.accepted).toBe(true);
+    expect(projectAdded.error).toBeNull();
+
+    const thread = await ctx.client.createThread({
+      projectId,
+      title: "Thread Attach Bounds",
+      baseBranch: "main",
+      launchConfig: { provider: "opencode" },
+    });
+    expect(thread.accepted).toBe(true);
+
+    const statusUpdates: Array<{ threadId: string; status: string; at: number }> = [];
+    const unsubStatus = ctx.client.onThreadStatusUpdated((payload) => {
+      statusUpdates.push({ threadId: payload.threadId, status: payload.status, at: Date.now() });
+    });
+
+    const missingTerminalId = `missing-terminal-${Date.now()}`;
+    const attemptDurations: number[] = [];
+
+    try {
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        const startedAt = Date.now();
+        const response = await ctx.client.attachTerminalStream(missingTerminalId, {
+          rows: 24,
+          cols: 80,
+        });
+        const durationMs = Date.now() - startedAt;
+        attemptDurations.push(durationMs);
+        expect(response.error).toBeTruthy();
+        expect(response.streamId).toBeNull();
+      }
+
+      const maxDuration = Math.max(...attemptDurations);
+      const totalDuration = attemptDurations.reduce((sum, value) => sum + value, 0);
+      expect(maxDuration).toBeLessThan(1500);
+      expect(totalDuration).toBeLessThan(6000);
+
+      const threadId = thread.thread!.threadId;
+      const threadStatusUpdates = statusUpdates.filter((update) => update.threadId === threadId);
+      expect(threadStatusUpdates.filter((update) => update.status === "running")).toHaveLength(0);
+    } finally {
+      unsubStatus();
+    }
+  });
+
+  test("active delete clears thread and stale attach attempts remain bounded", async () => {
+    const projectId = `proj-thread-delete-bounds-${Date.now()}`;
+    const projectAdded = await ctx.client.addProject({
+      projectId,
+      displayName: "Thread Delete Bounds Project",
+      repoRoot,
+      defaultBaseBranch: "main",
+    });
+    expect(projectAdded.accepted).toBe(true);
+    expect(projectAdded.error).toBeNull();
+
+    const createResult = await ctx.client.createThread({
+      projectId,
+      title: "Thread Delete Active",
+      baseBranch: "main",
+      launchConfig: { provider: "opencode" },
+    });
+    expect(createResult.accepted).toBe(true);
+    const createdThread = createResult.thread!;
+    const terminalId = createdThread.terminalId!;
+
+    const updates: Array<{ threadId: string; status: string; at: number }> = [];
+    const unsubStatus = ctx.client.onThreadStatusUpdated((payload) => {
+      updates.push({ threadId: payload.threadId, status: payload.status, at: Date.now() });
+    });
+
+    try {
+      const deleteResult = await ctx.client.deleteThread({
+        projectId,
+        threadId: createdThread.threadId,
+      });
+      expect(deleteResult.accepted).toBe(true);
+
+      const deletedAt = Date.now();
+      let activeCleared = false;
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        const listed = await ctx.client.listThreads(projectId);
+        if ((listed.activeThreadId ?? null) === null) {
+          activeCleared = true;
+          break;
+        }
+        await waitFor(25);
+      }
+      expect(activeCleared).toBe(true);
+
+      const postDeleteDurations: number[] = [];
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const startedAt = Date.now();
+        const response = await ctx.client.attachTerminalStream(terminalId, {
+          rows: 24,
+          cols: 80,
+        });
+        postDeleteDurations.push(Date.now() - startedAt);
+        expect(response.error).toBeTruthy();
+        expect(response.streamId).toBeNull();
+
+        const listed = await ctx.client.listThreads(projectId);
+        expect(listed.threads.some((entry) => entry.threadId === createdThread.threadId)).toBe(false);
+        expect(listed.activeThreadId ?? null).toBeNull();
+      }
+
+      expect(Math.max(...postDeleteDurations)).toBeLessThan(1500);
+
+      await waitFor(300);
+      const postDeleteUpdates = updates.filter(
+        (update) => update.threadId === createdThread.threadId && update.at >= deletedAt
+      );
+      expect(postDeleteUpdates.filter((update) => update.status === "running")).toHaveLength(0);
+      expect(postDeleteUpdates.length).toBeLessThanOrEqual(1);
+    } finally {
+      unsubStatus();
+    }
+  });
 
   test("creates a thread successfully when bun frozen-lockfile mismatch is recovered", async () => {
     const bunRepoRoot = createRepoRoot("daemon-thread-mgmt-bun-", {
