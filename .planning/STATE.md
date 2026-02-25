@@ -3,21 +3,21 @@
 ## Project Reference
 
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current Focus:** Phase 3 create-thread setup compatibility gap closure with deterministic no-workspace-failure regressions.
+**Current Focus:** Phase 3 create-thread pending-leak gap closure for disconnected/no-response websocket paths.
 **Config:** standard depth · yolo mode · parallel execution
 
 ## Current Position
 
 **Phase:** 03 of 5 (Project and Thread Management)
-**Plan:** 08 of 08
+**Plan:** 09 of 09
 **Status:** Phase complete (supplemental gap closure).
-**Last activity:** 2026-02-25 - Completed 03-08-PLAN.md create-thread npm workspace setup failure closure.
+**Last activity:** 2026-02-25 - Completed 03-09-PLAN.md create-thread pending leak closure.
 
 ```
 Progress: [████████████████████] 100%
 Phase 1:  ██████████ Complete
 Phase 2:  ██████████ Complete
-Phase 3:  ██████████ Complete (8/8)
+Phase 3:  ██████████ Complete (9/9)
 Phase 4:  ██████████ Complete (6/6)
 Phase 5:  ██████████ Complete (5/5)
 ```
@@ -26,8 +26,8 @@ Phase 5:  ██████████ Complete (5/5)
 
 | Metric                 | Value |
 | ---------------------- | ----- |
-| Plans executed         | 31    |
-| Plans passed           | 28    |
+| Plans executed         | 32    |
+| Plans passed           | 29    |
 | Plans failed           | 3     |
 | Total requirements     | 11    |
 | Requirements complete  | 11    |
@@ -90,6 +90,9 @@ Phase 5:  ██████████ Complete (5/5)
 | Seed bun-lockfile runtime fixtures with local file dependency plus node_modules ignore | Keeps frozen-lockfile create-thread regressions deterministic and preserves delete-flow cleanliness in web e2e | 03-06 |
 | Retry only explicit bun frozen-lockfile mismatch signature and restore tracked files after fallback | Closes create-thread failure path without broad retries or tracked-state drift | 03-07 |
 | Remove npm workspace relay setup command from canonical bootstrap and guard create-thread flow against `No workspaces found` | Keeps worktree setup deterministic in this bun workspace repo and prevents workspace-resolution regressions in daemon/web create path | 03-08 |
+| Make session send path report OPEN-socket send success and gate create-thread lifecycle on that result | Prevents disconnected submits from leaking pending state by failing fast with actionable inline error | 03-09 |
+| Bound create-thread pending lifecycle with explicit response timeout cleanup | Prevents silent hangs when request send appears successful but no matching response ever arrives | 03-09 |
+| Lock disconnect and no-response create-thread failures with browser regressions asserting `Creating…` clears | Keeps pending-leak regressions detectable in CI and prevents silent UI hangs from resurfacing | 03-09 |
 
 ### Blockers
 
@@ -101,11 +104,11 @@ Phase 5:  ██████████ Complete (5/5)
 
 ## Session Continuity
 
-**Last session:** 2026-02-25 03:43 UTC
-**Stopped at:** Completed 03-08-PLAN.md
+**Last session:** 2026-02-25 03:56 UTC
+**Stopped at:** Completed 03-09-PLAN.md
 **Resume file:** None
 
 ---
 
 _State initialized: 2026-02-21_
-_Last updated: 2026-02-25T03:43:36Z_
+_Last updated: 2026-02-25T03:56:04Z_
