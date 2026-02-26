@@ -356,6 +356,12 @@ function App() {
       return
     }
 
+    // If a recovery retry timer is pending, only the timer should send.
+    // This prevents effects from bypassing the exponential backoff.
+    if (attachRecoveryRetryTimerRef.current) {
+      return
+    }
+
     const nextResumeOffset = forceRefresh ? 0 : (adapterRef.current?.getOffset() ?? 0)
     adapterRef.current?.resetForStreamRollover({ resetOffset: forceRefresh })
     const requestId = randomId('attach')
