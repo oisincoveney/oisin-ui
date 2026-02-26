@@ -243,6 +243,40 @@ async function startRuntime(): Promise<Runtime> {
   };
 }
 
+async function ensureThread(title: string): Promise<void> {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const listed = await controlClient.listThreads("thread-web-project");
+    if (listed.threads.some((thread) => thread.title === title)) {
+      return;
+    }
+
+    if (attempt === 0) {
+      const created = await controlClient.createThread({
+        projectId: "thread-web-project",
+        title,
+        baseBranch: "main",
+        launchConfig: { provider: "opencode" },
+      });
+      if (!created.accepted) {
+        throw new Error(created.error ?? `failed to create thread '${title}'`);
+      }
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+
+  throw new Error(`thread '${title}' did not appear in listThreads`);
+}
+
+async function createThreadViaUi(page: import("@playwright/test").Page, title: string): Promise<void> {
+  await page.getByRole("button", { name: "Create new thread" }).click();
+  await page.getByLabel("Thread Name").fill(title);
+  await page.getByLabel("Base Branch").fill("main");
+  await page.getByRole("button", { name: "Create Thread" }).click();
+  await expect(page.getByRole("dialog", { name: "Create New Thread" })).toHaveCount(0);
+  await expect(page.locator("[data-sidebar='menu-button']", { hasText: title })).toBeVisible();
+}
+
 let runtime: Runtime;
 let controlClient: DaemonClient;
 
@@ -395,6 +429,7 @@ test("create thread exits pending with timeout error when create response never 
     const globalWindow = window as Window & {
       __dropCreateRequestForTest?: boolean;
       __originalWebSocketSendForTest?: WebSocket["send"];
+      __originalSetTimeoutForTest?: typeof window.setTimeout;
     };
 
     if (!globalWindow.__originalWebSocketSendForTest) {
@@ -404,7 +439,7 @@ test("create thread exits pending with timeout error when create response never 
           try {
             const parsed = JSON.parse(data) as {
               type?: string;
-              message?: { type?: string };
+              message?: { type?: string; requestId?: string };
             };
             if (parsed.type === "session" && parsed.message?.type === "thread_create_request") {
               return;
@@ -416,6 +451,14 @@ test("create thread exits pending with timeout error when create response never 
 
         globalWindow.__originalWebSocketSendForTest?.call(this, data);
       };
+    }
+
+    if (!globalWindow.__originalSetTimeoutForTest) {
+      globalWindow.__originalSetTimeoutForTest = window.setTimeout.bind(window);
+      window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+        const nextTimeout = typeof timeout === "number" && timeout >= 120_000 ? 2_000 : timeout;
+        return globalWindow.__originalSetTimeoutForTest?.(handler, nextTimeout, ...args) as number;
+      }) as typeof window.setTimeout;
     }
 
     globalWindow.__dropCreateRequestForTest = true;
@@ -430,50 +473,186 @@ test("create thread exits pending with timeout error when create response never 
   await page.getByRole("button", { name: "Create Thread" }).click();
 
   await expect(page.getByRole("button", { name: "Creating…" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Creating…" })).toHaveCount(0, { timeout: 12_000 });
+  await expect(page.getByRole("button", { name: "Creating…" })).toHaveCount(0, { timeout: 8_000 });
   await expect(page.getByRole("button", { name: "Create Thread" })).toBeVisible();
   await expect(page.getByRole("dialog", { name: "Create New Thread" })).toContainText(
-    "Create Thread timed out waiting for daemon response. Confirm daemon health and try again.",
+    "Create Thread timed out waiting for daemon response after 120s.",
+  );
+  await expect(page.getByRole("button", { name: "Technical details" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Create New Thread" })).toContainText(
+    "No thread_create_response received within 120s.",
   );
 });
 
-test("background thread delete updates sidebar state", async ({ page }) => {
-  const existing = await controlClient.listThreads("thread-web-project");
-  if (!existing.threads.some((thread) => thread.title === "thread-alpha")) {
-    await controlClient.createThread({
-      projectId: "thread-web-project",
-      title: "thread-alpha",
-      baseBranch: "main",
-      launchConfig: { provider: "opencode" },
-    });
-  }
-  if (!existing.threads.some((thread) => thread.title === "thread-beta")) {
-    await controlClient.createThread({
-      projectId: "thread-web-project",
-      title: "thread-beta",
-      baseBranch: "main",
-      launchConfig: { provider: "opencode" },
-    });
-  }
+test("restart warm-up locks actions and exposes bounded attach recovery indicator", async ({ page }) => {
+  await ensureThread("thread-restart-alpha");
+
+  await page.addInitScript(() => {
+    const globalWindow = window as Window & {
+      __injectAttachErrorsForTest?: boolean;
+      __injectAttachErrorRemainingForTest?: number;
+      __originalWebSocketSendForTest?: WebSocket["send"];
+      __trackSocketInstalledForTest?: boolean;
+      __lastSocketForTest?: WebSocket;
+    };
+
+    if (!globalWindow.__trackSocketInstalledForTest) {
+      const OriginalWebSocket = window.WebSocket;
+      const TrackingWebSocket = function (...args: ConstructorParameters<typeof WebSocket>) {
+        const socket = new OriginalWebSocket(...args);
+        globalWindow.__lastSocketForTest = socket;
+        return socket;
+      } as unknown as typeof WebSocket;
+
+      TrackingWebSocket.prototype = OriginalWebSocket.prototype;
+      Object.setPrototypeOf(TrackingWebSocket, OriginalWebSocket);
+
+      window.WebSocket = TrackingWebSocket;
+      globalWindow.__trackSocketInstalledForTest = true;
+    }
+
+    if (!globalWindow.__originalWebSocketSendForTest) {
+      globalWindow.__originalWebSocketSendForTest = WebSocket.prototype.send;
+      WebSocket.prototype.send = function (data: Parameters<WebSocket["send"]>[0]): void {
+        if (typeof data === "string") {
+          try {
+            const parsed = JSON.parse(data) as {
+              type?: string;
+              message?: { type?: string; requestId?: string };
+            };
+            if (
+              parsed.type === "session" &&
+              parsed.message?.type === "attach_terminal_stream_request" &&
+              globalWindow.__injectAttachErrorsForTest &&
+              (globalWindow.__injectAttachErrorRemainingForTest ?? 0) > 0
+            ) {
+              globalWindow.__injectAttachErrorRemainingForTest =
+                (globalWindow.__injectAttachErrorRemainingForTest ?? 0) - 1;
+              const requestId = parsed.message?.requestId;
+              if (globalWindow.__lastSocketForTest && typeof requestId === "string") {
+                const attachFailureMessage = JSON.stringify({
+                  type: "session",
+                  message: {
+                    type: "attach_terminal_stream_response",
+                    payload: {
+                      requestId,
+                      streamId: null,
+                      error: "synthetic attach failure for bounded recovery test",
+                    },
+                  },
+                });
+                setTimeout(() => {
+                  globalWindow.__lastSocketForTest?.dispatchEvent(
+                    new MessageEvent("message", { data: attachFailureMessage }),
+                  );
+                }, 5);
+              }
+              return;
+            }
+          } catch {
+            // fall through
+          }
+        }
+
+        globalWindow.__originalWebSocketSendForTest?.call(this, data);
+      };
+    }
+
+    globalWindow.__injectAttachErrorsForTest = false;
+    globalWindow.__injectAttachErrorRemainingForTest = 0;
+  });
 
   await page.goto(runtime.webUrl);
-  await page.reload();
+  const restartThreadRow = page.locator("[data-sidebar='menu-button']").first();
+  await expect(restartThreadRow).toBeVisible();
+  await restartThreadRow.click();
+  await expect(page.locator("[data-sidebar='menu-button'][data-active='true']")).toHaveCount(1);
 
-  await expect(page.locator("[data-sidebar='menu-button']", { hasText: "thread-alpha" })).toBeVisible();
-  await expect(page.locator("[data-sidebar='menu-button']", { hasText: "thread-beta" })).toBeVisible();
+  await page.evaluate(() => {
+    const globalWindow = window as Window & {
+      __injectAttachErrorsForTest?: boolean;
+      __injectAttachErrorRemainingForTest?: number;
+      __lastSocketForTest?: WebSocket;
+    };
+    globalWindow.__injectAttachErrorsForTest = true;
+    globalWindow.__injectAttachErrorRemainingForTest = 2;
 
-  await page.locator("[data-sidebar='menu-button']", { hasText: "thread-alpha" }).click();
+    const statusMessage = JSON.stringify({
+      type: "session",
+      message: {
+        type: "status",
+        payload: {
+          status: "server_info",
+          serverId: `e2e-restart-${Date.now()}`,
+        },
+      },
+    });
+    globalWindow.__lastSocketForTest?.dispatchEvent(new MessageEvent("message", { data: statusMessage }));
+  });
+
+  const createThreadButton = page.getByRole("button", { name: "Create new thread" });
+  await page.getByLabel("Warm-up in progress").waitFor({ state: "visible", timeout: 10_000 });
+  await expect(createThreadButton).toBeDisabled();
+
+  await expect(page.getByText(/Reattaching terminal \(attempt \d+\)/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/60s recovery window/)).toBeVisible();
+
+  await expect(page.getByText(/Reattaching terminal \(attempt \d+\)/)).toHaveCount(0, { timeout: 20_000 });
+});
+
+test("deleting the active thread immediately lands on no active thread", async ({ page }) => {
+  const activeTitle = `thread-delete-active-a-${Date.now()}`;
+  const otherTitle = `thread-delete-active-b-${Date.now()}`;
+
+  await page.goto(runtime.webUrl);
+  await createThreadViaUi(page, activeTitle);
+  await createThreadViaUi(page, otherTitle);
+
+  const activeCandidateRow = page.locator("[data-sidebar='menu-button']", { hasText: activeTitle }).first();
+  await expect(activeCandidateRow).toBeVisible();
+  await activeCandidateRow.click();
   await expect(
-    page.locator("[data-sidebar='menu-button'][data-active='true']", { hasText: "thread-alpha" }),
+    page.locator("[data-sidebar='menu-button'][data-active='true']", { hasText: activeTitle }),
+  ).toBeVisible();
+
+  const activeCandidateItem = activeCandidateRow.locator("xpath=ancestor::*[@data-sidebar='menu-item'][1]");
+  await activeCandidateItem.hover();
+
+  await page.getByRole("button", { name: `Delete ${activeTitle}` }).click();
+  await expect(page.getByRole("alertdialog", { name: "Delete Thread" })).toBeVisible();
+  await page.getByRole("button", { name: "Delete Thread" }).click();
+
+  await expect(page.getByText("No active thread")).toBeVisible({ timeout: 2_000 });
+  await expect(
+    page.locator("[data-sidebar='menu-button'][data-active='true']", { hasText: activeTitle }),
+  ).toHaveCount(0);
+  await expect(activeCandidateItem).toHaveCount(0);
+  await expect(page.getByText(/Reattaching terminal \(attempt \d+\)/)).toHaveCount(0);
+});
+
+test("background thread delete updates sidebar state", async ({ page }) => {
+  const alphaTitle = `thread-alpha-${Date.now()}`;
+  const betaTitle = `thread-beta-${Date.now()}`;
+
+  await page.goto(runtime.webUrl);
+  await createThreadViaUi(page, alphaTitle);
+  await createThreadViaUi(page, betaTitle);
+
+  await expect(page.locator("[data-sidebar='menu-button']", { hasText: alphaTitle })).toBeVisible();
+  await expect(page.locator("[data-sidebar='menu-button']", { hasText: betaTitle })).toBeVisible();
+
+  await page.locator("[data-sidebar='menu-button']", { hasText: alphaTitle }).click();
+  await expect(
+    page.locator("[data-sidebar='menu-button'][data-active='true']", { hasText: alphaTitle }),
   ).toBeVisible();
 
   const betaRow = page
-    .locator("[data-sidebar='menu-button']", { hasText: "thread-beta" })
+    .locator("[data-sidebar='menu-button']", { hasText: betaTitle })
     .locator("xpath=ancestor::*[@data-sidebar='menu-item'][1]");
   await expect(betaRow).toBeVisible();
   await betaRow.hover();
 
-  await page.getByRole("button", { name: "Delete thread-beta" }).click();
+  await page.getByRole("button", { name: `Delete ${betaTitle}` }).click();
   const deleteDialog = page.getByRole("alertdialog", { name: "Delete Thread" });
   await expect(deleteDialog).toBeVisible();
   await page.getByRole("button", { name: "Delete Thread" }).click();
@@ -534,6 +713,10 @@ test("create thread exits pending immediately with disconnected error when webso
   await expect(page.getByRole("button", { name: "Creating…" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Create Thread" })).toBeVisible();
   await expect(page.getByRole("dialog", { name: "Create New Thread" })).toContainText(
-    "Create Thread failed because the daemon connection is offline. Wait for reconnect, then try again.",
+    "Create Thread could not be sent because the daemon connection is offline.",
+  );
+  await expect(page.getByRole("button", { name: "Technical details" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Create New Thread" })).toContainText(
+    "WebSocket readyState was not OPEN, so the request was not sent.",
   );
 });
