@@ -26,7 +26,7 @@ v1.1 Hardening closes the remaining reliability and verification gaps from v1 so
   2. User sees terminal attach recover after reconnect without repeated `Terminal not found` loops.
   3. User can create a thread during transient websocket disruption and gets a bounded actionable error instead of indefinite pending.
   4. User can delete the active thread and immediately land in `No active thread` with no stale attach retries.
-**Plans**: 6 plans
+**Plans**: 8 plans
 Plans:
 - [x] 06-01-PLAN.md — Harden create-thread bounded actionable failure contract (RUN-03).
 - [x] 06-02-PLAN.md — Add bounded queued terminal input and flush semantics (RUN-02 prerequisite).
@@ -34,6 +34,8 @@ Plans:
 - [x] 06-04-PLAN.md — Enforce active-delete immediate null state + cancel stale attach retries (RUN-04).
 - [x] 06-05-PLAN.md — Add serverId restart warm-up gating and restore/fallback recovery flow (RUN-01).
 - [x] 06-06-PLAN.md — Close deterministic verification for RUN-01..RUN-04 with tests/docs.
+- [x] 06-07-PLAN.md — Close server-side first-request websocket race and startup blocking gap.
+- [x] 06-08-PLAN.md — Add client readiness barrier and refresh deterministic verification evidence.
 
 ### Phase 07: Thread Metadata Contract Closure
 **Goal**: Users always stay on the correct project/thread context through ensure-default, thread switching, reconnect, and refresh.
@@ -59,9 +61,9 @@ Plans:
 
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
 |-------|-----------|--------------|----------------|--------|-----------|
-| 06. Runtime Reliability Hardening | v1.1 | RUN-01, RUN-02, RUN-03, RUN-04 | 6/6 | Complete | 2026-02-26 |
+| 06. Runtime Reliability Hardening | v1.1 | RUN-01, RUN-02, RUN-03, RUN-04 | 8/8 | Complete | 2026-02-26 |
 | 07. Thread Metadata Contract Closure | v1.1 | THRD-01, THRD-02, THRD-03 | 0/TBD | Not started | - |
 | 08. Deterministic Verification Closure | v1.1 | VER-01, VER-02, VER-03 | 0/TBD | Not started | - |
 
 ---
-_Roadmap updated: 2026-02-26 after Phase 06 completion._
+_Roadmap updated: 2026-02-26 after Phase 06 gap-closure execution._
