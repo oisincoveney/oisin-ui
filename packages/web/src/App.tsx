@@ -349,6 +349,13 @@ function App() {
   }
 
   const sendAttachRequest = (terminalId: string, forceRefresh: boolean) => {
+    // If there's already a pending attach request, don't send another.
+    // This prevents retry amplification where multiple callers each send
+    // a request before the previous response arrives.
+    if (pendingAttachRef.current) {
+      return
+    }
+
     const nextResumeOffset = forceRefresh ? 0 : (adapterRef.current?.getOffset() ?? 0)
     adapterRef.current?.resetForStreamRollover({ resetOffset: forceRefresh })
     const requestId = randomId('attach')
