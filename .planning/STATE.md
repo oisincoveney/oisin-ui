@@ -11,11 +11,11 @@ See: `.planning/PROJECT.md` (updated 2026-02-25)
 
 **Phase:** 07 of 08 (Thread Contract Completion)
 **Plan:** 0 of TBD in current phase
-**Status:** Phase 06 gap-closure complete; ready to plan Phase 07
-**Last activity:** 2026-02-26 — Completed 06-07-PLAN.md
+**Status:** Phase 06 gap-closure fully complete; ready to execute Phase 07
+**Last activity:** 2026-02-26 — Completed 06-08-PLAN.md
 
 ```
-Progress: [███████████████████░] 97.6% (41/42 plans complete)
+Progress: [████████████████████] 100% (42/42 plans complete)
 ```
 
 ## Accumulated Context
@@ -53,13 +53,16 @@ Progress: [███████████████████░] 97.6% (
 - Websocket connect now binds inbound handling immediately and queues earliest messages until session dispatch is ready, then drains in-order through normal request handling.
 - Claude provider availability probing is async and cached (no constructor-time sync shell checks on session startup path).
 - Daemon e2e now asserts first post-connect `fetchAgents` reliability with bounded latency across repeated fresh connections.
+- First-RPC safety now has an explicit `waitForPostConnectReady` barrier; daemon test context must await it before initial `fetchAgents`.
+- First-request regression now validates readiness + immediate ping/fetchAgents bounded latency across repeated fresh connections.
+- Phase verification evidence must come from one concrete passing command chain run (typecheck -> daemon e2e -> web e2e).
 
 ## Session Continuity
 
-**Last session:** 2026-02-26T19:05:27Z
-**Stopped at:** Completed 06-07-PLAN.md
+**Last session:** 2026-02-26T19:15:37Z
+**Stopped at:** Completed 06-08-PLAN.md
 **Resume file:** None
 
 ---
 
-_State updated: 2026-02-26 after 06-07 plan completion_
+_State updated: 2026-02-26 after 06-08 plan completion_
