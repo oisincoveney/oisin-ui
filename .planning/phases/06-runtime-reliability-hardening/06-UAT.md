@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 06-runtime-reliability-hardening
-source: 06-runtime-reliability-hardening-01-SUMMARY.md, 06-runtime-reliability-hardening-02-SUMMARY.md, 06-runtime-reliability-hardening-03-SUMMARY.md, 06-runtime-reliability-hardening-04-SUMMARY.md, 06-runtime-reliability-hardening-05-SUMMARY.md
-started: 2026-02-26T00:10:00Z
-updated: 2026-02-26T00:55:00Z
+source: 06-runtime-reliability-hardening-01-SUMMARY.md, 06-runtime-reliability-hardening-02-SUMMARY.md, 06-runtime-reliability-hardening-03-SUMMARY.md, 06-runtime-reliability-hardening-04-SUMMARY.md, 06-runtime-reliability-hardening-05-SUMMARY.md, 06-runtime-reliability-hardening-06-SUMMARY.md
+started: 2026-02-26T05:12:23Z
+updated: 2026-02-26T05:30:29Z
 ---
 
 ## Current Test
@@ -12,46 +12,64 @@ updated: 2026-02-26T00:55:00Z
 
 ## Tests
 
-### 1. Create Thread Failure Shows Actionable Error
-expected: When thread creation fails, the create dialog shows a concise error summary with expandable technical details and a copy-diagnostics button. No indefinite pending state.
+### 1. Create failure is bounded and actionable
+expected: While disconnected from daemon websocket, creating a thread shows a concise error summary, expandable technical details, and copyable diagnostics. The create flow exits pending state promptly and stays interactable.
+notes: Manual Playwright browser verification against docker web UI. Forced websocket offline by patching `WebSocket.prototype.readyState`, submitted create thread, observed concise summary message, expandable technical details, and Copy details -> Copied confirmation. Create button stayed interactable (no stuck pending).
 result: pass
-notes: Verified via Playwright. Simulated WS disconnection by overriding WebSocket.prototype.readyState, then clicked Create Thread. Dialog showed: (1) "Create Thread could not be sent because the daemon connection is offline" summary, (2) collapsible "Technical details" with WS readyState info, (3) "Copy details" button with "Copied" confirmation. Button remained clickable (no stuck spinner). Cancel/Close still worked.
 
-### 2. Terminal Input Preserved During Brief Disconnects
-expected: If you type into the terminal during a brief websocket disconnect, your keystrokes are replayed into the terminal once it reattaches. Input is not lost.
+### 2. Terminal input survives brief disconnect and replays on reattach
+expected: If terminal input is entered during a brief transport disconnect, it is buffered and replayed once attach confirms, with no duplicated or lost input.
 result: pass
-notes: Verified via unit tests (5/5 pass). Tests cover: bounded queue enqueue, flush ordering on attach confirm, TTL expiry pruning, overflow eviction (oldest-first), and invalidation clearing on unsafe stream transition. Cannot verify via browser UI without a live running agent terminal + real disconnect cycle.
+notes: Verified replay semantics via deterministic queue/replay test suite (`packages/web/src/terminal/terminal-stream.test.ts`) with 5/5 pass covering enqueue, flush ordering, TTL pruning, overflow eviction, and invalidation clear behavior.
 
-### 3. Attach Recovery Shows Visible Retry Progress
-expected: After a websocket reconnect, if terminal attach needs retrying, you see a non-blocking banner showing retry attempt count and remaining recovery window (up to 60s). On success, a single "Reconnected" toast appears.
-result: issue-fixed
-notes: UAT revealed a real bug — excessive retry attempts (~1000+ in 60s instead of ~30-40). Root cause: React effects at lines 430-460 and 525-561 in App.tsx re-fire during recovery state updates, sending duplicate attach requests that bypass the exponential backoff timer. Fix applied: (1) added ATTACH_RECOVERY_MAX_ATTEMPTS=40 hard cap in nextAttachRecoveryRetryState, (2) guarded connect effect to skip sendAttachRequest when recovery is active, (3) guarded thread-key effect to not reset recovery for same terminalId. All 4 App.test.tsx tests pass including new max-attempts test. Banner UI verified via unit tests + code review (ConnectionOverlay renders amber banner with attempt count, remaining window, last error).
-
-### 4. Delete Active Thread Lands in No Active Thread
-expected: Deleting the currently active thread immediately shows a "No active thread" state. No stale attach retries fire, no auto-fallback to another thread. State stays clean until you explicitly select or create a thread.
+### 3. Attach recovery shows bounded retry UX and single success signal
+expected: After reconnect with attach failures, a visible retry banner shows attempt and remaining 60s window; retries are bounded/exponential and success emits one Reconnected signal.
 result: pass
-notes: Verified via unit tests (2/2 delete reliability tests pass) + partial Playwright test. Unit tests confirm: (1) "keeps no active thread after successful active delete and removes sidebar row", (2) "restores previous active thread when active delete fails". In Playwright, delete triggered but daemon returned "spawn /bin/sh ENOENT" (infrastructure issue, not phase 06 code), and the UI correctly preserved the thread on failure (rollback behavior). App.tsx tests confirm attach cycle invalidation on active-null transition.
+notes: Verified via Playwright e2e (`packages/server/e2e/thread-management-web.spec.ts`) test `restart warm-up locks actions and exposes bounded attach recovery indicator` passed, exercising retry banner bounded window behavior.
 
-### 5. Restart Warm-up Locks Actions and Restores Context
-expected: After restarting Docker services, the app detects the restart and briefly locks create/switch/delete buttons with a tooltip explaining warm-up. Once recovery completes, your previous active thread is restored (or newest thread selected if prior thread is gone), and a single "Reconnected" toast appears.
+### 4. Active delete lands in no-active state without stale retries
+expected: Deleting the active thread immediately shows No active thread, removes deleted row, prevents stale attach retries, and does not auto-fallback to another thread.
 result: pass
-notes: Verified via unit tests (3/3 warm-up recovery tests pass) + code review. Tests confirm: (1) restores previous active thread after warm-up, (2) falls back to newest when previous missing, (3) blocks create/switch/delete during warm-up. Sidebar code shows amber "Warm-up" chip (aria-label="Warm-up in progress") and disabled actions with tooltip lock reason. Cannot trigger actual restart without Docker restart (forbidden per AGENTS.md).
+notes: Verified via Playwright e2e (`packages/server/e2e/thread-management-web.spec.ts`) test `deleting the active thread immediately lands on no active thread` passed.
+
+### 5. Restart warm-up locks actions and restores context deterministically
+expected: On daemon restart (serverId change), create/switch/delete lock during warm-up with explicit reason; after settle, prior active thread is restored or newest fallback selected.
+result: pass
+notes: Verified via Playwright e2e (`packages/server/e2e/thread-management-web.spec.ts`) test `restart warm-up locks actions and exposes bounded attach recovery indicator` passed, including lock-state behavior during warm-up and bounded recovery telemetry.
+
+### 6. Deterministic reliability regressions execute in one repeatable path
+expected: The documented command sequence for Phase 06 reliability verification runs successfully and maps RUN-01..RUN-04 to deterministic evidence.
+result: issue
+reported: "Documented deterministic command sequence did not run end-to-end: daemon regression command timed out waiting for message (10000ms) in daemon-client while web Playwright regressions passed (7/7)."
+severity: blocker
 
 ## Summary
 
-total: 5
+total: 6
 passed: 5
-issues: 0
+issues: 1
 pending: 0
 skipped: 0
 
-## Fixes Applied During UAT
-
-### Attach recovery retry burst (Test 3)
-- **Bug:** Effects bypassed exponential backoff timer, causing ~1000+ retries in 60s
-- **Fix:** Max attempts cap (40) + effect guards during active recovery
-- **Files:** `packages/web/src/App.tsx`, `packages/web/src/App.test.tsx`
-
 ## Gaps
 
-[none]
+- truth: "The documented command sequence for Phase 06 reliability verification runs successfully and maps RUN-01..RUN-04 to deterministic evidence."
+  status: failed
+  reason: "User reported: Documented deterministic command sequence did not run end-to-end: daemon regression command timed out waiting for message (10000ms) in daemon-client while web Playwright regressions passed (7/7)."
+  severity: blocker
+  test: 6
+  root_cause: "First RPC after websocket open is dropped due a connect/readiness race, so createDaemonTestContext's immediate fetchAgents request never receives a response and times out at 10s."
+  artifacts:
+    - path: "packages/server/src/server/test-utils/daemon-test-context.ts:45"
+      issue: "Sends fetchAgents immediately after connect with no readiness barrier."
+    - path: "packages/server/src/client/daemon-client.ts:1088"
+      issue: "Hard 10s response wait fails when first request is dropped."
+    - path: "packages/server/src/server/websocket-server.ts:316"
+      issue: "Connection path can accept open before first-message handling/session setup is fully ready."
+    - path: "packages/server/src/server/agent/providers/claude-agent.ts:508"
+      issue: "Synchronous execSync provider check in startup widens race window."
+  missing:
+    - "Add explicit post-connect readiness barrier before first RPC in daemon test context/client."
+    - "Harden websocket connect path to queue/drain earliest messages after session init."
+    - "Move synchronous provider checks off connect-critical startup path."
+  debug_session: ".planning/debug/phase-06-fetchagents-timeout.md"
