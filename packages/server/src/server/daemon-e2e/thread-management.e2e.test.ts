@@ -191,8 +191,8 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
     }
   }, 60000);
 
-  test("immediate first fetchAgents RPC after connect returns within bounded time", async () => {
-    const attempts = 3;
+  test("post-connect readiness barrier keeps first ping/fetchAgents RPCs bounded", async () => {
+    const attempts = 5;
     for (let attempt = 0; attempt < attempts; attempt += 1) {
       const immediateClient = new DaemonClient({
         url: `ws://127.0.0.1:${ctx.daemon.port}/ws`,
@@ -201,15 +201,32 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
 
       try {
         await immediateClient.connect();
-        const startedAt = Date.now();
+
+        const readinessStartedAt = Date.now();
+        await immediateClient.waitForPostConnectReady({
+          timeoutMs: 1500,
+          probeTimeoutMs: 300,
+          retryDelayMs: 10,
+        });
+        const readinessElapsedMs = Date.now() - readinessStartedAt;
+
+        const pingStartedAt = Date.now();
+        const ping = await immediateClient.ping({ timeoutMs: 1000 });
+        const pingElapsedMs = Date.now() - pingStartedAt;
+
+        const fetchStartedAt = Date.now();
         const response = await immediateClient.fetchAgents({
           subscribe: { subscriptionId: `thread-mgmt-first-rpc-sub-${Date.now()}-${attempt}` },
         });
-        const elapsedMs = Date.now() - startedAt;
+        const fetchElapsedMs = Date.now() - fetchStartedAt;
 
+        expect(readinessElapsedMs).toBeLessThan(1500);
+        expect(ping.requestId).toBeTruthy();
+        expect(ping.rttMs).toBeGreaterThanOrEqual(0);
+        expect(pingElapsedMs).toBeLessThan(1200);
         expect(response.subscriptionId).toBeTruthy();
         expect(response.entries).toBeDefined();
-        expect(elapsedMs).toBeLessThan(2000);
+        expect(fetchElapsedMs).toBeLessThan(2000);
       } finally {
         await immediateClient.close();
       }
