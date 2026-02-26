@@ -9,10 +9,10 @@ Requirements for the v1.1 Hardening milestone.
 
 ### Runtime Reliability
 
-- [ ] **RUN-01**: User can restart the Docker service and reconnect without daemon lock-churn loops.
-- [ ] **RUN-02**: User sees terminal attach recover cleanly after reconnect without repeated `Terminal not found` error loops.
-- [ ] **RUN-03**: User can create a thread during transient websocket disruption and gets a bounded actionable error instead of indefinite pending state.
-- [ ] **RUN-04**: User can delete the active thread and immediately return to `No active thread` without stale attach retries.
+- [x] **RUN-01**: User can restart the Docker service and reconnect without daemon lock-churn loops.
+- [x] **RUN-02**: User sees terminal attach recover cleanly after reconnect without repeated `Terminal not found` error loops.
+- [x] **RUN-03**: User can create a thread during transient websocket disruption and gets a bounded actionable error instead of indefinite pending state.
+- [x] **RUN-04**: User can delete the active thread and immediately return to `No active thread` without stale attach retries.
 
 ### Thread Contract Completion
 
@@ -61,10 +61,10 @@ Updated for v1.1 roadmap phase mapping.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RUN-01 | Phase 06 | Pending |
-| RUN-02 | Phase 06 | Pending |
-| RUN-03 | Phase 06 | Pending |
-| RUN-04 | Phase 06 | Pending |
+| RUN-01 | Phase 06 | Complete |
+| RUN-02 | Phase 06 | Complete |
+| RUN-03 | Phase 06 | Complete |
+| RUN-04 | Phase 06 | Complete |
 | THRD-01 | Phase 07 | Pending |
 | THRD-02 | Phase 07 | Pending |
 | THRD-03 | Phase 07 | Pending |
@@ -79,4 +79,4 @@ Updated for v1.1 roadmap phase mapping.
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-25 after v1.1 roadmap creation*
+*Last updated: 2026-02-26 after Phase 06 completion*
