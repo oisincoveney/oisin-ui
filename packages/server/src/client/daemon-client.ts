@@ -326,6 +326,9 @@ const DEFAULT_SEND_QUEUE_TIMEOUT_MS = 10000
 const DEFAULT_DICTATION_FINISH_ACCEPT_TIMEOUT_MS = 15000
 const DEFAULT_DICTATION_FINISH_FALLBACK_TIMEOUT_MS = 5 * 60 * 1000
 const DEFAULT_DICTATION_FINISH_TIMEOUT_GRACE_MS = 5000
+const DEFAULT_POST_CONNECT_READY_TIMEOUT_MS = 2000
+const DEFAULT_POST_CONNECT_READY_PROBE_TIMEOUT_MS = 500
+const DEFAULT_POST_CONNECT_READY_RETRY_DELAY_MS = 25
 
 function isWaiterTimeoutError(error: unknown): boolean {
   return error instanceof Error && error.message.startsWith('Timeout waiting for message')
@@ -397,6 +400,9 @@ export class DaemonClient {
   private connectPromise: Promise<void> | null = null
   private connectResolve: (() => void) | null = null
   private connectReject: ((error: Error) => void) | null = null
+  private connectEpoch = 0
+  private readyEpoch = -1
+  private postConnectReadyPromise: Promise<void> | null = null
   private lastErrorValue: string | null = null
   private connectionState: ConnectionState = { status: 'idle' }
   private checkoutDiffSubscriptions = new Map<
@@ -582,6 +588,9 @@ export class DaemonClient {
           }
           this.lastErrorValue = null
           this.reconnectAttempt = 0
+          this.connectEpoch += 1
+          this.readyEpoch = -1
+          this.postConnectReadyPromise = null
           this.updateConnectionState({ status: 'connected' }, { event: 'TRANSPORT_OPEN' })
           this.resubscribeCheckoutDiffSubscriptions()
           this.resubscribeTerminalDirectorySubscriptions()
@@ -690,6 +699,7 @@ export class DaemonClient {
     }
     this.resetConnectTimeout()
     this.disposeTransport(1000, 'Client closed')
+    this.invalidatePostConnectReadiness()
     this.clearWaiters(new Error('Daemon client closed'))
     this.rejectPendingSendQueue(new Error('Daemon client closed'))
     this.terminalStreams.clearAll()
@@ -1079,6 +1089,53 @@ export class DaemonClient {
       serverSentAt: payload.serverSentAt,
       rttMs: Date.now() - clientSentAt,
     }
+  }
+
+  async waitForPostConnectReady(options?: {
+    timeoutMs?: number
+    probeTimeoutMs?: number
+    retryDelayMs?: number
+  }): Promise<void> {
+    if (this.connectionState.status === 'disposed') {
+      throw new Error('Daemon client is disposed')
+    }
+    if (this.connectionState.status !== 'connected') {
+      await this.connect()
+    }
+    if (this.connectionState.status !== 'connected') {
+      throw new Error(
+        `Cannot verify daemon readiness while disconnected (status: ${this.connectionState.status})`
+      )
+    }
+
+    const epoch = this.connectEpoch
+    if (this.readyEpoch === epoch) {
+      return
+    }
+    if (this.postConnectReadyPromise) {
+      return this.postConnectReadyPromise
+    }
+
+    const timeoutMs = Math.max(1, options?.timeoutMs ?? DEFAULT_POST_CONNECT_READY_TIMEOUT_MS)
+    const probeTimeoutMs = Math.max(
+      1,
+      options?.probeTimeoutMs ?? DEFAULT_POST_CONNECT_READY_PROBE_TIMEOUT_MS
+    )
+    const retryDelayMs = Math.max(0, options?.retryDelayMs ?? DEFAULT_POST_CONNECT_READY_RETRY_DELAY_MS)
+
+    const readinessProbe = this.probePostConnectReadiness({
+      epoch,
+      timeoutMs,
+      probeTimeoutMs,
+      retryDelayMs,
+    }).finally(() => {
+      if (this.postConnectReadyPromise === readinessProbe) {
+        this.postConnectReadyPromise = null
+      }
+    })
+
+    this.postConnectReadyPromise = readinessProbe
+    return readinessProbe
   }
 
   // ============================================================================
@@ -2892,6 +2949,7 @@ export class DaemonClient {
 
     // Clear all pending waiters and queued sends since the connection was lost
     // and responses from the previous connection will never arrive.
+    this.invalidatePostConnectReadiness()
     this.clearWaiters(new Error(reason ?? 'Connection lost'))
     this.rejectPendingSendQueue(new Error(reason ?? 'Connection lost'))
     this.terminalStreams.clearAll()
@@ -3103,6 +3161,73 @@ export class DaemonClient {
     }
 
     return { promise, cancel }
+  }
+
+  private async probePostConnectReadiness(input: {
+    epoch: number
+    timeoutMs: number
+    probeTimeoutMs: number
+    retryDelayMs: number
+  }): Promise<void> {
+    const startedAt = Date.now()
+    let probeTimeoutCount = 0
+    let lastTimeoutMessage: string | null = null
+
+    while (Date.now() - startedAt < input.timeoutMs) {
+      if (this.connectionState.status !== 'connected') {
+        throw new Error(
+          `Daemon post-connect readiness aborted: connection is ${this.connectionState.status}`
+        )
+      }
+      if (this.connectEpoch !== input.epoch) {
+        throw new Error('Daemon post-connect readiness aborted: connection changed during probe')
+      }
+
+      const elapsedMs = Date.now() - startedAt
+      const remainingMs = input.timeoutMs - elapsedMs
+      const attemptTimeoutMs = Math.max(1, Math.min(input.probeTimeoutMs, remainingMs))
+
+      try {
+        await this.ping({ timeoutMs: attemptTimeoutMs })
+        if (this.connectEpoch === input.epoch) {
+          this.readyEpoch = input.epoch
+        }
+        return
+      } catch (error) {
+        if (!isWaiterTimeoutError(error)) {
+          throw error
+        }
+        probeTimeoutCount += 1
+        lastTimeoutMessage = error.message
+      }
+
+      if (input.retryDelayMs <= 0) {
+        continue
+      }
+
+      const elapsedAfterAttemptMs = Date.now() - startedAt
+      const remainingAfterAttemptMs = input.timeoutMs - elapsedAfterAttemptMs
+      if (remainingAfterAttemptMs <= input.retryDelayMs) {
+        break
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, input.retryDelayMs))
+    }
+
+    const attemptsDetail =
+      probeTimeoutCount > 0
+        ? ` after ${probeTimeoutCount} timed-out readiness probe${probeTimeoutCount === 1 ? '' : 's'}`
+        : ''
+    const lastErrorDetail = lastTimeoutMessage ? ` Last probe error: ${lastTimeoutMessage}.` : ''
+    throw new Error(
+      `Daemon post-connect readiness timed out after ${input.timeoutMs}ms${attemptsDetail}. ` +
+        `The first RPC may be racing websocket session readiness.${lastErrorDetail}`
+    )
+  }
+
+  private invalidatePostConnectReadiness(): void {
+    this.readyEpoch = -1
+    this.postConnectReadyPromise = null
   }
 }
 
