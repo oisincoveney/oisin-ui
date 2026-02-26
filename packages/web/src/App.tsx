@@ -61,6 +61,7 @@ type PendingEnsure = {
 export const ATTACH_RECOVERY_WINDOW_MS = 60_000
 const ATTACH_RECOVERY_BASE_DELAY_MS = 500
 const ATTACH_RECOVERY_MAX_DELAY_MS = 5_000
+const ATTACH_RECOVERY_MAX_ATTEMPTS = 40
 
 export type AttachRecoveryPhase = 'idle' | 'retrying' | 'failed'
 
@@ -109,7 +110,7 @@ export function nextAttachRecoveryRetryState(
   const attempt = starting ? 1 : current.attempt + 1
   const token = starting ? current.token + 1 : current.token
 
-  if (now >= deadlineAt) {
+  if (now >= deadlineAt || attempt > ATTACH_RECOVERY_MAX_ATTEMPTS) {
     return {
       phase: 'failed',
       startedAt,
@@ -433,6 +434,13 @@ function App() {
       }
       hadConnectedOnceRef.current = true
 
+      // Don't send a fresh attach if recovery is already retrying — the
+      // recovery timer owns the retry cadence.  Sending here would bypass
+      // the exponential backoff and cause a burst of duplicate requests.
+      if (attachRecoveryRef.current.phase === 'retrying') {
+        return
+      }
+
       if (terminalRef.current && activeThreadTerminalId) {
         const forceRefresh = forceRefreshOnAttachRef.current
         terminalIdRef.current = activeThreadTerminalId
@@ -547,6 +555,16 @@ function App() {
     }
 
     if (terminalIdRef.current === activeThreadTerminalId && !pendingAttachRef.current) {
+      clearUnreadForActiveThread()
+      return
+    }
+
+    // If recovery is actively retrying for the same terminal, don't reset
+    // it and send a duplicate attach — that would bypass the backoff timer.
+    if (
+      attachRecoveryRef.current.phase === 'retrying' &&
+      terminalIdRef.current === activeThreadTerminalId
+    ) {
       clearUnreadForActiveThread()
       return
     }

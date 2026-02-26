@@ -24,8 +24,8 @@ notes: Verified via unit tests (5/5 pass). Tests cover: bounded queue enqueue, f
 
 ### 3. Attach Recovery Shows Visible Retry Progress
 expected: After a websocket reconnect, if terminal attach needs retrying, you see a non-blocking banner showing retry attempt count and remaining recovery window (up to 60s). On success, a single "Reconnected" toast appears.
-result: pass
-notes: Verified via unit tests (3/3 App.test.tsx pass) + code review. ConnectionOverlay.tsx renders amber banner with "Reattaching terminal (attempt N)" label, "Xs remaining in the 60s recovery window" hint, and last error. Failed state shows "Terminal attach retry window expired" with actionable recovery hint. Tests confirm deadline stop and one-shot recovery success clear. Cannot trigger real reconnect without infrastructure manipulation.
+result: issue-fixed
+notes: UAT revealed a real bug — excessive retry attempts (~1000+ in 60s instead of ~30-40). Root cause: React effects at lines 430-460 and 525-561 in App.tsx re-fire during recovery state updates, sending duplicate attach requests that bypass the exponential backoff timer. Fix applied: (1) added ATTACH_RECOVERY_MAX_ATTEMPTS=40 hard cap in nextAttachRecoveryRetryState, (2) guarded connect effect to skip sendAttachRequest when recovery is active, (3) guarded thread-key effect to not reset recovery for same terminalId. All 4 App.test.tsx tests pass including new max-attempts test. Banner UI verified via unit tests + code review (ConnectionOverlay renders amber banner with attempt count, remaining window, last error).
 
 ### 4. Delete Active Thread Lands in No Active Thread
 expected: Deleting the currently active thread immediately shows a "No active thread" state. No stale attach retries fire, no auto-fallback to another thread. State stays clean until you explicitly select or create a thread.
@@ -44,6 +44,13 @@ passed: 5
 issues: 0
 pending: 0
 skipped: 0
+
+## Fixes Applied During UAT
+
+### Attach recovery retry burst (Test 3)
+- **Bug:** Effects bypassed exponential backoff timer, causing ~1000+ retries in 60s
+- **Fix:** Max attempts cap (40) + effect guards during active recovery
+- **Files:** `packages/web/src/App.tsx`, `packages/web/src/App.test.tsx`
 
 ## Gaps
 

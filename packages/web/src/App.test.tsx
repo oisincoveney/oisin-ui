@@ -76,6 +76,28 @@ describe('attach recovery state machine', () => {
     expect(getAttachRecoveryRemainingMs(idle, startedAt)).toBeNull()
   })
 
+  it('fails after max attempts even within the time window', async () => {
+    const {
+      createIdleAttachRecoveryState,
+      nextAttachRecoveryRetryState,
+    } = await loadRecoveryApi()
+    const startedAt = 1_000
+    let state = nextAttachRecoveryRetryState(createIdleAttachRecoveryState(), startedAt, 'err')
+    let attemptCount = 1
+
+    // Keep retrying within the time window — should hit max attempts cap
+    while (state.phase === 'retrying' && attemptCount < 200) {
+      attemptCount++
+      // Advance time only slightly so we stay well within the 60s window
+      state = nextAttachRecoveryRetryState(state, startedAt + attemptCount, 'err')
+    }
+
+    expect(state.phase).toBe('failed')
+    // With exponential backoff (500ms, 1s, 2s, 4s, 5s cap), ~40 retries
+    // fills 60s. The max attempts cap should kick in around 40.
+    expect(attemptCount).toBeLessThan(50)
+  })
+
   it('clears retrying state and emits reconnect toast once per recovery token', async () => {
     const { createIdleAttachRecoveryState, nextAttachRecoveryRetryState, resolveAttachRecoverySuccess } =
       await loadRecoveryApi()
