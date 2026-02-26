@@ -191,6 +191,31 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
     }
   }, 60000);
 
+  test("immediate first fetchAgents RPC after connect returns within bounded time", async () => {
+    const attempts = 3;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const immediateClient = new DaemonClient({
+        url: `ws://127.0.0.1:${ctx.daemon.port}/ws`,
+        clientSessionKey: `thread-mgmt-first-rpc-${Date.now()}-${attempt}`,
+      });
+
+      try {
+        await immediateClient.connect();
+        const startedAt = Date.now();
+        const response = await immediateClient.fetchAgents({
+          subscribe: { subscriptionId: `thread-mgmt-first-rpc-sub-${Date.now()}-${attempt}` },
+        });
+        const elapsedMs = Date.now() - startedAt;
+
+        expect(response.subscriptionId).toBeTruthy();
+        expect(response.entries).toBeDefined();
+        expect(elapsedMs).toBeLessThan(2000);
+      } finally {
+        await immediateClient.close();
+      }
+    }
+  });
+
   test(
     "covers project listing, create/switch/delete lifecycle, reconnect attach, and full cleanup",
     async () => {
