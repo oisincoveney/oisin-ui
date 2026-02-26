@@ -3198,7 +3198,7 @@ export class DaemonClient {
           throw error
         }
         probeTimeoutCount += 1
-        lastTimeoutMessage = error.message
+        lastTimeoutMessage = error instanceof Error ? error.message : String(error)
       }
 
       if (input.retryDelayMs <= 0) {
