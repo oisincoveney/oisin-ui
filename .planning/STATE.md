@@ -11,11 +11,11 @@ See: `.planning/PROJECT.md` (updated 2026-02-25)
 
 **Phase:** 07 of 08 (Thread Contract Completion)
 **Plan:** 0 of TBD in current phase
-**Status:** Phase 06 complete and verified; ready to plan Phase 07
-**Last activity:** 2026-02-26 — Completed and verified Phase 06 execution
+**Status:** Phase 06 gap-closure complete; ready to plan Phase 07
+**Last activity:** 2026-02-26 — Completed 06-07-PLAN.md
 
 ```
-Progress: [███████████████░░░░░] 75.0% (6/8 phases complete)
+Progress: [███████████████████░] 97.6% (41/42 plans complete)
 ```
 
 ## Accumulated Context
@@ -50,13 +50,16 @@ Progress: [███████████████░░░░░] 75.0% (
 - Restart attach-retry UI regressions are driven deterministically by requestId-matched synthetic attach error responses in browser e2e.
 - Active-delete no-active-thread regression should use UI-created, test-owned threads to avoid ambient runtime state flake.
 - Phase runtime verification is a single deterministic command chain (typecheck + daemon e2e + web e2e) mapped directly to RUN-01..RUN-04.
+- Websocket connect now binds inbound handling immediately and queues earliest messages until session dispatch is ready, then drains in-order through normal request handling.
+- Claude provider availability probing is async and cached (no constructor-time sync shell checks on session startup path).
+- Daemon e2e now asserts first post-connect `fetchAgents` reliability with bounded latency across repeated fresh connections.
 
 ## Session Continuity
 
-**Last session:** 2026-02-26T00:07:01Z
-**Stopped at:** Completed phase 06 execution and verification
+**Last session:** 2026-02-26T19:05:27Z
+**Stopped at:** Completed 06-07-PLAN.md
 **Resume file:** None
 
 ---
 
-_State updated: 2026-02-26 after Phase 06 completion_
+_State updated: 2026-02-26 after 06-07 plan completion_
