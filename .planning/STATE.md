@@ -5,17 +5,17 @@
 See: `.planning/PROJECT.md` (updated 2026-02-25)
 
 **Core value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current focus:** Phase 06 - Runtime Reliability Hardening (v1.1).
+**Current focus:** Phase 07 - Thread Contract Completion (v1.1).
 
 ## Current Position
 
-**Phase:** 06 of 08 (Runtime Reliability Hardening)
-**Plan:** 5 of 6 in current phase
-**Status:** In progress
-**Last activity:** 2026-02-25 — Completed 06-05-PLAN.md
+**Phase:** 07 of 08 (Thread Contract Completion)
+**Plan:** 0 of 3 in current phase
+**Status:** Phase 06 complete; ready for next plan
+**Last activity:** 2026-02-26 — Completed 06-06-PLAN.md
 
 ```
-Progress: [██████████] 97.5% (39/40 plans have SUMMARY files)
+Progress: [██████████] 100.0% (40/40 plans have SUMMARY files)
 ```
 
 ## Accumulated Context
@@ -30,7 +30,6 @@ Progress: [██████████] 97.5% (39/40 plans have SUMMARY files
 
 - Ensure-default metadata contract completion (`projectId` / `resolvedThreadId` emission).
 - Deterministic diff-panel browser regression fixture (avoid skip path).
-- Run deterministic closure checks for RUN-01..RUN-04 in 06-06.
 
 ### Decisions Logged
 
@@ -48,13 +47,16 @@ Progress: [██████████] 97.5% (39/40 plans have SUMMARY files
 - Restart detection now keys off `status.server_info.serverId` identity change, not websocket transport state alone.
 - Warm-up locks create/switch/delete until both thread refresh and attach settle complete.
 - Restart recovery restores prior active thread if present, else falls back to newest thread by `updatedAt`.
+- Restart attach-retry UI regressions are driven deterministically by requestId-matched synthetic attach error responses in browser e2e.
+- Active-delete no-active-thread regression should use UI-created, test-owned threads to avoid ambient runtime state flake.
+- Phase runtime verification is a single deterministic command chain (typecheck + daemon e2e + web e2e) mapped directly to RUN-01..RUN-04.
 
 ## Session Continuity
 
-**Last session:** 2026-02-25T23:39:51Z
-**Stopped at:** Completed 06-05-PLAN.md
+**Last session:** 2026-02-26T00:07:01Z
+**Stopped at:** Completed 06-06-PLAN.md
 **Resume file:** None
 
 ---
 
-_State updated: 2026-02-25 after 06-05 execution_
+_State updated: 2026-02-26 after 06-06 execution_
