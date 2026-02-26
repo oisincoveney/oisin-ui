@@ -147,6 +147,8 @@ type WebSocketLike = {
   once: (event: "close" | "error", listener: (...args: any[]) => void) => void;
 };
 
+type RawSocketMessage = Buffer | ArrayBuffer | Buffer[] | string;
+
 type HeartbeatWebSocket = WebSocket & {
   isAlive: boolean;
 };
@@ -461,6 +463,16 @@ export class VoiceAssistantWebSocketServer {
     request?: unknown,
     metadata?: ExternalSocketMetadata
   ): Promise<void> {
+    const queuedPreReadyMessages: RawSocketMessage[] = [];
+    let readyForMessageDispatch = false;
+    ws.on("message", (data: RawSocketMessage) => {
+      if (!readyForMessageDispatch) {
+        queuedPreReadyMessages.push(data);
+        return;
+      }
+      void this.handleRawMessage(ws, data);
+    });
+
     const requestMetadata = extractSocketRequestMetadata(request);
     const relayExternalSessionKey =
       metadata?.transport === "relay" && metadata.externalSessionKey.trim().length > 0
@@ -510,6 +522,8 @@ export class VoiceAssistantWebSocketServer {
           "Client reconnected"
         );
         this.bindSocketHandlers(ws, existing);
+        readyForMessageDispatch = true;
+        await this.drainQueuedMessages(ws, queuedPreReadyMessages);
         return;
       }
     }
@@ -601,6 +615,22 @@ export class VoiceAssistantWebSocketServer {
     );
 
     this.bindSocketHandlers(ws, connection);
+    readyForMessageDispatch = true;
+    await this.drainQueuedMessages(ws, queuedPreReadyMessages);
+  }
+
+  private async drainQueuedMessages(
+    ws: WebSocketLike,
+    queuedMessages: RawSocketMessage[]
+  ): Promise<void> {
+    if (queuedMessages.length === 0) {
+      return;
+    }
+
+    const pending = queuedMessages.splice(0, queuedMessages.length);
+    for (const message of pending) {
+      await this.handleRawMessage(ws, message);
+    }
   }
 
   private buildServerInfoStatusPayload(): ServerInfoStatusPayload {
@@ -637,10 +667,6 @@ export class VoiceAssistantWebSocketServer {
     ws: WebSocketLike,
     connection: SessionConnection
   ): void {
-    ws.on("message", (data) => {
-      void this.handleRawMessage(ws, data);
-    });
-
     ws.on("close", async (code: number, reason: unknown) => {
       await this.detachSocket(ws, connection, {
         code: typeof code === "number" ? code : undefined,
