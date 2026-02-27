@@ -45,7 +45,10 @@ Plans:
   1. User session state resolves to the correct active project/thread after ensure-default, without missing-context placeholder behavior.
   2. User can switch threads and consistently see the selected thread context preserved across reconnect.
   3. User can refresh with an active thread and return to the same resolved thread context without metadata drift.
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 07-01-PLAN.md — Add getActiveThread() to registry; emit real projectId/resolvedThreadId in ensure-default response; clean schema placeholder
+- [ ] 07-02-PLAN.md — Unit tests for getActiveThread(); e2e test for ensure-default metadata contract
 
 ### Phase 08: Deterministic Verification Closure
 **Goal**: Users and maintainers can verify hardening scope with deterministic browser/runtime checks on demand.
