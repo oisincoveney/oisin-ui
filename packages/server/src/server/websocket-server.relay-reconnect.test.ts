@@ -11,6 +11,7 @@ const wsModuleMock = vi.hoisted(() => {
   class MockWebSocketServer {
     static instances: MockWebSocketServer[] = [];
     readonly handlers = new Map<string, (...args: any[]) => void>();
+    readonly clients = new Set<any>();
 
     constructor(_options: unknown) {
       MockWebSocketServer.instances.push(this);
@@ -49,6 +50,7 @@ const sessionMock = vi.hoisted(() => {
 });
 
 vi.mock("ws", () => ({
+  default: class WebSocket {},
   WebSocketServer: wsModuleMock.MockWebSocketServer,
 }));
 
@@ -205,10 +207,10 @@ function createDownloadInProgressSpeechReadinessSnapshot(): SpeechReadinessSnaps
   return {
     generatedAt: "2026-02-14T00:00:00.000Z",
     requiredLocalModelIds: [
-      "sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20",
+      "zipformer-bilingual-zh-en-2023-02-20",
     ],
     missingLocalModelIds: [
-      "sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20",
+      "zipformer-bilingual-zh-en-2023-02-20",
     ],
     download: {
       inProgress: true,
@@ -235,9 +237,9 @@ function createDownloadInProgressSpeechReadinessSnapshot(): SpeechReadinessSnaps
       available: false,
       reasonCode: "model_download_in_progress",
       message:
-        "Voice features are unavailable while models download in the background (sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20).",
+        "Voice features are unavailable while models download in the background (zipformer-bilingual-zh-en-2023-02-20).",
       retryable: true,
-      missingModelIds: ["sherpa-onnx-streaming-zipformer-bilingual-zh-en-2023-02-20"],
+      missingModelIds: ["zipformer-bilingual-zh-en-2023-02-20"],
     },
   };
 }

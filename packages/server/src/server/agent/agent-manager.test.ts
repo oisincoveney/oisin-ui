@@ -26,7 +26,7 @@ const TEST_CAPABILITIES = {
 } as const;
 
 class TestAgentClient implements AgentClient {
-  readonly provider = "codex" as const;
+  readonly provider = "claude" as const;
   readonly capabilities = TEST_CAPABILITIES;
 
   async isAvailable(): Promise<boolean> {
@@ -39,14 +39,14 @@ class TestAgentClient implements AgentClient {
 
   async resumeSession(config?: Partial<AgentSessionConfig>): Promise<AgentSession> {
     return new TestAgentSession({
-      provider: "codex",
+      provider: "claude",
       cwd: config?.cwd ?? process.cwd(),
     });
   }
 }
 
 class TestAgentSession implements AgentSession {
-  readonly provider = "codex" as const;
+  readonly provider = "claude" as const;
   readonly capabilities = TEST_CAPABILITIES;
   readonly id = randomUUID();
   private runtimeModel: string | null = null;
@@ -64,7 +64,7 @@ class TestAgentSession implements AgentSession {
   async *stream(): AsyncGenerator<AgentStreamEvent> {
     yield { type: "turn_started", provider: this.provider };
     yield { type: "turn_completed", provider: this.provider };
-    this.runtimeModel = "gpt-5.2-codex";
+    this.runtimeModel = "claude-3.5-sonnet";
   }
 
   async *streamHistory(): AsyncGenerator<AgentStreamEvent> {}
@@ -115,7 +115,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -123,7 +123,7 @@ describe("AgentManager", () => {
     });
 
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
     });
 
@@ -136,7 +136,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -144,7 +144,7 @@ describe("AgentManager", () => {
     });
 
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
       model: "default",
     });
@@ -158,7 +158,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -166,7 +166,7 @@ describe("AgentManager", () => {
 
     await expect(
       manager.createAgent({
-        provider: "codex",
+        provider: "claude",
         cwd: join(workdir, "does-not-exist"),
       })
     ).rejects.toThrow("Working directory does not exist");
@@ -178,7 +178,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
 
     class ResumeCaptureClient implements AgentClient {
-      readonly provider = "codex" as const;
+      readonly provider = "claude" as const;
       readonly capabilities = TEST_CAPABILITIES;
       lastResumeOverrides: Partial<AgentSessionConfig> | undefined;
 
@@ -199,7 +199,7 @@ describe("AgentManager", () => {
         const merged: AgentSessionConfig = {
           ...metadata,
           ...overrides,
-          provider: "codex",
+          provider: "claude",
           cwd: overrides?.cwd ?? metadata.cwd ?? process.cwd(),
         };
         return new TestAgentSession(merged);
@@ -209,7 +209,7 @@ describe("AgentManager", () => {
     const client = new ResumeCaptureClient();
     const manager = new AgentManager({
       clients: {
-        codex: client,
+        claude: client,
       },
       registry: storage,
       logger,
@@ -217,10 +217,10 @@ describe("AgentManager", () => {
     });
 
     const handle: AgentPersistenceHandle = {
-      provider: "codex",
+      provider: "claude",
       sessionId: "resume-session-1",
       metadata: {
-        provider: "codex",
+        provider: "claude",
         cwd: workdir,
         systemPrompt: "old prompt",
         mcpServers: {
@@ -291,7 +291,7 @@ describe("AgentManager", () => {
     }
 
     class HistoryProbeClient implements AgentClient {
-      readonly provider = "codex" as const;
+      readonly provider = "claude" as const;
       readonly capabilities = TEST_CAPABILITIES;
 
       async isAvailable(): Promise<boolean> {
@@ -310,7 +310,7 @@ describe("AgentManager", () => {
         const merged: AgentSessionConfig = {
           ...metadata,
           ...overrides,
-          provider: "codex",
+          provider: "claude",
           cwd: overrides?.cwd ?? metadata.cwd ?? process.cwd(),
         };
         return new HistoryProbeSession(merged, "history replay from provider");
@@ -319,7 +319,7 @@ describe("AgentManager", () => {
 
     const manager = new AgentManager({
       clients: {
-        codex: new HistoryProbeClient(),
+        claude: new HistoryProbeClient(),
       },
       registry: storage,
       logger,
@@ -327,7 +327,7 @@ describe("AgentManager", () => {
     });
 
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
     });
 
@@ -420,7 +420,7 @@ describe("AgentManager", () => {
     }
 
     class DelayedPersistenceClient implements AgentClient {
-      readonly provider = "codex" as const;
+      readonly provider = "claude" as const;
       readonly capabilities = TEST_CAPABILITIES;
       createSessionCalls = 0;
       resumeSessionCalls = 0;
@@ -445,7 +445,7 @@ describe("AgentManager", () => {
         const merged: AgentSessionConfig = {
           ...metadata,
           ...overrides,
-          provider: "codex",
+          provider: "claude",
           cwd: overrides?.cwd ?? metadata.cwd ?? process.cwd(),
         };
         return new DelayedPersistenceSession(merged, handle.sessionId, true);
@@ -454,14 +454,14 @@ describe("AgentManager", () => {
 
     const client = new DelayedPersistenceClient();
     const manager = new AgentManager({
-      clients: { codex: client },
+      clients: { claude: client },
       registry: storage,
       logger,
       idFactory: () => "00000000-0000-4000-8000-000000000114",
     });
 
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
     });
     expect(snapshot.persistence).toBeNull();
@@ -501,7 +501,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -509,7 +509,7 @@ describe("AgentManager", () => {
     });
 
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
     });
 
@@ -555,7 +555,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -563,7 +563,7 @@ describe("AgentManager", () => {
     });
 
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
     });
 
@@ -615,7 +615,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -624,7 +624,7 @@ describe("AgentManager", () => {
     });
 
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
     });
 
@@ -675,7 +675,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -684,7 +684,7 @@ describe("AgentManager", () => {
 
     await expect(
       manager.createAgent({
-        provider: "codex",
+        provider: "claude",
         cwd: workdir,
       })
     ).rejects.toThrow("createAgent: agentId must be a UUID");
@@ -696,7 +696,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -705,7 +705,7 @@ describe("AgentManager", () => {
     await expect(
       manager.createAgent(
         {
-          provider: "codex",
+          provider: "claude",
           cwd: workdir,
         },
         "not-a-uuid"
@@ -720,7 +720,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -728,7 +728,7 @@ describe("AgentManager", () => {
     });
 
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
       title: "Fix Login Bug",
     });
@@ -747,7 +747,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -755,14 +755,14 @@ describe("AgentManager", () => {
     });
 
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
-      model: "gpt-5.2-codex",
+      model: "claude-3.5-sonnet",
       modeId: "full-access",
     });
 
     expect(snapshot.runtimeInfo).toBeDefined();
-    expect(snapshot.runtimeInfo?.model).toBe("gpt-5.2-codex");
+    expect(snapshot.runtimeInfo?.model).toBe("claude-3.5-sonnet");
     expect(snapshot.runtimeInfo?.sessionId).toBe(snapshot.persistence?.sessionId);
   });
 
@@ -772,7 +772,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -780,7 +780,7 @@ describe("AgentManager", () => {
     });
 
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
     });
 
@@ -789,7 +789,7 @@ describe("AgentManager", () => {
     await manager.runAgent(snapshot.id, "hello");
 
     const refreshed = manager.getAgent(snapshot.id);
-    expect(refreshed?.runtimeInfo?.model).toBe("gpt-5.2-codex");
+    expect(refreshed?.runtimeInfo?.model).toBe("claude-3.5-sonnet");
   });
 
   test("keeps updatedAt monotonic when user message and run start happen in the same millisecond", async () => {
@@ -798,7 +798,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -806,7 +806,7 @@ describe("AgentManager", () => {
     });
 
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
     });
 
@@ -834,7 +834,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -842,7 +842,7 @@ describe("AgentManager", () => {
     });
 
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
     });
 
@@ -868,7 +868,7 @@ describe("AgentManager", () => {
       "```json\n{\"message\":\"Reserve space for archive button in sidebar agent list\"}\n```";
 
     class ChunkedAssistantSession implements AgentSession {
-      readonly provider = "codex" as const;
+      readonly provider = "claude" as const;
       readonly capabilities = TEST_CAPABILITIES;
       readonly id = randomUUID();
 
@@ -941,7 +941,7 @@ describe("AgentManager", () => {
     }
 
     class ChunkedAssistantClient implements AgentClient {
-      readonly provider = "codex" as const;
+      readonly provider = "claude" as const;
       readonly capabilities = TEST_CAPABILITIES;
 
       async isAvailable(): Promise<boolean> {
@@ -959,7 +959,7 @@ describe("AgentManager", () => {
 
     const manager = new AgentManager({
       clients: {
-        codex: new ChunkedAssistantClient(),
+        claude: new ChunkedAssistantClient(),
       },
       registry: storage,
       logger,
@@ -967,7 +967,7 @@ describe("AgentManager", () => {
     });
 
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
     });
 
@@ -986,7 +986,7 @@ describe("AgentManager", () => {
     let agentCounter = 0;
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -995,14 +995,14 @@ describe("AgentManager", () => {
 
     // Create a normal agent
     await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
       title: "Normal Agent",
     });
 
     // Create an internal agent
     await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
       title: "Internal Agent",
       internal: true,
@@ -1020,7 +1020,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -1028,7 +1028,7 @@ describe("AgentManager", () => {
     });
 
     await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
       title: "Internal Agent",
       internal: true,
@@ -1050,7 +1050,7 @@ describe("AgentManager", () => {
     let agentCounter = 0;
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -1066,14 +1066,14 @@ describe("AgentManager", () => {
 
     // Create a normal agent - should emit
     await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
       title: "Normal Agent",
     });
 
     // Create an internal agent - should NOT emit to global subscriber
     await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
       title: "Internal Agent",
       internal: true,
@@ -1091,7 +1091,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -1110,7 +1110,7 @@ describe("AgentManager", () => {
     );
 
     await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
       title: "Internal Agent",
       internal: true,
@@ -1123,7 +1123,7 @@ describe("AgentManager", () => {
   test("subscribe fails when filter agentId is not a UUID", () => {
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       logger,
     });
@@ -1143,7 +1143,7 @@ describe("AgentManager", () => {
     const attentionCalls: string[] = [];
     const manager = new AgentManager({
       clients: {
-        codex: new TestAgentClient(),
+        claude: new TestAgentClient(),
       },
       registry: storage,
       logger,
@@ -1154,7 +1154,7 @@ describe("AgentManager", () => {
     });
 
     const agent = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
       title: "Internal Agent",
       internal: true,
@@ -1175,7 +1175,7 @@ describe("AgentManager", () => {
     // Create a session that simulates plan approval mode change
     let sessionMode = "plan";
     class PlanModeTestSession implements AgentSession {
-      readonly provider = "codex" as const;
+      readonly provider = "claude" as const;
       readonly capabilities = TEST_CAPABILITIES;
       readonly id = randomUUID();
 
@@ -1233,7 +1233,7 @@ describe("AgentManager", () => {
     }
 
     class PlanModeTestClient implements AgentClient {
-      readonly provider = "codex" as const;
+      readonly provider = "claude" as const;
       readonly capabilities = TEST_CAPABILITIES;
 
       async isAvailable(): Promise<boolean> {
@@ -1251,7 +1251,7 @@ describe("AgentManager", () => {
 
     const manager = new AgentManager({
       clients: {
-        codex: new PlanModeTestClient(),
+        claude: new PlanModeTestClient(),
       },
       registry: storage,
       logger,
@@ -1260,7 +1260,7 @@ describe("AgentManager", () => {
 
     // Create agent in plan mode
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
       modeId: "plan",
     });
@@ -1271,7 +1271,7 @@ describe("AgentManager", () => {
     const agent = manager.getAgent(snapshot.id)!;
     const permissionRequest = {
       id: "perm-123",
-      provider: "codex" as const,
+      provider: "claude" as const,
       name: "ExitPlanMode",
       kind: "plan" as const,
       input: { plan: "Test plan" },
@@ -1295,7 +1295,7 @@ describe("AgentManager", () => {
     const storage = new AgentStorage(storagePath, logger);
 
     class CloseRaceSession implements AgentSession {
-      readonly provider = "codex" as const;
+      readonly provider = "claude" as const;
       readonly capabilities = TEST_CAPABILITIES;
       readonly id = randomUUID();
       private threadId: string | null = this.id;
@@ -1360,7 +1360,7 @@ describe("AgentManager", () => {
     }
 
     class CloseRaceClient implements AgentClient {
-      readonly provider = "codex" as const;
+      readonly provider = "claude" as const;
       readonly capabilities = TEST_CAPABILITIES;
 
       async isAvailable(): Promise<boolean> {
@@ -1378,7 +1378,7 @@ describe("AgentManager", () => {
 
     const manager = new AgentManager({
       clients: {
-        codex: new CloseRaceClient(),
+        claude: new CloseRaceClient(),
       },
       registry: storage,
       logger,
@@ -1386,7 +1386,7 @@ describe("AgentManager", () => {
     });
 
     const snapshot = await manager.createAgent({
-      provider: "codex",
+      provider: "claude",
       cwd: workdir,
     });
 

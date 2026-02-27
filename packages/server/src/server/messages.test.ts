@@ -27,7 +27,7 @@ describe("serializeAgentStreamEvent", () => {
   test("passes canonical tool_call payloads through unchanged", () => {
     const event: AgentStreamEvent = {
       type: "timeline",
-      provider: "codex",
+      provider: "claude",
       item: {
         type: "tool_call",
         callId: "call_1",
@@ -53,7 +53,7 @@ describe("serializeAgentStreamEvent", () => {
   test("passes unknown-detail tool_call payloads through unchanged", () => {
     const event: AgentStreamEvent = {
       type: "timeline",
-      provider: "codex",
+      provider: "claude",
       item: {
         type: "tool_call",
         callId: "call_unknown",
@@ -83,7 +83,7 @@ describe("serializeAgentStreamEvent", () => {
   test("drops invalid legacy tool_call items", () => {
     const event = {
       type: "timeline",
-      provider: "codex",
+      provider: "claude",
       item: {
         type: "tool_call",
         callId: "call_legacy",

@@ -15,13 +15,9 @@ import { createAgentMcpServer } from "./mcp-server.js";
 import { createAllClients, shutdownProviders } from "./provider-registry.js";
 import pino from "pino";
 
-const CODEX_TEST_MODEL = "gpt-5.1-codex-mini";
-const CODEX_TEST_THINKING_OPTION_ID = "low";
-
-const hasOpenAICredentials = !!process.env.OPENAI_API_KEY;
 const hasClaudeCredentials =
   !!process.env.CLAUDE_CODE_OAUTH_TOKEN || !!process.env.ANTHROPIC_API_KEY;
-const shouldRun = !process.env.CI && (hasOpenAICredentials || hasClaudeCredentials);
+const shouldRun = !process.env.CI && hasClaudeCredentials;
 
 type AgentMcpServerHandle = {
   url: string;
@@ -167,34 +163,6 @@ async function startAgentMcpServer(logger: pino.Logger): Promise<AgentMcpServerH
     rmSync(cwd, { recursive: true, force: true });
     await shutdownProviders(logger);
   }, 60000);
-
-  test.runIf(hasOpenAICredentials)(
-    "returns schema-valid JSON from a real Codex agent",
-    async () => {
-      const schema = z.object({
-        title: z.string(),
-        count: z.number(),
-      });
-
-      const result = await generateStructuredAgentResponse({
-        manager,
-        agentConfig: {
-          provider: "codex",
-          model: CODEX_TEST_MODEL,
-          thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
-          cwd,
-          title: "Structured Response Test",
-        },
-        prompt: "Return JSON with a short title and count 2.",
-        schema,
-        maxRetries: 1,
-      });
-
-      expect(result.title.length).toBeGreaterThan(0);
-      expect(typeof result.count).toBe("number");
-    },
-    180000
-  );
 
   test.runIf(hasClaudeCredentials)(
     "returns schema-valid JSON from Claude Haiku",

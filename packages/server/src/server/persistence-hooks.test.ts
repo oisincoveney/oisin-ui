@@ -148,7 +148,7 @@ describe("persistence hooks", () => {
       title: "Voice agent",
       config: {
         modeId: "default",
-        model: "gpt-5.1-codex-mini",
+        model: "claude-3.5-sonnet",
         thinkingOptionId: "minimal",
         systemPrompt: "Use speak first.",
         mcpServers: {
@@ -164,7 +164,7 @@ describe("persistence hooks", () => {
     expect(buildConfigOverrides(record)).toMatchObject({
       cwd: "/tmp/project",
       modeId: "plan",
-      model: "gpt-5.1-codex-mini",
+      model: "claude-3.5-sonnet",
       thinkingOptionId: "minimal",
       title: "Voice agent",
       systemPrompt: "Use speak first.",
@@ -180,10 +180,10 @@ describe("persistence hooks", () => {
 
   test("buildSessionConfig includes persisted systemPrompt and mcpServers", () => {
     const record = createRecord({
-      provider: "codex",
+      provider: "claude",
       config: {
         modeId: "default",
-        model: "gpt-5.1-codex-mini",
+        model: "claude-3.5-sonnet",
         systemPrompt: "Confirm and speak first.",
         mcpServers: {
           paseo: {
@@ -196,10 +196,10 @@ describe("persistence hooks", () => {
     });
 
     expect(buildSessionConfig(record)).toMatchObject({
-      provider: "codex",
+      provider: "claude",
       cwd: "/tmp/project",
       modeId: "plan",
-      model: "gpt-5.1-codex-mini",
+      model: "claude-3.5-sonnet",
       systemPrompt: "Confirm and speak first.",
       mcpServers: {
         paseo: {

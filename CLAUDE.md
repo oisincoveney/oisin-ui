@@ -15,7 +15,7 @@ Paseo is a mobile app for monitoring and controlling your local AI coding agents
 
 **Not a cloud sandbox** - Paseo connects directly to your actual development environment. Your code stays on your machine.
 
-**Supported agents:** Claude Code, Codex, and OpenCode.
+**Supported agents:** Claude Code and OpenCode.
 
 ## Monorepo Structure
 
@@ -107,12 +107,6 @@ Get the session ID from the agent JSON file (`persistence.sessionId`), then:
 
 ```
 ~/.claude/projects/{cwd-with-dashes}/{session-id}.jsonl
-```
-
-**Codex sessions:**
-
-```
-~/.codex/sessions/{YYYY}/{MM}/{DD}/rollout-{timestamp}-{session-id}.jsonl
 ```
 
 ## Android
@@ -235,7 +229,7 @@ Release completion checklist:
 
 ## Agent Authentication
 
-All agent providers (Claude, Codex, OpenCode) handle their own authentication outside of environment variables. They are authenticated without providing any extra configuration—Paseo does not manage API keys or tokens for agents.
+All agent providers (Claude, OpenCode) handle their own authentication outside of environment variables. They are authenticated without providing any extra configuration—Paseo does not manage API keys or tokens for agents.
 
 **Do not add auth checks to tests.** If auth fails for whatever reason, let the user know instead of patching the code or adding conditional skips.
 

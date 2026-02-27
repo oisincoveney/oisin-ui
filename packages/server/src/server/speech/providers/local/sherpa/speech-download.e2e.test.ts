@@ -191,11 +191,10 @@ describe("speech models (download E2E)", () => {
         const voiceCwd = mkdtempSync(path.join(tmpdir(), "speech-download-voice-agent-"));
         const voiceAgent = await ctx.client.createAgent({
           config: {
-            provider: "codex",
+            provider: "claude",
             cwd: voiceCwd,
-            modeId: "full-access",
-            model: "gpt-5.1-codex-mini",
-            thinkingOptionId: "low",
+            modeId: "bypassPermissions",
+            model: "haiku",
           },
         });
         await ctx.client.setVoiceMode(true, voiceAgent.id);

@@ -73,7 +73,7 @@ export function createCli(): Command {
     .argument('<prompt>', 'The task/prompt for the agent')
     .option('-d, --detach', 'Run in background (detached)')
     .option('--name <name>', 'Assign a name/title to the agent')
-    .option('--provider <provider>', 'Agent provider: claude | codex | opencode', 'claude')
+    .option('--provider <provider>', 'Agent provider: claude | opencode', 'claude')
     .option('--model <model>', 'Model to use (e.g., claude-sonnet-4-20250514, claude-3-5-haiku-20241022)')
     .option('--mode <mode>', 'Provider-specific mode (e.g., plan, default, bypass)')
     .option('--worktree <name>', 'Create agent in a new git worktree')

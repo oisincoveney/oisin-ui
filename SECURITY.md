@@ -47,7 +47,7 @@ Paseo uses a host allowlist to validate the `Host` header on incoming requests. 
 
 ## Agent authentication
 
-Paseo wraps agent CLIs (Claude Code, Codex, OpenCode) but does not manage their authentication. Each agent provider handles its own credentials. Paseo never stores or transmits provider API keys. Agents run in your user context with your existing credentials.
+Paseo wraps agent CLIs (Claude Code, OpenCode) but does not manage their authentication. Each agent provider handles its own credentials. Paseo never stores or transmits provider API keys. Agents run in your user context with your existing credentials.
 
 ## Reporting vulnerabilities
 

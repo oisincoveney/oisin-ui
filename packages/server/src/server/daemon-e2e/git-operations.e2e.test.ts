@@ -157,10 +157,6 @@ function getWorktreeTerminalBootstrapEntries(
   return terminals as WorktreeTerminalBootstrapEntry[];
 }
 
-// Use gpt-5.1-codex-mini with low thinking preset for faster test execution
-const CODEX_TEST_MODEL = "gpt-5.1-codex-mini";
-const CODEX_TEST_THINKING_OPTION_ID = "low";
-
 describe("daemon E2E", () => {
   let ctx: DaemonTestContext;
   let collector: MessageCollector;
@@ -285,7 +281,7 @@ describe("daemon E2E", () => {
 
         // Create agent in the git repo
         const agent = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "Git Repo Info Test",
         });
@@ -333,7 +329,7 @@ describe("daemon E2E", () => {
 
         // Create agent in the git repo
         const agent = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "Git Repo Info Clean Test",
         });
@@ -363,7 +359,7 @@ describe("daemon E2E", () => {
 
         // Create agent in a non-git directory
         const agent = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "Git Repo Info Non-Git Test",
         });
@@ -419,9 +415,7 @@ describe("daemon E2E", () => {
 
         const agent = await withTimeout({
           promise: ctx.client.createAgent({
-            provider: "codex",
-            model: CODEX_TEST_MODEL,
-            thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+            provider: "claude",
             cwd: repoRoot,
             title: "Async Worktree Setup Test",
             git: {
@@ -511,9 +505,7 @@ describe("daemon E2E", () => {
 
           const agent = await withTimeout({
             promise: ctx.client.createAgent({
-              provider: "codex",
-              model: CODEX_TEST_MODEL,
-              thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+              provider: "claude",
               cwd: repoRoot,
               title: "Async Worktree Setup + Terminals Test",
               git: {
@@ -644,9 +636,7 @@ describe("daemon E2E", () => {
 
         const agent = await withTimeout({
           promise: ctx.client.createAgent({
-            provider: "codex",
-            model: CODEX_TEST_MODEL,
-            thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+            provider: "claude",
             cwd: repoRoot,
             title: "Async Worktree Setup Failure Test",
             git: {
@@ -719,9 +709,7 @@ describe("daemon E2E", () => {
         });
 
         const agent = await ctx.client.createAgent({
-          provider: "codex",
-          model: CODEX_TEST_MODEL,
-          thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "Worktree Agent Test",
           git: {
@@ -801,9 +789,7 @@ describe("daemon E2E", () => {
 
         const agent = await withTimeout({
           promise: ctx.client.createAgent({
-            provider: "codex",
-            model: CODEX_TEST_MODEL,
-            thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+            provider: "claude",
             cwd: repoRoot,
             title: "Worktree Archive Cleanup Test",
             git: {
@@ -868,9 +854,7 @@ describe("daemon E2E", () => {
         execSync("git branch -M main", { cwd: repoRoot, stdio: "pipe" });
 
         const agent = await ctx.client.createAgent({
-          provider: "codex",
-          model: CODEX_TEST_MODEL,
-          thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd: repoRoot,
           title: "Archive Last Agent Cleanup Test",
           git: {
@@ -920,9 +904,7 @@ describe("daemon E2E", () => {
         execSync("git branch -M main", { cwd: repoRoot, stdio: "pipe" });
 
         const firstAgent = await ctx.client.createAgent({
-          provider: "codex",
-          model: CODEX_TEST_MODEL,
-          thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd: repoRoot,
           title: "Archive Multi-Agent Test 1",
           git: {
@@ -935,9 +917,7 @@ describe("daemon E2E", () => {
         });
 
         const secondAgent = await ctx.client.createAgent({
-          provider: "codex",
-          model: CODEX_TEST_MODEL,
-          thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd: firstAgent.cwd,
           title: "Archive Multi-Agent Test 2",
         });

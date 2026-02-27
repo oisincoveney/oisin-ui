@@ -1,6 +1,6 @@
 export type TaskStatus = "draft" | "open" | "in_progress" | "done" | "failed";
 
-export type AgentType = "claude" | "codex";
+export type AgentType = "claude" | "opencode";
 
 export type ModelName =
   | "haiku"

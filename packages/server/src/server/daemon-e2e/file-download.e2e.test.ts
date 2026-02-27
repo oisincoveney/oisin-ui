@@ -13,10 +13,6 @@ function tmpCwd(): string {
   return mkdtempSync(path.join(tmpdir(), "daemon-e2e-"));
 }
 
-// Use gpt-5.1-codex-mini with low thinking preset for faster test execution
-const CODEX_TEST_MODEL = "gpt-5.1-codex-mini";
-const CODEX_TEST_THINKING_OPTION_ID = "low";
-
 describe("daemon E2E", () => {
   let ctx: DaemonTestContext;
 
@@ -38,7 +34,7 @@ describe("daemon E2E", () => {
         writeFileSync(filePath, fileContents, "utf-8");
 
         const agent = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "Download Token Test Agent",
         });
@@ -96,7 +92,7 @@ describe("daemon E2E", () => {
         writeFileSync(filePath, "expired", "utf-8");
 
         const agent = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "Expired Token Test Agent",
         });
@@ -127,7 +123,7 @@ describe("daemon E2E", () => {
       async () => {
         const cwd = tmpCwd();
         const agent = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "Outside Path Token Test Agent",
         });

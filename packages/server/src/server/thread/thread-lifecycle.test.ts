@@ -29,7 +29,7 @@ describe("ThreadLifecycleService", () => {
     await rm(paseoHome, { recursive: true, force: true });
   });
 
-  it("rolls back created resources if agent creation fails", async () => {
+  it("creates thread immediately without requiring agent startup", async () => {
     const createWorktree = vi.fn(async () => ({
       branchName: "feature-thread",
       worktreePath: "/tmp/project-one/.paseo/worktrees/thread-a",
@@ -47,9 +47,7 @@ describe("ThreadLifecycleService", () => {
     } as any;
 
     const agentManager = {
-      createAgent: vi.fn(async () => {
-        throw new Error("provider unavailable");
-      }),
+      createAgent: vi.fn(async () => ({ id: "agent-1" })),
       closeAgent: vi.fn(async () => {}),
     } as any;
 
@@ -67,27 +65,74 @@ describe("ThreadLifecycleService", () => {
       }
     );
 
-    await expect(
-      lifecycle.createThread({
-        projectId: "proj-1",
-        title: "Thread A",
-        threadId: "thread-a",
-        launchConfig: { provider: "opencode" },
-      })
-    ).rejects.toThrow("provider unavailable");
+    const created = await lifecycle.createThread({
+      projectId: "proj-1",
+      title: "Thread A",
+      threadId: "thread-a",
+      launchConfig: { provider: "opencode" },
+    });
 
-    expect(terminalManager.killTerminalsBySessionKey).toHaveBeenCalledWith(
-      "oisin-proj-1-thread-a-hash"
-    );
-    expect(deleteWorktreeChecked).toHaveBeenCalledWith(
-      expect.objectContaining({
-        worktreePath: "/tmp/project-one/.paseo/worktrees/thread-a",
-        allowDirty: true,
-      })
-    );
+    expect(created.thread.threadId).toBe("thread-a");
+    expect(created.thread.status).toBe("idle");
+    expect(created.thread.links.agentId).toBeNull();
+    expect(terminalManager.killTerminalsBySessionKey).not.toHaveBeenCalled();
+    expect(deleteWorktreeChecked).not.toHaveBeenCalled();
+    expect(agentManager.createAgent).not.toHaveBeenCalled();
 
     const threads = await registry.listThreads("proj-1");
-    expect(threads).toHaveLength(0);
+    expect(threads).toHaveLength(1);
+  });
+
+  it("marks thread running and stores agent id when provisioning succeeds", async () => {
+    const createWorktree = vi.fn(async () => ({
+      branchName: "feature-thread",
+      worktreePath: "/tmp/project-one/.paseo/worktrees/thread-a",
+    }));
+
+    const terminalManager = {
+      ensureThreadTerminal: vi.fn(async () => ({
+        terminal: { id: "term-1", name: "Terminal 1", cwd: "/tmp/project-one/.paseo/worktrees/thread-a" },
+        sessionKey: "oisin-proj-1-thread-a-hash",
+        cwd: "/tmp/project-one/.paseo/worktrees/thread-a",
+      })),
+      killTerminalsBySessionKey: vi.fn(),
+    } as any;
+
+    const agentManager = {
+      createAgent: vi.fn(async () => ({ id: "agent-1" })),
+      closeAgent: vi.fn(async () => {}),
+    } as any;
+
+    const lifecycle = new ThreadLifecycleService(
+      {
+        threadRegistry: registry,
+        terminalManager,
+        agentManager,
+        paseoHome,
+      },
+      {
+        createWorktree,
+        deleteWorktreeChecked: vi.fn(async () => {}),
+        getWorktreePorcelainStatus: vi.fn(async () => []),
+        runWorktreeSetupCommands: vi.fn(async () => []),
+      }
+    );
+
+    await lifecycle.createThread({
+      projectId: "proj-1",
+      title: "Thread A",
+      threadId: "thread-a",
+      launchConfig: { provider: "opencode" },
+    });
+
+    const updated = await lifecycle.startThreadProvisioning({
+      projectId: "proj-1",
+      threadId: "thread-a",
+    });
+
+    expect(updated.status).toBe("running");
+    expect(updated.links.agentId).toBe("agent-1");
+    expect(agentManager.createAgent).toHaveBeenCalled();
   });
 
   it("requires force confirmation when deleting dirty worktrees", async () => {

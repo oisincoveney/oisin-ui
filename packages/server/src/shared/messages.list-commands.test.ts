@@ -22,7 +22,7 @@ describe("list_commands_request schema", () => {
       type: "list_commands_request",
       agentId: "__new_agent__",
       draftConfig: {
-        provider: "codex",
+        provider: "claude",
         cwd: "/tmp/project",
         modeId: "bypassPermissions",
         model: "gpt-5",
@@ -36,7 +36,7 @@ describe("list_commands_request schema", () => {
       throw new Error("Expected list_commands_request message");
     }
     expect(parsed.draftConfig).toEqual({
-      provider: "codex",
+      provider: "claude",
       cwd: "/tmp/project",
       modeId: "bypassPermissions",
       model: "gpt-5",

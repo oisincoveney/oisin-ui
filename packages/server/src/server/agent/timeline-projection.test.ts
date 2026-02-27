@@ -23,7 +23,7 @@ describe("projectTimelineRows", () => {
       },
     ];
 
-    const projected = projectTimelineRows(rows, "codex", "projected");
+    const projected = projectTimelineRows(rows, "claude", "projected");
 
     expect(projected).toHaveLength(2);
     expect(projected[0]?.item).toEqual({
@@ -77,7 +77,7 @@ describe("projectTimelineRows", () => {
       },
     ];
 
-    const projected = projectTimelineRows(rows, "codex", "projected");
+    const projected = projectTimelineRows(rows, "claude", "projected");
 
     expect(projected).toHaveLength(2);
     const tool = projected[0];
@@ -107,7 +107,7 @@ describe("projectTimelineRows", () => {
       },
     ];
 
-    const projected = projectTimelineRows(rows, "codex", "canonical");
+    const projected = projectTimelineRows(rows, "claude", "canonical");
 
     expect(projected).toHaveLength(2);
     expect(projected[0]?.item).toEqual(rows[0]?.item);

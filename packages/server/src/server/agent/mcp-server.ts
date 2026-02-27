@@ -71,19 +71,6 @@ export interface AgentMcpServerOptions {
   logger: Logger;
 }
 
-const CLAUDE_TO_CODEX_MODE: Record<string, string> = {
-  plan: "read-only",
-  default: "auto",
-  acceptEdits: "auto",
-  bypassPermissions: "full-access",
-};
-
-const CODEX_TO_CLAUDE_MODE: Record<string, string> = {
-  "read-only": "plan",
-  auto: "default",
-  "full-access": "bypassPermissions",
-};
-
 function mapModeAcrossProviders(
   sourceMode: string,
   sourceProvider: AgentProvider,
@@ -91,22 +78,6 @@ function mapModeAcrossProviders(
 ): string {
   if (sourceProvider === targetProvider) {
     return sourceMode;
-  }
-
-  if (sourceProvider === "claude" && targetProvider === "codex") {
-    const mapped = CLAUDE_TO_CODEX_MODE[sourceMode];
-    if (mapped) {
-      return mapped;
-    }
-    return "auto";
-  }
-
-  if (sourceProvider === "codex" && targetProvider === "claude") {
-    const mapped = CODEX_TO_CLAUDE_MODE[sourceMode];
-    if (mapped) {
-      return mapped;
-    }
-    return "default";
   }
 
   return sourceMode;
@@ -453,7 +424,7 @@ export async function createAgentMcpServer(
     {
       title: "Create Agent",
       description:
-        "Create a new Claude or Codex agent tied to a working directory. Optionally run an initial prompt immediately or create a git worktree for the agent.",
+        "Create a new agent tied to a working directory. Optionally run an initial prompt immediately or create a git worktree for the agent.",
       inputSchema: createAgentInputSchema,
       outputSchema: {
         agentId: z.string(),

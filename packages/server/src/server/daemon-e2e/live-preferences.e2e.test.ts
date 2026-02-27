@@ -59,7 +59,6 @@ function isBinaryInstalled(binary: string): boolean {
   }
 }
 
-const hasCodex = isBinaryInstalled("codex");
 const hasOpenCode = isBinaryInstalled("opencode");
 
 describe("daemon E2E", () => {
@@ -81,12 +80,11 @@ describe("daemon E2E", () => {
     await ctx.cleanup();
   }, 60000);
 
-  describe.each(["claude", "codex", "opencode"] as const)(
+  describe.each(["claude", "opencode"] as const)(
     "live model switching (%s)",
     (provider) => {
       const shouldRun =
         provider === "claude" ||
-        (provider === "codex" && hasCodex) ||
         (provider === "opencode" && hasOpenCode);
 
       test.runIf(shouldRun)(
@@ -161,56 +159,6 @@ describe("daemon E2E", () => {
         );
 
         expect(updated.thinkingOptionId).toBe("on");
-      } finally {
-        rmSync(cwd, { recursive: true, force: true });
-      }
-    },
-    120000
-  );
-
-  test.runIf(hasCodex)(
-    "live thinking switching works for Codex (default -> non-default)",
-    async () => {
-      const cwd = tmpCwd();
-      try {
-        const modelList = await ctx.client.listProviderModels("codex");
-        if (!modelList.models || modelList.models.length === 0) {
-          throw new Error("No Codex models returned");
-        }
-
-        const modelWithOptions = modelList.models.find(
-          (m) => (m.thinkingOptions?.length ?? 0) > 1
-        );
-        if (!modelWithOptions) {
-          throw new Error("No Codex model with thinkingOptions returned");
-        }
-        const defaultThinkingId = modelWithOptions.defaultThinkingOptionId ?? "default";
-        const nonDefault =
-          modelWithOptions.thinkingOptions?.find((o) => o.id !== defaultThinkingId)?.id ??
-          modelWithOptions.thinkingOptions?.[0]?.id ??
-          null;
-        if (!nonDefault) {
-          throw new Error("No non-default Codex thinking option found");
-        }
-
-        const agent = await ctx.client.createAgent({
-          provider: "codex",
-          cwd,
-          title: "Codex Thinking Switch",
-          model: modelWithOptions.id,
-        });
-
-        const startIndex = messages.length;
-        await ctx.client.setAgentThinkingOption(agent.id, nonDefault);
-
-        const updated = await waitForAgentUpdate(
-          messages,
-          startIndex,
-          (a) => a.id === agent.id && a.thinkingOptionId === nonDefault,
-          { timeoutMs: 20000 }
-        );
-
-        expect(updated.thinkingOptionId).toBe(nonDefault);
       } finally {
         rmSync(cwd, { recursive: true, force: true });
       }

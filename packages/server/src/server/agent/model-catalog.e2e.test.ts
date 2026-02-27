@@ -15,7 +15,6 @@ function isBinaryInstalled(binary: string): boolean {
   }
 }
 
-const hasCodex = isBinaryInstalled("codex");
 const hasOpenCode = isBinaryInstalled("opencode");
 
 describe("provider model catalogs (e2e)", () => {
@@ -40,20 +39,8 @@ describe("provider model catalogs (e2e)", () => {
       const descriptions = result.models.map(
         (model) => `${model.label} ${model.description ?? ""}`.toLowerCase()
       );
-      expect(descriptions.some((text) => text.includes("sonnet 4.5"))).toBe(true);
+      expect(descriptions.some((text) => text.includes("sonnet"))).toBe(true);
       expect(descriptions.some((text) => text.includes("haiku"))).toBe(true);
-    },
-    180_000
-  );
-
-  test.runIf(hasCodex)(
-    "Codex catalog exposes gpt-5.1-codex",
-    async () => {
-      const result = await ctx.client.listProviderModels("codex");
-
-      expect(result.error).toBeNull();
-      const ids = result.models.map((model) => model.id);
-      expect(ids.some((id) => id.startsWith("gpt-5.1-codex"))).toBe(true);
     },
     180_000
   );

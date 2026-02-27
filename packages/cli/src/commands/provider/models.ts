@@ -9,7 +9,7 @@ export interface ModelListItem {
   description: string
 }
 
-const VALID_PROVIDERS = ['claude', 'codex', 'opencode']
+const VALID_PROVIDERS = ['claude', 'opencode']
 
 /** Schema for provider models output */
 export const providerModelsSchema: OutputSchema<ModelListItem> = {

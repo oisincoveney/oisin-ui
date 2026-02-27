@@ -33,15 +33,15 @@ describe("daemon E2E - persistence", () => {
   }, 60_000);
 
   test(
-    "persists and resumes Codex agent with conversation context",
+    "persists and resumes Claude agent with conversation context",
     async () => {
       const cwd = tmpCwd();
       try {
         const agent = await ctx.client.createAgent({
-          provider: "codex",
+          provider: "claude",
           cwd,
           title: "Persistence Test Agent",
-          modeId: "full-access",
+          modeId: "bypassPermissions",
         });
 
         messages.length = 0;
@@ -49,17 +49,15 @@ describe("daemon E2E - persistence", () => {
         const afterMessage = await ctx.client.waitForFinish(agent.id, 5_000);
         expect(afterMessage.status).toBe("idle");
         expect(afterMessage.final?.persistence).toBeTruthy();
-        expect(afterMessage.final?.persistence?.provider).toBe("codex");
+        expect(afterMessage.final?.persistence?.provider).toBe("claude");
         expect(afterMessage.final?.persistence?.sessionId).toBeTruthy();
-        expect((afterMessage.final?.persistence?.metadata as { conversationId?: string } | undefined)?.conversationId)
-          .toBeTruthy();
 
         const handle = afterMessage.final!.persistence!;
 
         await ctx.client.deleteAgent(agent.id);
 
         const resumed = await ctx.client.resumeAgent(handle);
-        expect(resumed.provider).toBe("codex");
+        expect(resumed.provider).toBe("claude");
         expect(resumed.cwd).toBe(cwd);
 
         messages.length = 0;
@@ -94,10 +92,10 @@ describe("daemon E2E - persistence", () => {
         });
 
         const agent = await ctx.client.createAgent({
-          provider: "codex",
+          provider: "claude",
           cwd,
           title: "Restart Timeline Test Agent",
-          modeId: "full-access",
+          modeId: "bypassPermissions",
         });
         const agentId = agent.id;
 

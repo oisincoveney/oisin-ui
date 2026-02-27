@@ -59,9 +59,9 @@ function waitForSignal<T>(
             voiceTts: { provider: "openai", explicit: true },
           },
         },
-        voiceLlmProvider: "codex",
+        voiceLlmProvider: "claude",
         voiceLlmProviderExplicit: true,
-        voiceLlmModel: "gpt-5.1-codex-mini",
+        voiceLlmModel: "haiku",
       });
     }, 120000);
 
@@ -85,7 +85,7 @@ function waitForSignal<T>(
         const voiceCwd = mkdtempSync(path.join(tmpdir(), "voice-local-agent-"));
         const targetAgent = await ctx.client.createAgent({
           config: {
-            ...getFullAccessConfig("codex"),
+            ...getFullAccessConfig("claude"),
             cwd: voiceCwd,
           },
         });

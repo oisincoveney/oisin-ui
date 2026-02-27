@@ -8,6 +8,7 @@ import {
   deletePaseoWorktreeChecked,
   DirtyWorktreeError,
   getWorktreePorcelainStatus,
+  runWorktreeSetupCommands,
   slugify,
 } from "../../utils/worktree.js";
 import type { ThreadLaunchConfig, ThreadRecord } from "./thread-registry.js";
@@ -74,12 +75,14 @@ type ThreadLifecycleAdapters = {
   createWorktree: typeof createWorktree;
   deleteWorktreeChecked: typeof deletePaseoWorktreeChecked;
   getWorktreePorcelainStatus: typeof getWorktreePorcelainStatus;
+  runWorktreeSetupCommands: typeof runWorktreeSetupCommands;
 };
 
 const DEFAULT_ADAPTERS: ThreadLifecycleAdapters = {
   createWorktree,
   deleteWorktreeChecked: deletePaseoWorktreeChecked,
   getWorktreePorcelainStatus,
+  runWorktreeSetupCommands,
 };
 
 export class ThreadLifecycleService {
@@ -123,7 +126,6 @@ export class ThreadLifecycleService {
     let worktreePath: string | null = null;
     let sessionKey: string | null = null;
     let terminalId: string | null = null;
-    let agentId: string | null = null;
 
     try {
       const created = await this.adapters.createWorktree({
@@ -132,39 +134,17 @@ export class ThreadLifecycleService {
         baseBranch,
         worktreeSlug: slugify(threadId),
         paseoHome: this.paseoHome,
+        runSetup: false,
       });
       worktreePath = created.worktreePath;
 
-      const terminal = await this.terminalManager.ensureThreadTerminal({
+      const terminal = await this.ensureThreadTerminalWithRetry({
         projectId: project.projectId,
         threadId,
         cwd: worktreePath,
       });
       terminalId = terminal.terminal.id;
       sessionKey = terminal.sessionKey;
-
-      const providerExtra = input.launchConfig.commandOverride
-        ? {
-            [input.launchConfig.provider]: {
-              commandOverride: input.launchConfig.commandOverride,
-            },
-          }
-        : undefined;
-
-      const sessionConfig: AgentSessionConfig = {
-        provider: input.launchConfig.provider,
-        cwd: worktreePath,
-        ...(input.launchConfig.modeId ? { modeId: input.launchConfig.modeId } : {}),
-        ...(providerExtra ? { extra: providerExtra as AgentSessionConfig["extra"] } : {}),
-        title: input.title,
-      };
-      const agent = await this.agentManager.createAgent(sessionConfig, undefined, {
-        labels: {
-          projectId: project.projectId,
-          threadId,
-        },
-      });
-      agentId = agent.id;
 
       const thread = await this.threadRegistry.createThread({
         projectId: project.projectId,
@@ -173,11 +153,11 @@ export class ThreadLifecycleService {
         launchConfig: input.launchConfig,
         links: {
           terminalId,
-          agentId,
+          agentId: null,
           worktreePath,
           sessionKey,
         },
-        status: "running",
+        status: "idle",
       });
 
       return {
@@ -191,18 +171,130 @@ export class ThreadLifecycleService {
         projectRepoRoot: project.repoRoot,
         worktreePath,
         sessionKey,
-        agentId,
       });
       throw error;
     }
   }
 
-  async switchThread(input: SwitchThreadInput): Promise<ThreadRecord> {
-    await this.threadRegistry.switchThread(input.projectId, input.threadId);
+  async startThreadProvisioning(input: { projectId: string; threadId: string }): Promise<ThreadRecord> {
     const thread = await this.threadRegistry.getThread(input.projectId, input.threadId);
     if (!thread) {
       throw new Error(`Thread not found: ${input.projectId}/${input.threadId}`);
     }
+
+    const worktreePath = thread.links.worktreePath;
+    if (!worktreePath) {
+      throw new Error(`Thread missing worktree path: ${input.projectId}/${input.threadId}`);
+    }
+
+    const branchName = await this.resolveCurrentBranch(worktreePath);
+
+    await this.adapters.runWorktreeSetupCommands({
+      worktreePath,
+      branchName,
+      cleanupOnFailure: false,
+    });
+
+    const providerExtra = thread.launchConfig.commandOverride
+      ? {
+          [thread.launchConfig.provider]: {
+            commandOverride: thread.launchConfig.commandOverride,
+          },
+        }
+      : undefined;
+
+    const sessionConfig: AgentSessionConfig = {
+      provider: thread.launchConfig.provider,
+      cwd: worktreePath,
+      ...(thread.launchConfig.modeId ? { modeId: thread.launchConfig.modeId } : {}),
+      ...(providerExtra ? { extra: providerExtra as AgentSessionConfig["extra"] } : {}),
+      title: thread.title,
+    };
+
+    const agent = await this.agentManager.createAgent(sessionConfig, undefined, {
+      labels: {
+        projectId: thread.projectId,
+        threadId: thread.threadId,
+      },
+    });
+
+    return await this.threadRegistry.updateThread({
+      projectId: thread.projectId,
+      threadId: thread.threadId,
+      status: "running",
+      links: {
+        agentId: agent.id,
+      },
+    });
+  }
+
+  private async ensureThreadTerminalWithRetry(input: {
+    projectId: string;
+    threadId: string;
+    cwd: string;
+  }): Promise<{ terminal: { id: string }; sessionKey: string; cwd: string }> {
+    if (!this.terminalManager) {
+      throw new Error("Terminal manager unavailable");
+    }
+    const terminalManager = this.terminalManager;
+    let lastError: unknown = null;
+    const deriveThreadSessionKey = (terminalManager as {
+      deriveThreadSessionKey?: (projectId: string, threadId: string) => string;
+    }).deriveThreadSessionKey;
+    const sessionKey =
+      typeof deriveThreadSessionKey === "function"
+        ? deriveThreadSessionKey(input.projectId, input.threadId)
+        : null;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      try {
+        return await terminalManager.ensureThreadTerminal(input);
+      } catch (error) {
+        lastError = error;
+        if (sessionKey) {
+          try {
+            terminalManager.killTerminalsBySessionKey(sessionKey);
+          } catch {
+            // no-op
+          }
+        }
+        if (attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+        }
+      }
+    }
+    throw (lastError instanceof Error ? lastError : new Error(String(lastError)));
+  }
+
+  async switchThread(input: SwitchThreadInput): Promise<ThreadRecord> {
+    await this.threadRegistry.switchThread(input.projectId, input.threadId);
+    let thread = await this.threadRegistry.getThread(input.projectId, input.threadId);
+    if (!thread) {
+      throw new Error(`Thread not found: ${input.projectId}/${input.threadId}`);
+    }
+
+    if (this.terminalManager && thread.links.worktreePath) {
+      const ensured = await this.ensureThreadTerminalWithRetry({
+        projectId: thread.projectId,
+        threadId: thread.threadId,
+        cwd: thread.links.worktreePath,
+      });
+      if (
+        ensured.terminal.id !== thread.links.terminalId ||
+        ensured.sessionKey !== thread.links.sessionKey ||
+        ensured.cwd !== thread.links.worktreePath
+      ) {
+        thread = await this.threadRegistry.updateThread({
+          projectId: thread.projectId,
+          threadId: thread.threadId,
+          links: {
+            terminalId: ensured.terminal.id,
+            sessionKey: ensured.sessionKey,
+            worktreePath: ensured.cwd,
+          },
+        });
+      }
+    }
+
     return thread;
   }
 
@@ -260,19 +352,8 @@ export class ThreadLifecycleService {
     projectRepoRoot: string;
     worktreePath: string | null;
     sessionKey: string | null;
-    agentId: string | null;
   }): Promise<void> {
     const rollbackErrors: string[] = [];
-
-    if (input.agentId) {
-      try {
-        await this.agentManager.closeAgent(input.agentId);
-      } catch (error) {
-        rollbackErrors.push(
-          `agent:${error instanceof Error ? error.message : String(error)}`
-        );
-      }
-    }
 
     if (this.terminalManager && input.sessionKey) {
       try {

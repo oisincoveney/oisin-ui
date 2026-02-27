@@ -79,7 +79,7 @@ export type AgentCapabilityFlags = {
 export type AgentPersistenceHandle = {
   provider: AgentProvider;
   sessionId: string;
-  /** Provider specific handle (Codex thread id, Claude resume token, etc). */
+  /** Provider specific handle (Claude resume token, etc). */
   nativeHandle?: string;
   metadata?: AgentMetadata;
 };
@@ -312,7 +312,6 @@ export type AgentSessionConfig = {
   networkAccess?: boolean;
   webSearch?: boolean;
   extra?: {
-    codex?: AgentMetadata;
     claude?: Partial<ClaudeAgentOptions>;
   };
   mcpServers?: Record<string, McpServerConfig>;

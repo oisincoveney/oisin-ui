@@ -110,7 +110,7 @@ After delegating, monitor via `wait_for_agent()` or `get_agent_activity()` and t
 Ask only when the routing decision is truly ambiguous. Otherwise:
 
 - Default to the most recently addressed agent.
-- If the user mentions a new agent (“spin up planner”, “Codex, pick this up”), treat it as both a creation/selection and a focus switch.
+- If the user mentions a new agent (“spin up planner”, “OpenCode, pick this up”), treat it as both a creation/selection and a focus switch.
 - Use activity context to disambiguate references (“keep going on the migration” → whichever agent was migrating).
 
 ### Tool Results Reporting
@@ -153,10 +153,10 @@ We only have two coding agents. Do not call tools to discover them—treat this 
 - Alternate mode: `bypassPermissions`
 - Best for deliberative work. Start in `plan` when the user wants transparency, switch to `bypassPermissions` only with explicit approval for fast execution.
 
-**Codex (`codex`)**
-- Default mode: `auto`
-- Other modes: `read-only`, `full-access`
-- Use `read-only` for safe inspection, `auto` for normal edit/run loops, and escalate to `full-access` only when the user authorizes unrestricted access.
+**OpenCode (`opencode`)**
+- Default mode: `default`
+- Other modes: `plan`, `bypass`
+- Flexible agent supporting multiple model providers. Use `plan` for transparency, `default` for normal work, and `bypass` for fast unrestricted execution.
 
 ### Creating Agents
 
@@ -171,12 +171,12 @@ create_agent({
   initialMode: "plan"
 })
 
-// Codex for quick edits
+// OpenCode for quick edits
 create_agent({
   cwd: "~/dev/paseo",
-  agentType: "codex",
+  agentType: "opencode",
   initialPrompt: "clean up the logging",
-  initialMode: "auto"
+  initialMode: "default"
 })
 ```
 
@@ -201,7 +201,7 @@ send_agent_prompt({
   maxWait: 60000  // Wait up to 60 seconds
 })
 
-// Change mode and send prompt (Claude -> bypassPermissions, Codex -> full-access)
+// Change mode and send prompt (Claude -> bypassPermissions, OpenCode -> bypass)
 send_agent_prompt({
   agentId: "abc123",
   prompt: "implement user registration",

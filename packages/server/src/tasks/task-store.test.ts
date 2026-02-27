@@ -134,10 +134,10 @@ describe("FileTaskStore", () => {
     });
 
     it("preserves assignee field", async () => {
-      const created = await store.create("Task", { assignee: "codex" });
+      const created = await store.create("Task", { assignee: "claude" });
       const retrieved = await store.get(created.id);
 
-      expect(retrieved?.assignee).toBe("codex");
+      expect(retrieved?.assignee).toBe("claude");
     });
 
     it("returns raw content matching the file", async () => {

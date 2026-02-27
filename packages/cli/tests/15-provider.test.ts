@@ -12,7 +12,6 @@
  * - provider ls --json outputs valid JSON
  * - provider ls --quiet outputs provider names only
  * - provider models claude lists claude models
- * - provider models codex lists codex models
  * - provider models opencode lists opencode models
  * - provider models unknown fails with error
  * - provider models --json outputs valid JSON
@@ -41,7 +40,6 @@ console.log('=== Provider Commands ===\n')
   const result = await $`npx paseo provider ls`.nothrow()
   assert.strictEqual(result.exitCode, 0, 'provider ls should exit 0')
   assert(result.stdout.includes('claude'), 'output should include claude')
-  assert(result.stdout.includes('codex'), 'output should include codex')
   assert(result.stdout.includes('opencode'), 'output should include opencode')
   assert(result.stdout.includes('available'), 'output should show available status')
   console.log('✓ provider ls lists all providers\n')
@@ -54,9 +52,8 @@ console.log('=== Provider Commands ===\n')
   assert.strictEqual(result.exitCode, 0, 'should exit 0')
   const data = JSON.parse(result.stdout.trim())
   assert(Array.isArray(data), 'output should be an array')
-  assert.strictEqual(data.length, 3, 'should have 3 providers')
+  assert.strictEqual(data.length, 2, 'should have 2 providers')
   assert(data.some((p: { provider: string }) => p.provider === 'claude'), 'should include claude')
-  assert(data.some((p: { provider: string }) => p.provider === 'codex'), 'should include codex')
   assert(data.some((p: { provider: string }) => p.provider === 'opencode'), 'should include opencode')
   console.log('✓ provider ls --json outputs valid JSON\n')
 }
@@ -67,9 +64,8 @@ console.log('=== Provider Commands ===\n')
   const result = await $`npx paseo provider ls --quiet`.nothrow()
   assert.strictEqual(result.exitCode, 0, 'should exit 0')
   const lines = result.stdout.trim().split('\n')
-  assert.strictEqual(lines.length, 3, 'should have 3 lines')
+  assert.strictEqual(lines.length, 2, 'should have 2 lines')
   assert(lines.includes('claude'), 'should include claude')
-  assert(lines.includes('codex'), 'should include codex')
   assert(lines.includes('opencode'), 'should include opencode')
   console.log('✓ provider ls --quiet outputs provider names only\n')
 }
@@ -85,30 +81,18 @@ console.log('=== Provider Commands ===\n')
   console.log('✓ provider models claude lists claude models\n')
 }
 
-// Test 6: provider models codex lists codex models
+// Test 6: provider models opencode lists opencode models
 {
-  console.log('Test 6: provider models codex lists codex models')
-  const result = await $`npx paseo provider models codex`.nothrow()
-  assert.strictEqual(result.exitCode, 0, 'provider models codex should exit 0')
-  assert(result.stdout.includes('o3-mini'), 'output should include o3-mini')
-  assert(result.stdout.includes('o4-mini'), 'output should include o4-mini')
-  console.log('✓ provider models codex lists codex models\n')
-}
-
-// Test 7: provider models opencode lists opencode models
-{
-  console.log('Test 7: provider models opencode lists opencode models')
+  console.log('Test 6: provider models opencode lists opencode models')
   const result = await $`npx paseo provider models opencode`.nothrow()
   assert.strictEqual(result.exitCode, 0, 'provider models opencode should exit 0')
-  // opencode supports both claude and codex models
   assert(result.stdout.includes('claude-sonnet-4-20250514'), 'output should include claude models')
-  assert(result.stdout.includes('o3-mini'), 'output should include codex models')
   console.log('✓ provider models opencode lists opencode models\n')
 }
 
-// Test 8: provider models unknown fails with error
+// Test 7: provider models unknown fails with error
 {
-  console.log('Test 8: provider models unknown fails with error')
+  console.log('Test 7: provider models unknown fails with error')
   const result = await $`npx paseo provider models unknown`.nothrow()
   assert.notStrictEqual(result.exitCode, 0, 'should fail for unknown provider')
   const output = result.stdout + result.stderr
@@ -119,9 +103,9 @@ console.log('=== Provider Commands ===\n')
   console.log('✓ provider models unknown fails with error\n')
 }
 
-// Test 9: provider models --json outputs valid JSON
+// Test 8: provider models --json outputs valid JSON
 {
-  console.log('Test 9: provider models --json outputs valid JSON')
+  console.log('Test 8: provider models --json outputs valid JSON')
   const result = await $`npx paseo provider models claude --json`.nothrow()
   assert.strictEqual(result.exitCode, 0, 'should exit 0')
   const data = JSON.parse(result.stdout.trim())
@@ -131,9 +115,9 @@ console.log('=== Provider Commands ===\n')
   console.log('✓ provider models --json outputs valid JSON\n')
 }
 
-// Test 10: provider models --quiet outputs model IDs only
+// Test 9: provider models --quiet outputs model IDs only
 {
-  console.log('Test 10: provider models --quiet outputs model IDs only')
+  console.log('Test 9: provider models --quiet outputs model IDs only')
   const result = await $`npx paseo provider models claude --quiet`.nothrow()
   assert.strictEqual(result.exitCode, 0, 'should exit 0')
   const lines = result.stdout.trim().split('\n')

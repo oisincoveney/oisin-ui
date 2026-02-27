@@ -37,26 +37,6 @@ const CLAUDE_MODES: AgentMode[] = [
   },
 ];
 
-const CODEX_MODES: AgentMode[] = [
-  {
-    id: "read-only",
-    label: "Read Only",
-    description:
-      "Read files and answer questions. Manual approval required for edits, commands, or network ops.",
-  },
-  {
-    id: "auto",
-    label: "Auto",
-    description:
-      "Edit files and run commands but still request approval before escalating scope.",
-  },
-  {
-    id: "full-access",
-    label: "Full Access",
-    description: "Edit files, run commands, and access the network without additional prompts.",
-  },
-];
-
 const OPENCODE_MODES: AgentMode[] = [
   {
     id: "default",
@@ -77,19 +57,6 @@ export const AGENT_PROVIDER_DEFINITIONS: AgentProviderDefinition[] = [
       enabled: true,
       defaultModeId: "default",
       defaultModel: "haiku",
-    },
-  },
-  {
-    id: "codex",
-    label: "Codex",
-    description:
-      "OpenAI's Codex workspace agent with sandbox controls and optional network access",
-    defaultModeId: "auto",
-    modes: CODEX_MODES,
-    voice: {
-      enabled: true,
-      defaultModeId: "read-only",
-      defaultModel: "gpt-5.1-codex-mini",
     },
   },
   {

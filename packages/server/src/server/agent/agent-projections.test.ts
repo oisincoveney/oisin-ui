@@ -214,7 +214,7 @@ describe("toAgentPayload", () => {
     const permissionA = createPermission({ id: "perm-a" });
     const permissionB = createPermission({
       id: "perm-b",
-      provider: "codex",
+      provider: "claude",
       metadata: { requestedAt: new Date("2025-02-02T00:00:00.000Z"), extra: { flag: true } },
     });
     const pending = new Map([
@@ -284,7 +284,7 @@ describe("toAgentPayload", () => {
   it("keeps persistence handles sanitized and detached", () => {
     const agent = createManagedAgent({
       persistence: {
-        provider: "codex",
+        provider: "claude",
         sessionId: "persist-99",
         nativeHandle: { id: "native" } as any,
         metadata: { restored: new Date("2025-03-01T00:00:00.000Z"), empty: {} },
@@ -292,7 +292,7 @@ describe("toAgentPayload", () => {
     });
     const payload = toAgentPayload(agent);
     expect(payload.persistence).toEqual({
-      provider: "codex",
+      provider: "claude",
       sessionId: "persist-99",
       nativeHandle: { id: "native" },
       metadata: { restored: "2025-03-01T00:00:00.000Z" },

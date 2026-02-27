@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readFileSync, writeFileSync, rmSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, rmSync } from "node:fs";
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -82,9 +82,6 @@ function buildPersistence(
   sessionId: string,
   metadata?: Record<string, unknown>
 ): AgentPersistenceHandle {
-  if (provider === "codex") {
-    return { provider, sessionId, metadata: { conversationId: sessionId, ...metadata } };
-  }
   return { provider, sessionId, ...(metadata ? { metadata } : {}) };
 }
 
@@ -96,13 +93,6 @@ function buildToolCallForPrompt(provider: string, prompt: string) {
   if (createFileMatch) {
     const fileName = createFileMatch[1] ?? "test.txt";
     const content = createFileMatch[2] ?? "";
-    if (provider === "codex") {
-      return {
-        name: "shell",
-        input: { command: `printf "%s" "${content}" > ${fileName}` },
-        output: { ok: true },
-      };
-    }
     return {
       name: "Bash",
       input: { command: `printf "%s" "${content}" > ${fileName}` },
@@ -122,38 +112,11 @@ function buildToolCallForPrompt(provider: string, prompt: string) {
     if (text.includes("echo hello")) {
       return { name: "Bash", input: { command: "echo hello" }, output: { stdout: "hello\n" } };
     }
+    if (text.includes("printf") && text.includes("permission.txt")) {
+      return { name: "Bash", input: { command: 'printf "ok" > permission.txt' }, output: { ok: true } };
+    }
     if (text.includes("edit") && text.includes(".txt")) {
       return { name: "Edit", input: { file: "test.txt" }, output: { applied: true } };
-    }
-    return null;
-  }
-
-  if (provider === "codex") {
-    if (text.includes("echo hello")) {
-      return { name: "shell", input: { command: "echo hello" }, output: { stdout: "hello\n" } };
-    }
-    if (text.includes("read") && text.includes("/etc/hosts")) {
-      return { name: "read_file", input: { path: "/etc/hosts" }, output: undefined };
-    }
-    if (text.includes("read") && text.includes("tool-create.txt")) {
-      return { name: "read_file", input: { path: "tool-create.txt" }, output: undefined };
-    }
-    if (text.includes("edit") && text.includes(".txt")) {
-      const output = text.includes("tool-create.txt")
-        ? { applied: true, file: "tool-create.txt" }
-        : { applied: true };
-      return { name: "apply_patch", input: { patch: "*** Begin Patch\n*** End Patch\n" }, output };
-    }
-    const printfMatch =
-      /printf\s+"ok"\s*>\s*([^\s`]+)/i.exec(text) ??
-      /printf\s+ok\s*>\s*([^\s`]+)/i.exec(text);
-    if (printfMatch) {
-      const fileName = printfMatch[1] ?? "permission.txt";
-      return { name: "shell", input: { command: `printf "ok" > ${fileName}` }, output: { ok: true } };
-    }
-    if (text.includes("sleep")) {
-      // Long-running command to test cancellation/overlap.
-      return { name: "shell", input: { command: "sleep 30" }, output: null };
     }
     return null;
   }
@@ -208,43 +171,10 @@ class FakeAgentSession implements AgentSession {
     await appendFile(this.historyPath, JSON.stringify(event) + "\n", "utf8");
   }
 
-  private parseSlashCommandInput(
-    text: string
-  ): { commandName: string; args?: string } | null {
-    const trimmed = text.trim();
-    if (!trimmed.startsWith("/") || trimmed.length <= 1) {
-      return null;
-    }
-    const withoutPrefix = trimmed.slice(1);
-    const firstWhitespaceIdx = withoutPrefix.search(/\s/);
-    const commandName =
-      firstWhitespaceIdx === -1
-        ? withoutPrefix
-        : withoutPrefix.slice(0, firstWhitespaceIdx);
-    if (!commandName || commandName.includes("/")) {
-      return null;
-    }
-    const rawArgs =
-      firstWhitespaceIdx === -1
-        ? ""
-        : withoutPrefix.slice(firstWhitespaceIdx + 1).trim();
-    return rawArgs ? { commandName, args: rawArgs } : { commandName };
-  }
-
   private async resolveSlashCommandInput(
-    prompt: AgentPromptInput
+    _prompt: AgentPromptInput
   ): Promise<{ commandName: string; args?: string } | null> {
-    if (this.providerName !== "codex" || typeof prompt !== "string") {
-      return null;
-    }
-    const parsed = this.parseSlashCommandInput(prompt);
-    if (!parsed) {
-      return null;
-    }
-    const commands = await this.listCommands();
-    return commands.some((command) => command.name === parsed.commandName)
-      ? parsed
-      : null;
+    return null;
   }
 
   async run(prompt: AgentPromptInput, options?: AgentRunOptions): Promise<AgentRunResult> {
@@ -530,47 +460,6 @@ class FakeAgentSession implements AgentSession {
   async close(): Promise<void> {}
 
   async listCommands(): Promise<AgentSlashCommand[]> {
-    if (this.providerName === "codex") {
-      const codexHome =
-        process.env.CODEX_HOME ??
-        path.join(process.env.HOME ?? "/tmp", ".codex");
-
-      const commands: AgentSlashCommand[] = [];
-
-      const promptsDir = path.join(codexHome, "prompts");
-      try {
-        for (const entry of readdirSync(promptsDir, { withFileTypes: true })) {
-          if (!entry.isFile()) continue;
-          if (!entry.name.endsWith(".md")) continue;
-          const name = entry.name.slice(0, -".md".length);
-          commands.push({
-            name: `prompts:${name}`,
-            description: "Prompt command",
-            argumentHint: "",
-          });
-        }
-      } catch {
-        // ignore missing dirs
-      }
-
-      const skillsDir = path.join(codexHome, "skills");
-      try {
-        for (const entry of readdirSync(skillsDir, { withFileTypes: true })) {
-          if (!entry.isDirectory()) continue;
-          commands.push({
-            name: entry.name,
-            description: "Skill command",
-            argumentHint: "",
-          });
-        }
-      } catch {
-        // ignore
-      }
-
-      return commands;
-    }
-
-    // Keep deterministic defaults for non-codex providers.
     if (this.providerName === "claude") {
       return [
         { name: "help", description: "Help", argumentHint: "" },
@@ -590,23 +479,13 @@ class FakeAgentSession implements AgentSession {
   }
 
   private async runSlashCommand(
-    commandName: string,
-    args?: string
+    _commandName: string,
+    _args?: string
   ): Promise<{
     text: string;
     timeline: AgentRunResult["timeline"];
     usage: AgentUsage;
   }> {
-    const fullName = commandName.trim();
-    if (this.providerName === "codex" && fullName.startsWith("prompts:")) {
-      const promptId = fullName.slice("prompts:".length);
-      return {
-        text: `PASEO_OK ${args ?? ""}`.trim(),
-        timeline: [{ type: "assistant_message", text: `PASEO_OK ${promptId}` }],
-        usage: { inputTokens: 1, outputTokens: 1 },
-      };
-    }
-
     return {
       text: "PASEO_SKILL_OK",
       timeline: [{ type: "assistant_message", text: "PASEO_SKILL_OK" }],
@@ -835,11 +714,6 @@ class FakeAgentClient implements AgentClient {
         { provider: this.provider, id: "sonnet", label: "Sonnet", isDefault: false },
       ];
     }
-    if (this.provider === "codex") {
-      return [
-        { provider: this.provider, id: "gpt-5.1-codex-mini", label: "gpt-5.1-codex-mini", isDefault: true },
-      ];
-    }
     return [{ provider: this.provider, id: "test-model", label: "Test Model", isDefault: true }];
   }
 
@@ -851,7 +725,6 @@ class FakeAgentClient implements AgentClient {
 export function createTestAgentClients(): Record<string, AgentClient> {
   return {
     claude: new FakeAgentClient("claude"),
-    codex: new FakeAgentClient("codex"),
     opencode: new FakeAgentClient("opencode"),
   };
 }

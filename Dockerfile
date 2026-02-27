@@ -18,7 +18,7 @@ COPY . .
 
 RUN bun install
 
-RUN bun add -g opencode-ai@1.2.11 @openai/codex@0.104.0
+RUN bun add -g opencode-ai@1.2.11
 
 RUN chmod +x scripts/start.sh
 

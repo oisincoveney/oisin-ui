@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
-import { mkdtemp, rm } from "node:fs/promises";
-import { spawn, type ChildProcess } from "node:child_process";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { execSync, spawn, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -79,10 +79,35 @@ async function stopProcess(child: ChildProcess): Promise<void> {
 }
 
 async function startRuntime(): Promise<Runtime> {
+  execSync("bun run --filter @getpaseo/server build", { cwd: repoRoot, stdio: "pipe" });
+
   const daemonPort = await getAvailablePort();
   const webPort = await getAvailablePort();
   const paseoHomeRoot = await mkdtemp(path.join(os.tmpdir(), "terminal-web-smoke-"));
   const paseoHome = path.join(paseoHomeRoot, ".paseo");
+  await mkdir(paseoHome, { recursive: true });
+  await writeFile(
+    path.join(paseoHome, "config.json"),
+    `${JSON.stringify(
+      {
+        version: 1,
+        daemon: { relay: { enabled: false } },
+        projects: {
+          repositories: [
+            {
+              projectId: "terminal-web-project",
+              displayName: "Terminal Web Project",
+              repoRoot,
+              defaultBaseBranch: "main",
+            },
+          ],
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
   const webUrl = `http://127.0.0.1:${webPort}`;
   const daemonHealthUrl = `http://127.0.0.1:${daemonPort}/api/health`;
   const daemonListen = `127.0.0.1:${daemonPort}`;
@@ -103,7 +128,7 @@ async function startRuntime(): Promise<Runtime> {
     VITE_DAEMON_PORT: String(daemonPort),
   };
 
-  const daemon = spawnProcess("bun", ["run", "dev:server"], daemonEnv);
+  const daemon = spawnProcess("bun", ["run", "--filter", "@getpaseo/server", "start"], daemonEnv);
   await waitForHttpOk(daemonHealthUrl, 60_000);
 
   const web = spawnProcess(
@@ -157,8 +182,17 @@ test("terminal becomes interactive and renders command output", async ({ page })
   await expect(page.getByText("Terminal disconnected.", { exact: false })).toHaveCount(0);
   await expect(page.getByText("reason:", { exact: false })).toHaveCount(0);
 
+  await page.getByRole("button", { name: "Create new thread" }).click();
+  await page.getByRole("combobox", { name: "Project" }).selectOption({ index: 0 });
+  await page.getByRole("textbox", { name: "Thread Name" }).fill(`terminal-smoke-${Date.now()}`);
+  const baseBranch = page.getByRole("combobox", { name: "Base Branch" });
+  await expect(baseBranch).toBeEnabled();
+  await baseBranch.fill("main");
+  await page.getByRole("button", { name: "Create Thread", exact: true }).click();
+  await expect(page.getByText("No active thread", { exact: false })).toHaveCount(0);
+
   const terminalInput = page.getByRole("textbox", { name: "Terminal input" });
-  await terminalInput.click();
+  await page.locator(".xterm-screen").click();
   await expect(terminalInput).toBeFocused();
 
   const marker = `terminal-web-smoke-${Date.now()}`;

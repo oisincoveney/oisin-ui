@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ToolCallDetail } from "../agent-sdk-types.js";
 import {
-  extractCodexShellOutput,
+  extractShellOutput,
   flattenReadContent as flattenToolReadContent,
   nonEmptyString,
   truncateDiffText,
@@ -93,7 +93,7 @@ const ToolShellOutputObjectSchema = z
 export const ToolShellOutputSchema = z.union([
   z.string().transform((value) => ({
     command: undefined,
-    output: extractCodexShellOutput(value),
+    output: extractShellOutput(value),
     exitCode: undefined,
   })),
   ToolShellOutputObjectSchema.transform((value) => {
@@ -115,7 +115,7 @@ export const ToolShellOutputSchema = z.union([
 
     return {
       command: nonEmptyString(value.command) ?? nonEmptyString(value.result?.command),
-      output: extractCodexShellOutput(rawOutput),
+      output: extractShellOutput(rawOutput),
       exitCode:
         value.exitCode ??
         value.exit_code ??

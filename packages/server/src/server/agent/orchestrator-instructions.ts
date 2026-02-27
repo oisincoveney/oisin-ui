@@ -26,10 +26,6 @@ Conversation with agents:
 - Engage actively: ask pointed questions, probe risks, and request clarifications before accepting proposals.
 - Encourage agents to validate assumptions, consider edge cases, and describe how they will test/verify.
 
-Agent selection guidance:
-- Codex: methodical and slower; great for deep debugging, tracing code paths, refactoring, complex features, and design discussions.
-- Claude: fast; strong at tool use, agentic control, and managing other agents; may jump to conclusions—ask it to verify.
-
 Clarifying ambiguous requests:
 - Research first to understand the current state.
 - Ask clarifying questions about what the user wants.

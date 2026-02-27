@@ -1,11 +1,11 @@
 /**
  * Shared agent configurations for e2e tests.
- * Enables running the same tests against Claude, Codex, and OpenCode providers.
+ * Enables running the same tests against Claude and OpenCode providers.
  */
 import { isCommandAvailable } from "../agent/provider-launch-config.js";
 
 export interface AgentTestConfig {
-  provider: "claude" | "codex" | "opencode";
+  provider: "claude" | "opencode";
   model: string;
   thinkingOptionId?: string;
   modes: {
@@ -13,6 +13,8 @@ export interface AgentTestConfig {
     ask: string; // Requires permission approval
   };
 }
+
+const opencodeModel = process.env.PASEO_TEST_OPENCODE_MODEL?.trim() || "opencode/gpt-5-nano";
 
 export const agentConfigs = {
   claude: {
@@ -23,18 +25,9 @@ export const agentConfigs = {
       ask: "default",
     },
   },
-  codex: {
-    provider: "codex",
-    model: "gpt-5.1-codex-mini",
-    thinkingOptionId: "low",
-    modes: {
-      full: "full-access",
-      ask: "auto",
-    },
-  },
   opencode: {
     provider: "opencode",
-    model: "opencode/glm-5-free",
+    model: opencodeModel,
     modes: {
       full: "default",
       ask: "default",
@@ -83,13 +76,10 @@ export function isRealProviderReady(provider: AgentProvider): boolean {
   if (provider === "claude") {
     return isCommandAvailable("claude") && hasClaudeCredentials;
   }
-  if (provider === "codex") {
-    return isCommandAvailable("codex");
-  }
   return isCommandAvailable("opencode");
 }
 
 /**
  * Helper to run a test for each provider.
  */
-export const allProviders: AgentProvider[] = ["claude", "codex", "opencode"];
+export const allProviders: AgentProvider[] = ["claude", "opencode"];

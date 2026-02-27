@@ -14,10 +14,6 @@ function tmpCwd(): string {
   return mkdtempSync(path.join(tmpdir(), "daemon-e2e-"));
 }
 
-// Use gpt-5.1-codex-mini with low thinking preset for faster test execution
-const CODEX_TEST_MODEL = "gpt-5.1-codex-mini";
-const CODEX_TEST_THINKING_OPTION_ID = "low";
-
 describe("daemon E2E", () => {
   let ctx: DaemonTestContext;
   let collector: MessageCollector;
@@ -33,15 +29,15 @@ describe("daemon E2E", () => {
   }, 60000);
 
   test("creates agent and receives response", async () => {
-    // Create a Codex agent
+    // Create a Claude agent
     const agent = await ctx.client.createAgent({
-      provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+      provider: "claude",
       cwd: "/tmp",
       title: "Test Agent",
     });
 
     expect(agent.id).toBeTruthy();
-    expect(agent.provider).toBe("codex");
+    expect(agent.provider).toBe("claude");
     expect(agent.status).toBe("idle");
     // Title may or may not be set depending on timing
     expect(agent.cwd).toBe("/tmp");
@@ -95,7 +91,7 @@ describe("daemon E2E", () => {
 
     await expect(
       ctx.client.createAgent({
-        provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+        provider: "claude",
         cwd: nonExistentCwd,
         title: "Should Fail Agent",
       })

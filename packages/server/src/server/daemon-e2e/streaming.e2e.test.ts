@@ -79,10 +79,10 @@ describe("daemon E2E - streaming", () => {
       const cwd = tmpCwd();
       try {
         const agent = await ctx.client.createAgent({
-          provider: "codex",
+          provider: "claude",
           cwd,
           title: "Overlap stream test",
-          modeId: "full-access",
+          modeId: "bypassPermissions",
         });
 
         messages.length = 0;
@@ -107,4 +107,3 @@ describe("daemon E2E - streaming", () => {
     30_000
   );
 });
-

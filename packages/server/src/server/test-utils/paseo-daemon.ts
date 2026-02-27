@@ -95,8 +95,8 @@ export async function createTestPaseoDaemon(
       await daemon.start();
 
       const close = async (): Promise<void> => {
-        await daemon.stop().catch(() => undefined);
-        await daemon.agentManager.flush().catch(() => undefined);
+        await withTimeout(daemon.stop(), 8000).catch(() => undefined);
+        await withTimeout(daemon.agentManager.flush(), 8000).catch(() => undefined);
         if (options.cleanup ?? true) {
           await new Promise((r) => setTimeout(r, 50));
           await rm(paseoHomeRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
@@ -125,6 +125,24 @@ export async function createTestPaseoDaemon(
   }
 
   throw lastError ?? new Error("Failed to start test daemon");
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(new Error(`Operation timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
 }
 
 function isAddressInUseError(error: unknown): boolean {

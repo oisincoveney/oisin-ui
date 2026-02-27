@@ -155,6 +155,12 @@ function byteLength(data: string): number {
   return Buffer.byteLength(data, "utf8");
 }
 
+function createEmptyGrid(rows: number, cols: number): Cell[][] {
+  return Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => ({ char: " ", fg: undefined, bg: undefined }))
+  );
+}
+
 export async function createTmuxTerminalSession(
   options: CreateTerminalOptions & {
     sessionName: string;
@@ -193,6 +199,8 @@ export async function createTmuxTerminalSession(
   let startupSettled = false;
   let resolveStartup: (() => void) | null = null;
   let rejectStartup: ((error: Error) => void) | null = null;
+  const pendingStartupMessages: ClientMessage[] = [];
+  let startupTimeout: NodeJS.Timeout | null = null;
 
   const startupReady = new Promise<void>((resolve, reject) => {
     resolveStartup = resolve;
@@ -204,6 +212,16 @@ export async function createTmuxTerminalSession(
       return;
     }
     startupSettled = true;
+    if (startupTimeout) {
+      clearTimeout(startupTimeout);
+      startupTimeout = null;
+    }
+    if (pendingStartupMessages.length > 0) {
+      const queued = pendingStartupMessages.splice(0, pendingStartupMessages.length);
+      for (const message of queued) {
+        send(message);
+      }
+    }
     resolveStartup?.();
     resolveStartup = null;
     rejectStartup = null;
@@ -214,6 +232,11 @@ export async function createTmuxTerminalSession(
       return;
     }
     startupSettled = true;
+    if (startupTimeout) {
+      clearTimeout(startupTimeout);
+      startupTimeout = null;
+    }
+    pendingStartupMessages.length = 0;
     rejectStartup?.(error);
     resolveStartup = null;
     rejectStartup = null;
@@ -242,6 +265,27 @@ export async function createTmuxTerminalSession(
       ...env,
       TERM: "xterm-256color",
     },
+  });
+
+  const ptyEmitter = ptyProcess as unknown as {
+    on(event: "error", listener: (error: NodeJS.ErrnoException) => void): void;
+  };
+
+  ptyEmitter.on("error", (error) => {
+    const code = error?.code;
+    if (code === "ENXIO" || code === "EIO" || code === "EBADF") {
+      return;
+    }
+    if (killed || disposed) {
+      return;
+    }
+
+    if (!startupSettled) {
+      markStartupFailed(error instanceof Error ? error : new Error(String(error)));
+    }
+    killed = true;
+    emitExit();
+    disposeResources();
   });
 
   function emitExit(): void {
@@ -351,6 +395,18 @@ export async function createTmuxTerminalSession(
   });
 
   function getState(): TerminalState {
+    if (disposed) {
+      return {
+        rows,
+        cols,
+        grid: createEmptyGrid(rows, cols),
+        scrollback: [],
+        cursor: {
+          row: 0,
+          col: 0,
+        },
+      };
+    }
     return {
       rows: terminal.rows,
       cols: terminal.cols,
@@ -368,16 +424,28 @@ export async function createTmuxTerminalSession(
       return;
     }
 
-    switch (msg.type) {
-      case "input":
-        ptyProcess.write(msg.data);
-        break;
-      case "resize":
-        terminal.resize(msg.cols, msg.rows);
-        ptyProcess.resize(msg.cols, msg.rows);
-        break;
-      case "mouse":
-        break;
+    if (!startupSettled) {
+      pendingStartupMessages.push(msg);
+      return;
+    }
+
+    try {
+      switch (msg.type) {
+        case "input":
+          ptyProcess.write(msg.data);
+          break;
+        case "resize":
+          terminal.resize(msg.cols, msg.rows);
+          ptyProcess.resize(msg.cols, msg.rows);
+          break;
+        case "mouse":
+          break;
+      }
+    } catch {
+      killed = true;
+      pendingStartupMessages.length = 0;
+      emitExit();
+      disposeResources();
     }
   }
 
@@ -492,9 +560,9 @@ export async function createTmuxTerminalSession(
     disposeResources();
   }
 
-  setTimeout(() => {
+  startupTimeout = setTimeout(() => {
     markStartupReady();
-  }, 300);
+  }, 1000);
 
   await startupReady;
 

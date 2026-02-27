@@ -45,7 +45,7 @@ async function cleanup(): Promise<void> {
 }
 
 async function runProviderCase(input: {
-  provider: 'claude' | 'codex' | 'opencode'
+  provider: 'claude' | 'opencode'
   mode: string
   model: string
 }): Promise<void> {
@@ -85,11 +85,6 @@ async function test_all_providers_return_structured_output(): Promise<void> {
     provider: 'claude',
     mode: 'bypassPermissions',
     model: 'haiku',
-  })
-  await runProviderCase({
-    provider: 'codex',
-    mode: 'full-access',
-    model: 'gpt-5.3-codex',
   })
   await runProviderCase({
     provider: 'opencode',

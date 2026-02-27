@@ -18,12 +18,6 @@ const PROVIDERS: ProviderListItem[] = [
     modes: 'plan, default, bypass',
   },
   {
-    provider: 'codex',
-    status: 'available',
-    defaultMode: 'auto',
-    modes: 'read-only, auto, full-access',
-  },
-  {
     provider: 'opencode',
     status: 'available',
     defaultMode: 'default',

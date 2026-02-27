@@ -210,7 +210,7 @@ describe("AgentStorage", () => {
     await storage.applySnapshot(
       createManagedAgent({
         id: "agent-2",
-        provider: "codex",
+        provider: "claude",
         cwd: "/tmp/second",
       })
     );
@@ -337,7 +337,7 @@ describe("AgentStorage", () => {
         createManagedAgent({
           id: agentId,
           cwd: "/tmp/project-a",
-          provider: "codex",
+          provider: "claude",
         })
       );
       const record = await storage.get(agentId);

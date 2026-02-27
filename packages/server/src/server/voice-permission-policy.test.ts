@@ -6,7 +6,7 @@ import { isVoicePermissionAllowed } from "./voice-permission-policy.js";
 function buildRequest(partial: Partial<AgentPermissionRequest>): AgentPermissionRequest {
   return {
     id: "req-1",
-    provider: "codex",
+    provider: "claude",
     name: "unknown",
     kind: "tool",
     ...partial,

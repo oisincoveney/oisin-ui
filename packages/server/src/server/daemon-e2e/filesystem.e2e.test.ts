@@ -13,10 +13,6 @@ function tmpCwd(): string {
   return mkdtempSync(path.join(tmpdir(), "daemon-e2e-"));
 }
 
-// Use gpt-5.1-codex-mini with low thinking preset for faster test execution
-const CODEX_TEST_MODEL = "gpt-5.1-codex-mini";
-const CODEX_TEST_THINKING_OPTION_ID = "low";
-
 describe("daemon E2E", () => {
   let ctx: DaemonTestContext;
 
@@ -42,7 +38,7 @@ describe("daemon E2E", () => {
 
         // Create agent in the directory
         const agent = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "File Explorer Test",
         });
@@ -92,7 +88,7 @@ describe("daemon E2E", () => {
 
         // Create agent in the directory
         const agent = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "File Read Test",
         });
@@ -126,7 +122,7 @@ describe("daemon E2E", () => {
 
         // Create agent
         const agent = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "File Explorer Error Test",
         });

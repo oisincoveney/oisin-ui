@@ -17,7 +17,7 @@ const openaiApiKey = process.env.OPENAI_API_KEY ?? null;
 const shouldRun = process.env.PASEO_VOICE_ROUNDTRIP_E2E === "1" && Boolean(openaiApiKey);
 const speechTest = shouldRun ? test : test.skip;
 
-type VoiceRoundtripProvider = "claude" | "codex" | "opencode";
+type VoiceRoundtripProvider = "claude" | "opencode";
 
 function getVoiceRoundtripConfig(provider: VoiceRoundtripProvider): {
   provider: VoiceRoundtripProvider;
@@ -31,13 +31,6 @@ function getVoiceRoundtripConfig(provider: VoiceRoundtripProvider): {
         provider: "claude",
         model: "haiku",
         modeId: "bypassPermissions",
-      };
-    case "codex":
-      return {
-        provider: "codex",
-        model: "gpt-5.1-codex-mini",
-        modeId: "full-access",
-        thinkingOptionId: "low",
       };
     case "opencode":
       return {
@@ -128,7 +121,7 @@ describe("voice roundtrip e2e", () => {
     await ctx.cleanup();
   }, 60000);
 
-  for (const targetProvider of ["claude", "codex", "opencode"] as const satisfies VoiceRoundtripProvider[]) {
+  for (const targetProvider of ["claude", "opencode"] as const satisfies VoiceRoundtripProvider[]) {
     speechTest(
       `full roundtrip (${targetProvider}): voice input audio -> voice agent -> output audio -> transcribed output`,
       async () => {

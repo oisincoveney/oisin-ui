@@ -122,7 +122,7 @@ try {
   {
     console.log('Test 6: run --provider flag is accepted')
     const result =
-      await $`PASEO_HOST=localhost:${port} PASEO_HOME=${paseoHome} npx paseo run --provider codex "test prompt"`.nothrow()
+      await $`PASEO_HOST=localhost:${port} PASEO_HOME=${paseoHome} npx paseo run --provider opencode "test prompt"`.nothrow()
     const output = result.stdout + result.stderr
     assert(!output.includes('unknown option'), 'should accept --provider flag')
     assert(!output.includes('error: option'), 'should not have option parsing error')

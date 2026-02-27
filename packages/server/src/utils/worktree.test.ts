@@ -66,7 +66,7 @@ describe("createWorktree", () => {
     const metadata = JSON.parse(
       readFileSync(metadataPath, "utf8")
     );
-    expect(metadata).toMatchObject({ version: 1, baseRefName: "main" });
+    expect(metadata).toMatchObject({ version: 2, baseRefName: "main" });
   });
 
   it.skip("detects paseo-owned worktrees across realpath differences (macOS /var vs /private/var)", async () => {
@@ -153,7 +153,7 @@ describe("createWorktree", () => {
     const metadata = JSON.parse(
       readFileSync(metadataPath, "utf8")
     );
-    expect(metadata).toMatchObject({ version: 1, baseRefName: "main" });
+    expect(metadata).toMatchObject({ version: 2, baseRefName: "main" });
   });
 
   it("fails with invalid branch name", async () => {

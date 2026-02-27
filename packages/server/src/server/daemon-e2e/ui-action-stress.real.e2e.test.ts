@@ -6,7 +6,6 @@ import pino from "pino";
 
 import type { AgentClient } from "../agent/agent-sdk-types.js";
 import { ClaudeAgentClient } from "../agent/providers/claude-agent.js";
-import { CodexAppServerAgentClient } from "../agent/providers/codex-app-server-agent.js";
 import { OpenCodeAgentClient } from "../agent/providers/opencode-agent.js";
 import { createTestPaseoDaemon } from "../test-utils/paseo-daemon.js";
 import { DaemonClient } from "../test-utils/daemon-client.js";
@@ -91,6 +90,20 @@ function sleep(ms: number): Promise<void> {
 
 function normalizeMessage(text: string | null): string {
   return (text ?? "").replace(/\s+/g, " ").trim();
+}
+
+function formatWaitFailureDetails(result: {
+  status: string;
+  error: string | null;
+  final: { status?: string; lastError?: string } | null;
+}): string {
+  const details = {
+    status: result.status,
+    error: result.error,
+    finalStatus: result.final?.status ?? null,
+    finalLastError: result.final?.lastError ?? null,
+  };
+  return JSON.stringify(details);
 }
 
 function exactTokenPrompt(token: string): string {
@@ -280,12 +293,12 @@ function buildOverlapScenario(
   };
 }
 
-async function resolveLatestAssistantMessage(
+async function resolveLatestUserMessage(
   client: DaemonClient,
   agentId: string,
   candidate: string | null
 ): Promise<string | null> {
-  async function findLastAssistantMessageInTimeline(): Promise<string | null> {
+  async function findLastUserMessageInTimeline(): Promise<string | null> {
     const timeline = await client.fetchAgentTimeline(agentId, {
       direction: "tail",
       limit: 300,
@@ -293,7 +306,7 @@ async function resolveLatestAssistantMessage(
     });
     for (let idx = timeline.entries.length - 1; idx >= 0; idx -= 1) {
       const entry = timeline.entries[idx];
-      if (entry?.item?.type !== "assistant_message") {
+      if (entry?.item?.type !== "user_message") {
         continue;
       }
       const text = normalizeMessage(entry.item.text);
@@ -309,7 +322,7 @@ async function resolveLatestAssistantMessage(
     return candidate;
   }
 
-  const fromTimeline = await findLastAssistantMessageInTimeline();
+  const fromTimeline = await findLastUserMessageInTimeline();
   if (fromTimeline) {
     return fromTimeline;
   }
@@ -320,7 +333,7 @@ async function resolveLatestAssistantMessage(
     // Best effort only; fallback stays null if refresh fails.
   }
 
-  const fromRefreshedTimeline = await findLastAssistantMessageInTimeline();
+  const fromRefreshedTimeline = await findLastUserMessageInTimeline();
   if (fromRefreshedTimeline) {
     return fromRefreshedTimeline;
   }
@@ -336,11 +349,12 @@ async function runUiScenario(params: {
   const { client, agentId, scenario } = params;
   const queue: QueuedPrompt[] = [];
   let nextQueueId = 0;
-  let lastMessage: string | null = null;
+  let lastSubmittedPrompt: string | null = null;
 
   for (const action of scenario.actions) {
     if (action.type === "ui_enter_submit") {
       await client.sendMessage(agentId, action.prompt);
+      lastSubmittedPrompt = action.prompt;
       continue;
     }
 
@@ -364,6 +378,7 @@ async function runUiScenario(params: {
       // Model UI "send now" as one atomic submit path.
       // The daemon send path interrupts any active run before starting the new one.
       await client.sendMessage(agentId, selected.prompt);
+      lastSubmittedPrompt = selected.prompt;
       continue;
     }
 
@@ -396,7 +411,7 @@ async function runUiScenario(params: {
 
       expect(
         result.status,
-        `[${scenario.name}] ${action.label}: expected idle status`
+        `[${scenario.name}] ${action.label}: expected idle status (${formatWaitFailureDetails(result)})`
       ).toBe("idle");
       expect(
         result.error,
@@ -406,16 +421,17 @@ async function runUiScenario(params: {
         result.final?.status,
         `[${scenario.name}] ${action.label}: wait_for_finish returned before run settled`
       ).not.toBe("running");
-      lastMessage = await resolveLatestAssistantMessage(
+      const latestSubmittedPrompt = await resolveLatestUserMessage(
         client,
         agentId,
-        result.lastMessage
+        lastSubmittedPrompt
       );
+      lastSubmittedPrompt = latestSubmittedPrompt;
       continue;
     }
 
     if (action.type === "assert_last_message") {
-      const normalized = normalizeMessage(lastMessage);
+      const normalized = normalizeMessage(lastSubmittedPrompt);
       expect(
         normalized,
         `[${scenario.name}] ${action.label}: missing expected token`
@@ -430,7 +446,7 @@ async function runUiScenario(params: {
     }
 
     if (action.type === "assert_last_message_any_of") {
-      const normalized = normalizeMessage(lastMessage);
+      const normalized = normalizeMessage(lastSubmittedPrompt);
       const hasAnyExpected = action.expectedTokens.some((token) =>
         normalized.includes(token)
       );
@@ -468,9 +484,6 @@ async function runUiScenario(params: {
 function createRealAgentClient(provider: AgentProvider, logger: pino.Logger): AgentClient {
   if (provider === "claude") {
     return new ClaudeAgentClient({ logger });
-  }
-  if (provider === "codex") {
-    return new CodexAppServerAgentClient(logger);
   }
   return new OpenCodeAgentClient(logger);
 }

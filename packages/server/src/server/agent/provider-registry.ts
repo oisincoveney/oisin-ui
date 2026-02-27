@@ -8,7 +8,6 @@ import type { AgentProviderRuntimeSettingsMap } from "./provider-launch-config.j
 import type { Logger } from "pino";
 
 import { ClaudeAgentClient } from "./providers/claude-agent.js";
-import { CodexAppServerAgentClient } from "./providers/codex-app-server-agent.js";
 import { OpenCodeAgentClient, OpenCodeServerManager } from "./providers/opencode-agent.js";
 
 import {
@@ -44,10 +43,6 @@ export function buildProviderRegistry(
     logger,
     runtimeSettings: runtimeSettings?.claude,
   });
-  const codexClient = new CodexAppServerAgentClient(
-    logger,
-    runtimeSettings?.codex
-  );
   const opencodeClient = new OpenCodeAgentClient(
     logger,
     runtimeSettings?.opencode
@@ -59,12 +54,6 @@ export function buildProviderRegistry(
       createClient: (logger: Logger) =>
         new ClaudeAgentClient({ logger, runtimeSettings: runtimeSettings?.claude }),
       fetchModels: (options) => claudeClient.listModels(options),
-    },
-    codex: {
-      ...AGENT_PROVIDER_DEFINITIONS.find((d) => d.id === "codex")!,
-      createClient: (logger: Logger) =>
-        new CodexAppServerAgentClient(logger, runtimeSettings?.codex),
-      fetchModels: (options) => codexClient.listModels(options),
     },
     opencode: {
       ...AGENT_PROVIDER_DEFINITIONS.find((d) => d.id === "opencode")!,
@@ -85,7 +74,6 @@ export function createAllClients(
   const registry = buildProviderRegistry(logger, options);
   return {
     claude: registry.claude.createClient(logger),
-    codex: registry.codex.createClient(logger),
     opencode: registry.opencode.createClient(logger),
   };
 }

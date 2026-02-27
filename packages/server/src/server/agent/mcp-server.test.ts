@@ -107,7 +107,7 @@ describe("create_agent MCP tool", () => {
     const tool = (server as any)._registeredTools["create_agent"];
 
     await expect(
-      tool.callback({
+      tool.handler({
         cwd: "/path/that/does/not/exist",
         title: "Short title",
         initialPrompt: "Do work",
@@ -128,7 +128,7 @@ describe("create_agent MCP tool", () => {
 
     const server = await createAgentMcpServer({ agentManager, agentStorage, logger });
     const tool = (server as any)._registeredTools["create_agent"];
-    await tool.callback({
+    await tool.handler({
       cwd: existingCwd,
       title: "  Fix auth bug  ",
       initialPrompt: "Do work",
@@ -157,7 +157,7 @@ describe("create_agent MCP tool", () => {
 
     const server = await createAgentMcpServer({ agentManager, agentStorage, logger });
     const tool = (server as any)._registeredTools["create_agent"];
-    await tool.callback({
+    await tool.handler({
       cwd: existingCwd,
       title: "  Fix auth  ",
       initialPrompt: "Do work",
@@ -180,8 +180,8 @@ describe("create_agent MCP tool", () => {
     spies.agentManager.getAgent.mockReturnValue({
       id: "voice-agent",
       cwd: baseDir,
-      provider: "codex",
-      currentModeId: "full-access",
+      provider: "claude",
+      currentModeId: "bypassPermissions",
     } as ManagedAgent);
     spies.agentManager.createAgent.mockResolvedValue({
       id: "child-agent",
@@ -204,10 +204,10 @@ describe("create_agent MCP tool", () => {
     });
 
     const tool = (server as any)._registeredTools["create_agent"];
-    await tool.callback({
+    await tool.handler({
       cwd: "subdir",
       title: "Child",
-      agentType: "codex",
+      agentType: "claude",
       initialPrompt: "Do work",
     });
 
@@ -239,7 +239,7 @@ describe("speak MCP tool", () => {
     const tool = (server as any)._registeredTools["speak"];
     expect(tool).toBeDefined();
 
-    await tool.callback({ text: "Hello from voice agent." });
+    await tool.handler({ text: "Hello from voice agent." });
     expect(speak).toHaveBeenCalledWith(
       expect.objectContaining({
         text: "Hello from voice agent.",
@@ -259,7 +259,7 @@ describe("speak MCP tool", () => {
       logger,
     });
     const tool = (server as any)._registeredTools["speak"];
-    await expect(tool.callback({ text: "Hello." })).rejects.toThrow(
+    await expect(tool.handler({ text: "Hello." })).rejects.toThrow(
       "No speak handler registered for caller agent"
     );
   });

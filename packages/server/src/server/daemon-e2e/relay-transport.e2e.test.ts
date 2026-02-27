@@ -6,13 +6,25 @@ import net from "node:net";
 import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import { Buffer } from "node:buffer";
+import { existsSync } from "node:fs";
 
 import { createTestPaseoDaemon } from "../test-utils/paseo-daemon.js";
 import { createClientChannel, type Transport } from "@getpaseo/relay/e2ee";
 import { buildRelayWebSocketUrl } from "../../shared/daemon-endpoints.js";
 
 const nodeMajor = Number((process.versions.node ?? "0").split(".")[0] ?? "0");
-const shouldRunRelayE2e = process.env.FORCE_RELAY_E2E === "1" || nodeMajor < 25;
+const relayDir = path.resolve(process.cwd(), "../relay");
+const shouldRunRelayE2e =
+  (process.env.FORCE_RELAY_E2E === "1" || nodeMajor < 25) && existsSync(relayDir);
+
+function resolveNpxExecutable(): string {
+  const nodeBinDir = path.dirname(process.execPath);
+  const candidate = path.join(nodeBinDir, process.platform === "win32" ? "npx.cmd" : "npx");
+  if (existsSync(candidate)) {
+    return candidate;
+  }
+  return "npx";
+}
 
 function createCapturingLogger() {
   const lines: string[] = [];
@@ -132,9 +144,8 @@ async function waitForRelayWebSocketReady(port: number, timeout = 60000): Promis
 
   const startRelay = async () => {
     relayPort = await getAvailablePort();
-    const relayDir = path.resolve(process.cwd(), "../relay");
     relayProcess = spawn(
-      "npx",
+      resolveNpxExecutable(),
       [
         "wrangler",
         "dev",

@@ -95,8 +95,9 @@ export function toAgentPayload(
     payload.lastUsage = usage;
   }
 
-  if (agent.lastError !== undefined) {
-    payload.lastError = agent.lastError;
+  const lastError = sanitizeLastError(agent.lastError);
+  if (lastError !== undefined) {
+    payload.lastError = lastError;
   }
 
   // Handle attention state
@@ -179,6 +180,23 @@ function cloneCapabilities(
 
 function cloneAvailableModes(modes: AgentMode[]): AgentMode[] {
   return modes.map((mode) => ({ ...mode }));
+}
+
+function sanitizeLastError(value: unknown): string | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value instanceof Error) {
+    return value.message;
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
 }
 
 function sanitizeOptionalJson(value: unknown): JsonValue | undefined {

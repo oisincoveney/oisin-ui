@@ -28,7 +28,7 @@ describe('shared messages stream parsing', () => {
         hasNewer: false,
         entries: [
           {
-            provider: 'codex',
+            provider: 'claude',
             item: { type: 'assistant_message', text: 'hello' },
             timestamp: '2026-02-08T20:10:00.000Z',
             seqStart: 1,

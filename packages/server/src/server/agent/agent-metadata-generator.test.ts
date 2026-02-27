@@ -11,10 +11,10 @@ import { createAllClients, shutdownProviders } from "./provider-registry.js";
 import { generateAndApplyAgentMetadata } from "./agent-metadata-generator.js";
 import { createWorktree, validateBranchSlug } from "../../utils/worktree.js";
 
-const CODEX_TEST_MODEL = "gpt-5.1-codex-mini";
-const CODEX_TEST_THINKING_OPTION_ID = "low";
+const CLAUDE_TEST_MODEL = "haiku";
+const CLAUDE_TEST_THINKING_OPTION_ID = "on";
 
-const shouldRun = !process.env.CI && !!process.env.OPENAI_API_KEY;
+const shouldRun = !process.env.CI && (!!process.env.CLAUDE_CODE_OAUTH_TOKEN || !!process.env.ANTHROPIC_API_KEY);
 
 function tmpCwd(prefix: string): string {
   return realpathSync(mkdtempSync(path.join(tmpdir(), prefix)));
@@ -45,7 +45,7 @@ function initGitRepo(repoDir: string): void {
   let storagePath: string;
   let manager: AgentManager;
   let storage: AgentStorage;
-  let codexSessionDir: string;
+  let agentSessionDir: string;
   let previousCodexSessionDir: string | undefined;
 
   beforeEach(() => {
@@ -59,9 +59,9 @@ function initGitRepo(repoDir: string): void {
       registry: storage,
       logger,
     });
-    codexSessionDir = tmpCwd("codex-sessions-");
+    agentSessionDir = tmpCwd("agent-sessions-");
     previousCodexSessionDir = process.env.CODEX_SESSION_DIR;
-    process.env.CODEX_SESSION_DIR = codexSessionDir;
+    process.env.CODEX_SESSION_DIR = agentSessionDir;
   });
 
   afterEach(async () => {
@@ -69,17 +69,17 @@ function initGitRepo(repoDir: string): void {
     await shutdownProviders(logger);
     rmSync(repoDir, { recursive: true, force: true });
     rmSync(paseoHome, { recursive: true, force: true });
-    rmSync(codexSessionDir, { recursive: true, force: true });
+    rmSync(agentSessionDir, { recursive: true, force: true });
   }, 60000);
 
   test(
-    "generates a title using a real Codex agent",
+    "generates a title using a real Claude agent",
     async () => {
       const agent = await manager.createAgent({
-        provider: "codex",
-        model: CODEX_TEST_MODEL,
-        thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
-        modeId: "auto",
+        provider: "claude",
+        model: CLAUDE_TEST_MODEL,
+        thinkingOptionId: CLAUDE_TEST_THINKING_OPTION_ID,
+        modeId: "plan",
         cwd: repoDir,
         title: "Main Agent",
       }, "4e0a4508-e522-4fe9-8384-cf3bf889f16d");
@@ -104,7 +104,7 @@ function initGitRepo(repoDir: string): void {
   );
 
   test(
-    "renames the worktree branch using a real Codex agent",
+    "renames the worktree branch using a real Claude agent",
     async () => {
       const worktreeSlug = "metadata-worktree";
       const worktree = await createWorktree({
@@ -116,10 +116,10 @@ function initGitRepo(repoDir: string): void {
       });
 
       const agent = await manager.createAgent({
-        provider: "codex",
-        model: CODEX_TEST_MODEL,
-        thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
-        modeId: "auto",
+        provider: "claude",
+        model: CLAUDE_TEST_MODEL,
+        thinkingOptionId: CLAUDE_TEST_THINKING_OPTION_ID,
+        modeId: "plan",
         cwd: worktree.worktreePath,
         title: "Worktree Agent",
       }, "32bb765d-f637-44a2-9820-f2efd5261418");

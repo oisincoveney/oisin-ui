@@ -58,7 +58,7 @@ const agentSchema: OutputSchema<Agent> = {
 // Test data
 const testAgents: Agent[] = [
   { id: 'abc123', title: 'Feature Implementation', status: 'running', provider: 'claude' },
-  { id: 'def456', title: 'Bug Fix', status: 'idle', provider: 'codex' },
+  { id: 'def456', title: 'Bug Fix', status: 'idle', provider: 'opencode' },
   { id: 'ghi789', title: 'Failed Task', status: 'error', provider: 'claude' },
 ]
 

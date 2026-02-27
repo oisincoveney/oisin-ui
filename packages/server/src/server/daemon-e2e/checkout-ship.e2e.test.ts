@@ -10,9 +10,6 @@ import {
 } from "../test-utils/index.js";
 import { createWorktree } from "../../utils/worktree.js";
 
-const CODEX_TEST_MODEL = "gpt-5.1-codex-mini";
-const CODEX_TEST_THINKING_OPTION_ID = "low";
-
 function tmpCwd(prefix: string): string {
   return realpathSync(mkdtempSync(path.join(tmpdir(), prefix)));
 }
@@ -123,9 +120,7 @@ describe("daemon checkout ship loop", () => {
         });
 
         const agent = await ctx.client.createAgent({
-          provider: "codex",
-          model: CODEX_TEST_MODEL,
-          thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd: worktree.worktreePath,
           title: "Checkout Ship Loop",
         });
@@ -134,7 +129,11 @@ describe("daemon checkout ship loop", () => {
         const status = await ctx.client.getCheckoutStatus(worktree.worktreePath);
         expect(status.isGit).toBe(true);
         expect(status.isPaseoOwnedWorktree).toBe(true);
-        expect(realpathSync(status.repoRoot)).toBe(realpathSync(worktree.worktreePath));
+        const repoRoot = status.repoRoot;
+        if (!repoRoot) {
+          throw new Error("Expected repoRoot for paseo-owned worktree");
+        }
+        expect(realpathSync(repoRoot)).toBe(realpathSync(worktree.worktreePath));
         if (status.isGit) {
           expect(status.baseRef).toBe("main");
         }
@@ -244,7 +243,7 @@ describe("daemon checkout ship loop", () => {
         expect(existsSync(worktree.worktreePath)).toBe(false);
 
         const remainingAgents = await ctx.client.fetchAgents();
-        expect(remainingAgents.some((entry) => entry.id === agent.id)).toBe(false);
+        expect(remainingAgents.entries.some((entry) => entry.agent.id === agent.id)).toBe(false);
       } finally {
         if (agentId) {
           await ctx.client.deleteAgent(agentId).catch(() => undefined);
@@ -279,9 +278,7 @@ describe("daemon checkout ship loop", () => {
 				});
 
 				const agent = await ctx.client.createAgent({
-					provider: "codex",
-					model: CODEX_TEST_MODEL,
-					thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+					provider: "claude",
 					cwd: worktree.worktreePath,
 					title: "Merge From Base Test",
 				});
@@ -349,9 +346,7 @@ describe("daemon checkout ship loop", () => {
 
       try {
         const agent = await ctx.client.createAgent({
-          provider: "codex",
-          model: CODEX_TEST_MODEL,
-          thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "Checkout Non-Git",
         });

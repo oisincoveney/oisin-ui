@@ -299,6 +299,24 @@ export async function createTerminal(options: CreateTerminalOptions): Promise<Te
     },
   });
 
+  const ptyEmitter = ptyProcess as unknown as {
+    on(event: "error", listener: (error: NodeJS.ErrnoException) => void): void;
+  };
+
+  ptyEmitter.on("error", (error) => {
+    const code = error?.code;
+    if (code === "ENXIO" || code === "EIO" || code === "EBADF") {
+      return;
+    }
+    if (killed || disposed) {
+      return;
+    }
+
+    killed = true;
+    emitExit();
+    disposeResources();
+  });
+
   function emitExit(): void {
     if (exitEmitted) {
       return;
@@ -416,18 +434,24 @@ export async function createTerminal(options: CreateTerminalOptions): Promise<Te
   function send(msg: ClientMessage): void {
     if (killed) return;
 
-    switch (msg.type) {
-      case "input":
-        ptyProcess.write(msg.data);
-        break;
-      case "resize":
-        terminal.resize(msg.cols, msg.rows);
-        ptyProcess.resize(msg.cols, msg.rows);
-        break;
-      case "mouse":
-        // Mouse events can be sent as escape sequences if terminal supports it
-        // For now, we'll just ignore them - can be implemented later
-        break;
+    try {
+      switch (msg.type) {
+        case "input":
+          ptyProcess.write(msg.data);
+          break;
+        case "resize":
+          terminal.resize(msg.cols, msg.rows);
+          ptyProcess.resize(msg.cols, msg.rows);
+          break;
+        case "mouse":
+          // Mouse events can be sent as escape sequences if terminal supports it
+          // For now, we'll just ignore them - can be implemented later
+          break;
+      }
+    } catch {
+      killed = true;
+      emitExit();
+      disposeResources();
     }
   }
 

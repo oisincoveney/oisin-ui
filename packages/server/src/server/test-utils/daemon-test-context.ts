@@ -25,7 +25,7 @@ export interface DaemonTestContext {
  *
  * test("creates agent", async () => {
  *   const agent = await ctx.client.createAgent({
- *     provider: "codex",
+ *     provider: "claude",
  *     cwd: "/tmp",
  *   });
  *   expect(agent.id).toBeTruthy();
@@ -41,6 +41,7 @@ export async function createDaemonTestContext(
   });
   const client = new DaemonClient({
     url: `ws://127.0.0.1:${daemon.port}/ws`,
+    reconnect: { enabled: false },
   });
   await client.connect();
   await client.waitForPostConnectReady();

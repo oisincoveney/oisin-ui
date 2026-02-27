@@ -28,7 +28,7 @@ describe("PersistedConfigSchema agent provider runtime settings", () => {
     const parsed = PersistedConfigSchema.parse({
       agents: {
         providers: {
-          codex: {
+          claude: {
             command: {
               mode: "replace",
               argv: ["docker", "run", "--rm", "my-codex-wrapper"],
@@ -38,7 +38,7 @@ describe("PersistedConfigSchema agent provider runtime settings", () => {
       },
     });
 
-    expect(parsed.agents?.providers?.codex?.command?.mode).toBe("replace");
+    expect(parsed.agents?.providers?.claude?.command?.mode).toBe("replace");
   });
 
   test("rejects replace command without argv", () => {

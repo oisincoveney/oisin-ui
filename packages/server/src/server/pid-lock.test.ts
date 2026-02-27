@@ -42,7 +42,9 @@ describe("acquirePidLock", () => {
     });
 
     const lock = readLock(home);
-    expect(lock.pid).toBe(process.pid);
+    // In vitest fork mode, process.send exists so the lock owner resolves to process.ppid
+    const expectedPid = typeof process.send === "function" ? process.ppid : process.pid;
+    expect(lock.pid).toBe(expectedPid);
     expect(lock.sockPath).toBe("0.0.0.0:6767");
   });
 
@@ -70,7 +72,8 @@ describe("acquirePidLock", () => {
     });
 
     const lock = readLock(home);
-    expect(lock.pid).toBe(process.pid);
+    const expectedPid = typeof process.send === "function" ? process.ppid : process.pid;
+    expect(lock.pid).toBe(expectedPid);
     expect(lock.startedAt).not.toBe("2026-02-25T01:00:00.000Z");
   });
 

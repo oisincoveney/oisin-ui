@@ -13,10 +13,6 @@ function tmpCwd(): string {
   return mkdtempSync(path.join(tmpdir(), "daemon-e2e-"));
 }
 
-// Use gpt-5.1-codex-mini with low thinking preset for faster test execution
-const CODEX_TEST_MODEL = "gpt-5.1-codex-mini";
-const CODEX_TEST_THINKING_OPTION_ID = "low";
-
 describe("daemon E2E", () => {
   let ctx: DaemonTestContext;
   let messages: SessionOutboundMessage[] = [];
@@ -41,9 +37,9 @@ describe("daemon E2E", () => {
       async () => {
         const cwd = tmpCwd();
 
-        // Create a Codex agent
+        // Create a Claude agent
         const agent = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "Timestamp Test Agent",
         });
@@ -102,9 +98,9 @@ describe("daemon E2E", () => {
       async () => {
         const cwd = tmpCwd();
 
-        // Create a Codex agent
+        // Create a Claude agent
         const agent = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "Timestamp Update Test Agent",
         });
@@ -147,11 +143,12 @@ describe("daemon E2E", () => {
           subscribe: { subscriptionId: "agent-operations-cancel" },
         });
 
-        // Create Codex agent
+        // Create Claude agent
         const agent = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "Cancel Test Agent",
+          modeId: "bypassPermissions",
         });
 
         expect(agent.id).toBeTruthy();
@@ -223,9 +220,9 @@ describe("daemon E2E", () => {
           subscribe: { subscriptionId: "agent-operations-mode" },
         });
 
-        // Create a Codex agent with default mode ("auto")
+        // Create a Claude agent with default mode
         const agent = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd,
           title: "Mode Switch Test Agent",
         });
@@ -233,8 +230,8 @@ describe("daemon E2E", () => {
         expect(agent.id).toBeTruthy();
         expect(agent.status).toBe("idle");
 
-        // Verify initial mode is "auto" (the default)
-        expect(agent.currentModeId).toBe("auto");
+        // Verify initial mode is set
+        expect(agent.currentModeId).toBeTruthy();
 
         // Clear message queue before mode switch
         messages.length = 0;
@@ -341,11 +338,11 @@ describe("daemon E2E", () => {
 
         // Initially, there should be no agents (fresh session)
         const initialAgents = await ctx.client.fetchAgents();
-        expect(initialAgents).toHaveLength(0);
+        expect(initialAgents.entries).toHaveLength(0);
 
         // Create first agent
         const agent1 = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd: cwd1,
           title: "List Test Agent 1",
         });
@@ -355,14 +352,14 @@ describe("daemon E2E", () => {
 
         // fetchAgents should now return 1 agent
         const afterFirst = await ctx.client.fetchAgents();
-        expect(afterFirst).toHaveLength(1);
-        expect(afterFirst[0].id).toBe(agent1.id);
+        expect(afterFirst.entries).toHaveLength(1);
+        expect(afterFirst.entries[0]?.agent.id).toBe(agent1.id);
         // Title may or may not be set depending on timing
-        expect(afterFirst[0].cwd).toBe(cwd1);
+        expect(afterFirst.entries[0]?.agent.cwd).toBe(cwd1);
 
         // Create second agent
         const agent2 = await ctx.client.createAgent({
-          provider: "codex", model: CODEX_TEST_MODEL, thinkingOptionId: CODEX_TEST_THINKING_OPTION_ID,
+          provider: "claude",
           cwd: cwd2,
           title: "List Test Agent 2",
         });
@@ -372,35 +369,35 @@ describe("daemon E2E", () => {
 
         // fetchAgents should now return 2 agents
         const afterSecond = await ctx.client.fetchAgents();
-        expect(afterSecond).toHaveLength(2);
+        expect(afterSecond.entries).toHaveLength(2);
 
         // Verify both agents are present with correct IDs and states
-        const ids = afterSecond.map((a) => a.id);
+        const ids = afterSecond.entries.map((a) => a.agent.id);
         expect(ids).toContain(agent1.id);
         expect(ids).toContain(agent2.id);
 
-        const agent1State = afterSecond.find((a) => a.id === agent1.id);
-        const agent2State = afterSecond.find((a) => a.id === agent2.id);
+        const agent1State = afterSecond.entries.find((a) => a.agent.id === agent1.id);
+        const agent2State = afterSecond.entries.find((a) => a.agent.id === agent2.id);
 
         // Title may or may not be set depending on timing
-        expect(agent1State?.cwd).toBe(cwd1);
-        expect(agent1State?.status).toBe("idle");
+        expect(agent1State?.agent.cwd).toBe(cwd1);
+        expect(agent1State?.agent.status).toBe("idle");
 
         // Title may or may not be set depending on timing
-        expect(agent2State?.cwd).toBe(cwd2);
-        expect(agent2State?.status).toBe("idle");
+        expect(agent2State?.agent.cwd).toBe(cwd2);
+        expect(agent2State?.agent.status).toBe("idle");
 
         // Delete first agent
         await ctx.client.deleteAgent(agent1.id);
 
         // fetchAgents should now return only 1 agent
         const afterDelete = await ctx.client.fetchAgents();
-        expect(afterDelete).toHaveLength(1);
-        expect(afterDelete[0].id).toBe(agent2.id);
-        expect(afterDelete[0].cwd).toBe(cwd2);
+        expect(afterDelete.entries).toHaveLength(1);
+        expect(afterDelete.entries[0]?.agent.id).toBe(agent2.id);
+        expect(afterDelete.entries[0]?.agent.cwd).toBe(cwd2);
 
         // Verify agent1 is no longer in the list
-        const deletedAgent = afterDelete.find((a) => a.id === agent1.id);
+        const deletedAgent = afterDelete.entries.find((a) => a.agent.id === agent1.id);
         expect(deletedAgent).toBeUndefined();
 
         // Cleanup

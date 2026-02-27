@@ -412,7 +412,7 @@ function coerceSessionMetadata(metadata: AgentMetadata | undefined): Partial<Age
   }
 
   const result: Partial<AgentSessionConfig> = {};
-  if (metadata.provider === "claude" || metadata.provider === "codex") {
+  if (metadata.provider === "claude") {
     result.provider = metadata.provider;
   }
   if (typeof metadata.cwd === "string") {
@@ -441,13 +441,10 @@ function coerceSessionMetadata(metadata: AgentMetadata | undefined): Partial<Age
   }
   if (isMetadata(metadata.extra)) {
     const extra: AgentSessionConfig["extra"] = {};
-    if (isMetadata(metadata.extra.codex)) {
-      extra.codex = metadata.extra.codex;
-    }
     if (isClaudeExtra(metadata.extra.claude)) {
       extra.claude = metadata.extra.claude;
     }
-    if (extra.codex || extra.claude) {
+    if (extra.claude) {
       result.extra = extra;
     }
   }

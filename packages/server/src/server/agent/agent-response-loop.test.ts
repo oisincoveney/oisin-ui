@@ -159,7 +159,6 @@ describe("generateStructuredAgentResponseWithFallback", () => {
     const calls: Array<{ provider: string; model?: string }> = [];
     const manager = createManager([
       { provider: "claude", available: true, error: null },
-      { provider: "codex", available: true, error: null },
       { provider: "opencode", available: true, error: null },
     ]);
 
@@ -170,7 +169,7 @@ describe("generateStructuredAgentResponseWithFallback", () => {
       schema,
       providers: [
         { provider: "claude", model: "haiku" },
-        { provider: "codex", model: "gpt-5.1-codex-mini" },
+        { provider: "opencode", model: "opencode/kimi-k2.5-free" },
       ],
       runner: async (options) => {
         calls.push({
@@ -189,7 +188,6 @@ describe("generateStructuredAgentResponseWithFallback", () => {
     const calls: Array<{ provider: string; model?: string }> = [];
     const manager = createManager([
       { provider: "claude", available: false, error: "missing auth" },
-      { provider: "codex", available: true, error: null },
       { provider: "opencode", available: true, error: null },
     ]);
 
@@ -200,7 +198,7 @@ describe("generateStructuredAgentResponseWithFallback", () => {
       schema,
       providers: [
         { provider: "claude", model: "haiku" },
-        { provider: "codex", model: "gpt-5.1-codex-mini" },
+        { provider: "opencode", model: "opencode/kimi-k2.5-free" },
       ],
       runner: async (options) => {
         calls.push({
@@ -212,14 +210,13 @@ describe("generateStructuredAgentResponseWithFallback", () => {
     });
 
     expect(result).toEqual({ summary: "ok" });
-    expect(calls).toEqual([{ provider: "codex", model: "gpt-5.1-codex-mini" }]);
+    expect(calls).toEqual([{ provider: "opencode", model: "opencode/kimi-k2.5-free" }]);
   });
 
   it("falls back when an available provider fails", async () => {
     const calls: Array<{ provider: string; model?: string }> = [];
     const manager = createManager([
       { provider: "claude", available: true, error: null },
-      { provider: "codex", available: true, error: null },
       { provider: "opencode", available: true, error: null },
     ]);
 
@@ -230,7 +227,7 @@ describe("generateStructuredAgentResponseWithFallback", () => {
       schema,
       providers: [
         { provider: "claude", model: "haiku" },
-        { provider: "codex", model: "gpt-5.1-codex-mini" },
+        { provider: "opencode", model: "opencode/kimi-k2.5-free" },
       ],
       runner: async (options) => {
         calls.push({
@@ -247,14 +244,13 @@ describe("generateStructuredAgentResponseWithFallback", () => {
     expect(result).toEqual({ summary: "ok" });
     expect(calls).toEqual([
       { provider: "claude", model: "haiku" },
-      { provider: "codex", model: "gpt-5.1-codex-mini" },
+      { provider: "opencode", model: "opencode/kimi-k2.5-free" },
     ]);
   });
 
   it("throws a fallback error when all providers are unavailable or fail", async () => {
     const manager = createManager([
       { provider: "claude", available: false, error: "missing auth" },
-      { provider: "codex", available: true, error: null },
       { provider: "opencode", available: false, error: "not installed" },
     ]);
 
@@ -266,7 +262,6 @@ describe("generateStructuredAgentResponseWithFallback", () => {
         schema,
         providers: [
           { provider: "claude", model: "haiku" },
-          { provider: "codex", model: "gpt-5.1-codex-mini" },
           { provider: "opencode", model: "opencode/kimi-k2.5-free" },
         ],
         runner: async () => {

@@ -19,7 +19,7 @@ describe("resolveAgentModel", () => {
 
   it("returns the trimmed requested model when provided", async () => {
     const result = await resolveAgentModel({
-      provider: "codex",
+      provider: "claude",
       requestedModel: "  gpt-5.1  ",
       cwd: "/tmp",
       logger: testLogger,
@@ -36,7 +36,6 @@ describe("resolveAgentModel", () => {
     ]);
     mockedBuildProviderRegistry.mockReturnValue({
       claude: { fetchModels },
-      codex: { fetchModels: vi.fn() },
       opencode: { fetchModels: vi.fn() },
     } as any);
 
@@ -55,11 +54,10 @@ describe("resolveAgentModel", () => {
     ]);
     mockedBuildProviderRegistry.mockReturnValue({
       claude: { fetchModels: vi.fn() },
-      codex: { fetchModels },
-      opencode: { fetchModels: vi.fn() },
+      opencode: { fetchModels },
     } as any);
 
-    const result = await resolveAgentModel({ provider: "codex", logger: testLogger });
+    const result = await resolveAgentModel({ provider: "opencode", logger: testLogger });
 
     expect(result).toBe("model-a");
   });
@@ -68,11 +66,10 @@ describe("resolveAgentModel", () => {
     const fetchModels = vi.fn().mockRejectedValue(new Error("boom"));
     mockedBuildProviderRegistry.mockReturnValue({
       claude: { fetchModels: vi.fn() },
-      codex: { fetchModels },
-      opencode: { fetchModels: vi.fn() },
+      opencode: { fetchModels },
     } as any);
 
-    const result = await resolveAgentModel({ provider: "codex", logger: testLogger });
+    const result = await resolveAgentModel({ provider: "opencode", logger: testLogger });
 
     expect(result).toBeUndefined();
     expect(testLogger.warn).toHaveBeenCalled();

@@ -269,12 +269,18 @@ async function ensureThread(title: string): Promise<void> {
 }
 
 async function createThreadViaUi(page: import("@playwright/test").Page, title: string): Promise<void> {
+  const submittedAt = Date.now();
   await page.getByRole("button", { name: "Create new thread" }).click();
   await page.getByLabel("Thread Name").fill(title);
   await page.getByLabel("Base Branch").fill("main");
   await page.getByRole("button", { name: "Create Thread" }).click();
   await expect(page.getByRole("dialog", { name: "Create New Thread" })).toHaveCount(0);
   await expect(page.locator("[data-sidebar='menu-button']", { hasText: title })).toBeVisible();
+  await expect(page.getByText("No active thread")).toHaveCount(0);
+  await expect(page.getByText(/Reattaching terminal \(attempt \d+\)/)).toHaveCount(0);
+
+  const createLatencyMs = Date.now() - submittedAt;
+  expect(createLatencyMs).toBeLessThan(10_000);
 }
 
 let runtime: Runtime;

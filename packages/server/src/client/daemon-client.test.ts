@@ -936,7 +936,7 @@ describe('DaemonClient', () => {
           payload: {
             providers: [
               { provider: 'claude', available: true, error: null },
-              { provider: 'codex', available: false, error: 'Missing binary' },
+              { provider: 'opencode', available: false, error: 'Missing binary' },
             ],
             error: null,
             fetchedAt: '2026-02-12T00:00:00.000Z',
@@ -949,7 +949,7 @@ describe('DaemonClient', () => {
     await expect(promise).resolves.toEqual({
       providers: [
         { provider: 'claude', available: true, error: null },
-        { provider: 'codex', available: false, error: 'Missing binary' },
+        { provider: 'opencode', available: false, error: 'Missing binary' },
       ],
       error: null,
       fetchedAt: '2026-02-12T00:00:00.000Z',
@@ -975,7 +975,7 @@ describe('DaemonClient', () => {
 
     const promise = client.listCommands('__new_agent__', {
       draftConfig: {
-        provider: 'codex',
+        provider: 'claude',
         cwd: '/tmp/project',
         modeId: 'bypassPermissions',
         model: 'gpt-5',
@@ -1002,7 +1002,7 @@ describe('DaemonClient', () => {
     expect(request.message.type).toBe('list_commands_request')
     expect(request.message.agentId).toBe('__new_agent__')
     expect(request.message.draftConfig).toEqual({
-      provider: 'codex',
+      provider: 'claude',
       cwd: '/tmp/project',
       modeId: 'bypassPermissions',
       model: 'gpt-5',
@@ -1371,7 +1371,7 @@ describe('DaemonClient', () => {
           timestamp: '2026-02-08T20:20:00.000Z',
           event: {
             type: 'timeline',
-            provider: 'codex',
+            provider: 'claude',
             item: {
               type: 'tool_call',
               callId: 'call_cli_stream',
@@ -1442,7 +1442,7 @@ describe('DaemonClient', () => {
           timestamp: '2026-02-08T20:20:00.000Z',
           event: {
             type: 'timeline',
-            provider: 'codex',
+            provider: 'claude',
             item: {
               type: 'tool_call',
               callId: 'call_cli_stream_legacy',
@@ -1506,7 +1506,7 @@ describe('DaemonClient', () => {
           entries: [
             {
               timestamp: '2026-02-08T20:20:00.000Z',
-              provider: 'codex',
+              provider: 'claude',
               seqStart: 1,
               seqEnd: 1,
               sourceSeqRanges: [{ startSeq: 1, endSeq: 1 }],
@@ -1598,7 +1598,7 @@ describe('DaemonClient', () => {
           entries: [
             {
               timestamp: '2026-02-08T20:20:00.000Z',
-              provider: 'codex',
+              provider: 'claude',
               seqStart: 1,
               seqEnd: 1,
               sourceSeqRanges: [{ startSeq: 1, endSeq: 1 }],
