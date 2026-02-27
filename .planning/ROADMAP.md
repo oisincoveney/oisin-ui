@@ -12,7 +12,7 @@ v1.1 Hardening closes the remaining reliability and verification gaps from v1 so
 ## Phases
 
 - [x] **Phase 06: Runtime Reliability Hardening** - Restart/reconnect/create/delete flows remain bounded and recoverable. (Completed 2026-02-26)
-- [ ] **Phase 07: Thread Metadata Contract Closure** - Active thread context remains consistent across ensure/reconnect/refresh.
+- [x] **Phase 07: Thread Metadata Contract Closure** - Active thread context remains consistent across ensure/reconnect/refresh. (Completed 2026-02-27)
 - [ ] **Phase 08: Deterministic Verification Closure** - Browser/runtime hardening checks run deterministically in one repeatable path.
 
 ## Phase Details
@@ -48,7 +48,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 07-01-PLAN.md — Add getActiveThread() to registry; emit real projectId/resolvedThreadId in ensure-default response; clean schema placeholder
-- [ ] 07-02-PLAN.md — Unit tests for getActiveThread(); e2e test for ensure-default metadata contract
+- [x] 07-02-PLAN.md — Unit tests for getActiveThread(); e2e test for ensure-default metadata contract
 
 ### Phase 08: Deterministic Verification Closure
 **Goal**: Users and maintainers can verify hardening scope with deterministic browser/runtime checks on demand.
@@ -65,8 +65,8 @@ Plans:
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
 |-------|-----------|--------------|----------------|--------|-----------|
 | 06. Runtime Reliability Hardening | v1.1 | RUN-01, RUN-02, RUN-03, RUN-04 | 8/8 | Complete | 2026-02-26 |
-| 07. Thread Metadata Contract Closure | v1.1 | THRD-01, THRD-02, THRD-03 | 1/2 | In progress | - |
+| 07. Thread Metadata Contract Closure | v1.1 | THRD-01, THRD-02, THRD-03 | 2/2 | Complete | 2026-02-27 |
 | 08. Deterministic Verification Closure | v1.1 | VER-01, VER-02, VER-03 | 0/TBD | Not started | - |
 
 ---
-_Roadmap updated: 2026-02-27 after 07-01 execution._
+_Roadmap updated: 2026-02-27 after 07-02 execution._
