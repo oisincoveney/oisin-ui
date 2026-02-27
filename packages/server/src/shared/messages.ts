@@ -97,7 +97,6 @@ const AgentSessionConfigSchema = z.object({
   webSearch: z.boolean().optional(),
   extra: z
     .object({
-      codex: z.record(z.unknown()).optional(),
       claude: z.record(z.unknown()).optional(),
     })
     .partial()
@@ -2071,9 +2070,9 @@ export const EnsureDefaultTerminalResponseSchema = z.object({
   payload: z.object({
     terminal: TerminalInfoSchema.nullable(),
     threadId: z.literal('active'),
-    threadScope: z.literal('phase2-active-thread-placeholder'),
-    projectId: z.string().nullable().optional(),
-    resolvedThreadId: z.string().nullable().optional(),
+    threadScope: z.string(),
+    projectId: z.string().nullable(),
+    resolvedThreadId: z.string().nullable(),
     sessionKey: z.string().nullable(),
     cwd: z.string().nullable(),
     error: z.string().nullable(),
