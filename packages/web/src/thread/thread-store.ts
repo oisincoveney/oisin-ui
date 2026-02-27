@@ -1336,6 +1336,47 @@ export function noteDaemonServerId(serverId: string): void {
   })
 }
 
+export function noteActiveThreadTerminalId(terminalId: string): void {
+  if (!terminalId) {
+    return
+  }
+
+  updateState((previous) => {
+    if (!previous.activeThreadKey) {
+      return previous
+    }
+
+    const { projectId, threadId } = parseThreadKey(previous.activeThreadKey)
+    const projectThreads = previous.threadsByProjectId[projectId] ?? []
+    let changed = false
+    const nextThreads = projectThreads.map((thread) => {
+      if (thread.threadId !== threadId) {
+        return thread
+      }
+      if (thread.terminalId === terminalId) {
+        return thread
+      }
+      changed = true
+      return {
+        ...thread,
+        terminalId,
+      }
+    })
+
+    if (!changed) {
+      return previous
+    }
+
+    return {
+      ...previous,
+      threadsByProjectId: {
+        ...previous.threadsByProjectId,
+        [projectId]: nextThreads,
+      },
+    }
+  })
+}
+
 export function markRuntimeWarmupAttachSettled(): void {
   updateState((previous) => {
     if (!previous.runtimeRecovery.warmup.active) {
