@@ -335,6 +335,19 @@ export class ThreadRegistry {
     );
   }
 
+  async getActiveThread(): Promise<ThreadRecord | null> {
+    await this.load();
+    const { projectId, threadId } = this.state.active;
+    if (!projectId || !threadId) {
+      return null;
+    }
+    return (
+      this.state.threads.find(
+        (t) => t.projectId === projectId && t.threadId === threadId
+      ) ?? null
+    );
+  }
+
   async findThreadByAgentId(agentId: string): Promise<ThreadRecord | null> {
     await this.load();
     return this.state.threads.find((thread) => thread.links.agentId === agentId) ?? null;
@@ -518,6 +531,48 @@ export class ThreadRegistry {
     this.state.updatedAt = nowIso;
     this.state = normalizeState(this.state);
     await this.flush();
+  }
+
+  async updateThread(input: {
+    projectId: string;
+    threadId: string;
+    status?: ThreadStatus;
+    links?: Partial<ThreadLinks>;
+  }): Promise<ThreadRecord> {
+    await this.load();
+    const nowIso = new Date().toISOString();
+    let updated: ThreadRecord | null = null;
+
+    this.state.threads = this.state.threads.map((thread) => {
+      if (thread.projectId !== input.projectId || thread.threadId !== input.threadId) {
+        return thread;
+      }
+
+      const nextThread: ThreadRecord = {
+        ...thread,
+        status: input.status ?? thread.status,
+        links: input.links
+          ? {
+              ...thread.links,
+              ...input.links,
+            }
+          : thread.links,
+        lastStatusAt: input.status ? nowIso : thread.lastStatusAt,
+        updatedAt: nowIso,
+      };
+
+      updated = nextThread;
+      return nextThread;
+    });
+
+    if (!updated) {
+      throw new Error(`Thread not found: ${input.projectId}/${input.threadId}`);
+    }
+
+    this.state.updatedAt = nowIso;
+    this.state = normalizeState(this.state);
+    await this.flush();
+    return updated;
   }
 
   async flush(): Promise<void> {
