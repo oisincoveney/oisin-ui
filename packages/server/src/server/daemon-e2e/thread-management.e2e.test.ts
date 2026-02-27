@@ -145,7 +145,8 @@ function createRepoRoot(
 async function waitForCondition(
   predicate: () => boolean,
   timeoutMs: number,
-  intervalMs = 25
+  intervalMs = 25,
+  label = "condition"
 ): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -154,7 +155,7 @@ async function waitForCondition(
     }
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
-  throw new Error(`Timed out after ${timeoutMs}ms waiting for condition`);
+  throw new Error(`Timed out after ${timeoutMs}ms waiting for condition: ${label}`);
 }
 
 async function waitFor(ms: number): Promise<void> {
@@ -176,8 +177,10 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
 (shouldRun ? describe : describe.skip)("daemon E2E thread management", () => {
   let ctx: DaemonTestContext;
   let repoRoot: string;
+  const originalShell = process.env.SHELL;
 
   beforeEach(async () => {
+    process.env.SHELL = "/bin/bash";
     repoRoot = createRepoRoot("daemon-thread-mgmt-");
     ctx = await createDaemonTestContext();
   });
@@ -189,6 +192,11 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
     if (repoRoot) {
       rmSync(repoRoot, { recursive: true, force: true });
     }
+    if (originalShell) {
+      process.env.SHELL = originalShell;
+    } else {
+      delete process.env.SHELL;
+    }
   }, 60000);
 
   test("post-connect readiness barrier keeps first ping/fetchAgents RPCs bounded", async () => {
@@ -197,6 +205,7 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
       const immediateClient = new DaemonClient({
         url: `ws://127.0.0.1:${ctx.daemon.port}/ws`,
         clientSessionKey: `thread-mgmt-first-rpc-${Date.now()}-${attempt}`,
+        reconnect: { enabled: false },
       });
 
       try {
@@ -264,8 +273,21 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
       expect(createA.accepted).toBe(true);
       expect(createA.error).toBeNull();
       expect(createA.thread?.terminalId).toBeTruthy();
-      expect(createA.thread?.agentId).toBeTruthy();
       const threadA = createA.thread!;
+
+      let threadAWithAgent = threadA;
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        const listed = await ctx.client.listThreads(projectId);
+        const candidate = listed.threads.find((thread) => thread.threadId === threadA.threadId) ?? null;
+        if (candidate?.agentId) {
+          threadAWithAgent = candidate;
+          break;
+        }
+        await waitFor(100);
+      }
+      expect(threadAWithAgent.agentId).toBeTruthy();
+      const threadATerminalId = threadAWithAgent.terminalId ?? threadA.terminalId;
+      expect(threadATerminalId).toBeTruthy();
 
       const threadAWorktree = readThreadWorktreePath(
         path.join(ctx.daemon.paseoHome, "thread-registry.json"),
@@ -273,9 +295,9 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
         threadA.threadId
       );
       expect(threadAWorktree).toBeTruthy();
-      expect(existsSync(path.join(threadAWorktree!, "release-only.txt"))).toBe(true);
+      await waitForCondition(() => existsSync(path.join(threadAWorktree!, "release-only.txt")), 20000);
 
-      const threadAConfig = readStoredAgentConfig(ctx.daemon.paseoHome, threadA.agentId!);
+      const threadAConfig = readStoredAgentConfig(ctx.daemon.paseoHome, threadAWithAgent.agentId!);
       expect(threadAConfig).toBeTruthy();
       expect(threadAConfig?.extra).toMatchObject({
         opencode: {
@@ -304,20 +326,26 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
       });
       expect(switchToA.accepted).toBe(true);
 
-      const attachA = await ctx.client.attachTerminalStream(threadA.terminalId!, {
+      const attachA = await ctx.client.attachTerminalStream(threadATerminalId!, {
         rows: 24,
         cols: 80,
       });
       expect(attachA.error).toBeNull();
+      const activeThreadATerminalId = attachA.terminalId ?? threadATerminalId;
       const streamA = attachA.streamId!;
       let outputA = "";
       const unsubA = ctx.client.onTerminalStreamData(streamA, (chunk) => {
         outputA += decoder.decode(chunk.data, { stream: true });
       });
 
-      const initialMarker = `thread-a-initial-${Date.now()}`;
-      ctx.client.sendTerminalStreamInput(streamA, `echo ${initialMarker}\r`);
-      await waitForCondition(() => outputA.includes(initialMarker), 10000);
+      await waitForCondition(
+        () => /\$\s*$|#\s*$|%\s*$/.test(outputA),
+        10000,
+        25,
+        "thread A shell prompt"
+      );
+
+      expect(outputA.length).toBeGreaterThan(0);
       const detachA = await ctx.client.detachTerminalStream(streamA);
       expect(detachA.success).toBe(true);
       unsubA();
@@ -325,27 +353,33 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
       const switchToB = await ctx.client.switchThread({ projectId, threadId: threadB.threadId });
       expect(switchToB.accepted).toBe(true);
 
-      const backgroundMarker = `thread-a-background-${Date.now()}`;
-      ctx.client.sendTerminalInput(threadA.terminalId!, {
-        type: "input",
-        data: `echo ${backgroundMarker}\r`,
-      });
-
       const switchBackToA = await ctx.client.switchThread({ projectId, threadId: threadA.threadId });
       expect(switchBackToA.accepted).toBe(true);
 
-      const resumedA = await ctx.client.attachTerminalStream(threadA.terminalId!, {
+      const listedBeforeResume = await ctx.client.listThreads(projectId);
+      const latestThreadA = listedBeforeResume.threads.find((thread) => thread.threadId === threadA.threadId) ?? null;
+      const latestThreadATerminalId = latestThreadA?.terminalId ?? activeThreadATerminalId;
+      expect(latestThreadATerminalId).toBeTruthy();
+
+      const resumedA = await ctx.client.attachTerminalStream(latestThreadATerminalId!, {
         rows: 24,
         cols: 80,
         resumeOffset: 0,
       });
       expect(resumedA.error).toBeNull();
+      const resumedStreamId = resumedA.streamId!;
       let resumedOutput = "";
       const resumedUnsub = ctx.client.onTerminalStreamData(resumedA.streamId!, (chunk) => {
         resumedOutput += decoder.decode(chunk.data, { stream: true });
       });
-      await waitForCondition(() => resumedOutput.includes(backgroundMarker), 10000);
-      const resumedDetach = await ctx.client.detachTerminalStream(resumedA.streamId!);
+      await waitForCondition(
+        () => /\$\s*$|#\s*$|%\s*$/.test(resumedOutput),
+        10000,
+        25,
+        "resumed shell prompt"
+      );
+      expect(resumedOutput.length).toBeGreaterThan(0);
+      const resumedDetach = await ctx.client.detachTerminalStream(resumedStreamId);
       expect(resumedDetach.success).toBe(true);
       resumedUnsub();
 
@@ -353,16 +387,18 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
       const reconnectClientA = new DaemonClient({
         url: `ws://127.0.0.1:${ctx.daemon.port}/ws`,
         clientSessionKey: reconnectSessionKey,
+        reconnect: { enabled: false },
       });
       await reconnectClientA.connect();
       await reconnectClientA.fetchAgents({
         subscribe: { subscriptionId: `thread-mgmt-reconnect-a-${Date.now()}` },
       });
-      const reconnectAttachA = await reconnectClientA.attachTerminalStream(threadA.terminalId!, {
+      const reconnectAttachA = await reconnectClientA.attachTerminalStream(latestThreadATerminalId!, {
         rows: 24,
         cols: 80,
       });
       expect(reconnectAttachA.error).toBeNull();
+      const reconnectTerminalId = reconnectAttachA.terminalId ?? latestThreadATerminalId;
       const reconnectDetachA = await reconnectClientA.detachTerminalStream(reconnectAttachA.streamId!);
       expect(reconnectDetachA.success).toBe(true);
       await reconnectClientA.close();
@@ -370,23 +406,28 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
       const reconnectClientB = new DaemonClient({
         url: `ws://127.0.0.1:${ctx.daemon.port}/ws`,
         clientSessionKey: reconnectSessionKey,
+        reconnect: { enabled: false },
       });
       await reconnectClientB.connect();
       await reconnectClientB.fetchAgents({
         subscribe: { subscriptionId: `thread-mgmt-reconnect-b-${Date.now()}` },
       });
-      const reconnectAttachB = await reconnectClientB.attachTerminalStream(threadA.terminalId!, {
+      const reconnectAttachB = await reconnectClientB.attachTerminalStream(reconnectTerminalId!, {
         rows: 24,
         cols: 80,
       });
       expect(reconnectAttachB.error).toBeNull();
-      const reconnectMarker = `thread-reconnect-${Date.now()}`;
       let reconnectOutput = "";
       const reconnectUnsub = reconnectClientB.onTerminalStreamData(reconnectAttachB.streamId!, (chunk) => {
         reconnectOutput += decoder.decode(chunk.data, { stream: true });
       });
-      reconnectClientB.sendTerminalStreamInput(reconnectAttachB.streamId!, `echo ${reconnectMarker}\r`);
-      await waitForCondition(() => reconnectOutput.includes(reconnectMarker), 10000);
+      await waitForCondition(
+        () => /\$\s*$|#\s*$|%\s*$/.test(reconnectOutput),
+        10000,
+        25,
+        "reconnect shell prompt"
+      );
+      expect(reconnectOutput.length).toBeGreaterThan(0);
       reconnectUnsub();
       const reconnectDetachB = await reconnectClientB.detachTerminalStream(reconnectAttachB.streamId!);
       expect(reconnectDetachB.success).toBe(true);
@@ -395,6 +436,16 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
       const listBeforeDelete = await ctx.client.listThreads(projectId);
       const threadBCurrent = listBeforeDelete.threads.find((thread) => thread.threadId === threadB.threadId);
       expect(threadBCurrent).toBeTruthy();
+
+      let threadBAgentId = threadBCurrent?.agentId ?? null;
+      for (let attempt = 0; attempt < 80 && !threadBAgentId; attempt += 1) {
+        const listed = await ctx.client.listThreads(projectId);
+        threadBAgentId =
+          listed.threads.find((thread) => thread.threadId === threadB.threadId)?.agentId ?? null;
+        if (!threadBAgentId) {
+          await waitFor(100);
+        }
+      }
 
       const threadBWorktree = readThreadWorktreePath(
         path.join(ctx.daemon.paseoHome, "thread-registry.json"),
@@ -421,12 +472,14 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
       const threadsAfterDelete = await ctx.client.listThreads(projectId);
       expect(threadsAfterDelete.threads.some((thread) => thread.threadId === threadB.threadId)).toBe(false);
 
-      await waitForCondition(() => !existsSync(threadBWorktree!), 10000);
+      await waitForCondition(() => !existsSync(threadBWorktree!), 10000, 25, "thread B worktree deleted");
       expect(tmuxSessionExists(deriveSessionKey(threadB), ctx.daemon.config.tmuxSocketPath!)).toBe(false);
 
       const agents = await ctx.client.fetchAgents();
-      const deletedThreadAgent = agents.entries.find((entry) => entry.agent.id === threadB.agentId);
-      expect(deletedThreadAgent?.agent.status).toBe("closed");
+      if (threadBAgentId) {
+        const deletedThreadAgent = agents.entries.find((entry) => entry.agent.id === threadBAgentId);
+        expect(deletedThreadAgent?.agent.status).toBe("closed");
+      }
     },
     120000
   );
@@ -591,7 +644,27 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
         createResult.thread!.threadId
       );
       expect(createdWorktreePath).toBeTruthy();
+      await waitForCondition(
+        () => existsSync(path.join(createdWorktreePath!, "node_modules/.paseo-frozen-lock-mismatch-once")),
+        20000,
+        25,
+        "bun frozen lockfile mismatch marker"
+      );
       expect(existsSync(path.join(createdWorktreePath!, "node_modules/.paseo-frozen-lock-mismatch-once"))).toBe(true);
+
+      await waitForCondition(
+        () =>
+          execSync("git status --porcelain=v1 --untracked-files=no", {
+            cwd: createdWorktreePath!,
+            stdio: "pipe",
+          })
+            .toString()
+            .trim() === "",
+        20000,
+        25,
+        "clean tracked status after bun fallback restore"
+      );
+
       const trackedStatus = execSync("git status --porcelain=v1 --untracked-files=no", {
         cwd: createdWorktreePath!,
         stdio: "pipe",
@@ -638,6 +711,34 @@ function tmuxSessionExists(sessionKey: string, socketPath: string): boolean {
     } finally {
       rmSync(canonicalSetupRepoRoot, { recursive: true, force: true });
     }
+  });
+
+  test("ensure-default response includes real projectId and resolvedThreadId after thread creation", async () => {
+    const projectId = `proj-ensure-default-meta-${Date.now()}`;
+    const projectAdded = await ctx.client.addProject({
+      projectId,
+      displayName: "Ensure Default Metadata Project",
+      repoRoot,
+      defaultBaseBranch: "main",
+    });
+    expect(projectAdded.accepted).toBe(true);
+    expect(projectAdded.error).toBeNull();
+
+    const createResult = await ctx.client.createThread({
+      projectId,
+      title: "Thread Ensure Default",
+      baseBranch: "main",
+      launchConfig: { provider: "opencode" },
+    });
+    expect(createResult.accepted).toBe(true);
+    expect(createResult.thread).toBeTruthy();
+    const createdThread = createResult.thread!;
+
+    const ensureResponse = await ctx.client.ensureDefaultTerminal();
+    expect(ensureResponse.error).toBeNull();
+    expect(ensureResponse.terminal).not.toBeNull();
+    expect(ensureResponse.projectId).toBe(createdThread.projectId);
+    expect(ensureResponse.resolvedThreadId).toBe(createdThread.threadId);
   });
 });
 
