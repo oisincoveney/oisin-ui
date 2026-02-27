@@ -10,9 +10,9 @@ See: `.planning/PROJECT.md` (updated 2026-02-25)
 ## Current Position
 
 **Phase:** 07 of 08 (Thread Contract Completion)
-**Plan:** 0 of TBD in current phase
-**Status:** Phase 06 gap-closure fully complete and re-verified; ready to plan Phase 07
-**Last activity:** 2026-02-26 — Completed 06-07/06-08 gap plans and re-verified phase goal
+**Plan:** 1 of 2 in current phase
+**Status:** In progress
+**Last activity:** 2026-02-27 — Completed 07-01-PLAN.md
 
 ```
 Progress: [███████████████░░░░░] 75.0% (6/8 phases complete)
@@ -28,7 +28,7 @@ Progress: [███████████████░░░░░] 75.0% (
 
 ### Open Follow-ups for Next Milestone
 
-- Ensure-default metadata contract completion (`projectId` / `resolvedThreadId` emission).
+- ~~Ensure-default metadata contract completion~~ (done in 07-01).
 - Deterministic diff-panel browser regression fixture (avoid skip path).
 
 ### Decisions Logged
@@ -56,13 +56,14 @@ Progress: [███████████████░░░░░] 75.0% (
 - First-RPC safety now has an explicit `waitForPostConnectReady` barrier; daemon test context must await it before initial `fetchAgents`.
 - First-request regression now validates readiness + immediate ping/fetchAgents bounded latency across repeated fresh connections.
 - Phase verification evidence must come from one concrete passing command chain run (typecheck -> daemon e2e -> web e2e).
+- threadScope relaxed from z.literal to z.string() for backward compat; projectId/resolvedThreadId now required-nullable in ensure-default schema.
 
 ## Session Continuity
 
-**Last session:** 2026-02-26T19:20:21Z
-**Stopped at:** Completed phase 06 gaps-only execution and re-verification
+**Last session:** 2026-02-27T23:08:21Z
+**Stopped at:** Completed 07-01-PLAN.md
 **Resume file:** None
 
 ---
 
-_State updated: 2026-02-26 after Phase 06 gap-closure execution_
+_State updated: 2026-02-27 after 07-01 execution_

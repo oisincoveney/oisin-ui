@@ -47,7 +47,7 @@ Plans:
   3. User can refresh with an active thread and return to the same resolved thread context without metadata drift.
 **Plans**: 2 plans
 Plans:
-- [ ] 07-01-PLAN.md — Add getActiveThread() to registry; emit real projectId/resolvedThreadId in ensure-default response; clean schema placeholder
+- [x] 07-01-PLAN.md — Add getActiveThread() to registry; emit real projectId/resolvedThreadId in ensure-default response; clean schema placeholder
 - [ ] 07-02-PLAN.md — Unit tests for getActiveThread(); e2e test for ensure-default metadata contract
 
 ### Phase 08: Deterministic Verification Closure
@@ -65,8 +65,8 @@ Plans:
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
 |-------|-----------|--------------|----------------|--------|-----------|
 | 06. Runtime Reliability Hardening | v1.1 | RUN-01, RUN-02, RUN-03, RUN-04 | 8/8 | Complete | 2026-02-26 |
-| 07. Thread Metadata Contract Closure | v1.1 | THRD-01, THRD-02, THRD-03 | 0/TBD | Not started | - |
+| 07. Thread Metadata Contract Closure | v1.1 | THRD-01, THRD-02, THRD-03 | 1/2 | In progress | - |
 | 08. Deterministic Verification Closure | v1.1 | VER-01, VER-02, VER-03 | 0/TBD | Not started | - |
 
 ---
-_Roadmap updated: 2026-02-26 after Phase 06 gap-closure execution._
+_Roadmap updated: 2026-02-27 after 07-01 execution._
