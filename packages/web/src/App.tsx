@@ -218,7 +218,6 @@ function App() {
   const terminalRef = useRef<Terminal | null>(null)
   const terminalIdRef = useRef<string | null>(null)
   const terminalOffsetsRef = useRef<Map<string, number>>(new Map())
-  const terminalSnapshotsRef = useRef<Map<string, string>>(new Map())
   const activeThreadTerminalIdRef = useRef<string | null>(activeThreadTerminalId)
   const pendingAttachRef = useRef<PendingAttach | null>(null)
   const pendingEnsureRef = useRef<PendingEnsure | null>(null)
@@ -355,59 +354,6 @@ function App() {
       rows: term.rows,
       cols: term.cols,
     }
-  }
-
-  const captureCurrentTerminalSnapshot = () => {
-    const term = terminalRef.current
-    const terminalId = terminalIdRef.current
-    if (!term || !terminalId) {
-      return
-    }
-
-    const rowsRoot = term.element?.querySelector('.xterm-rows')
-    const domLines = rowsRoot
-      ? Array.from(rowsRoot.children)
-          .map((row) => (row.textContent ?? '').trimEnd())
-          .filter((line) => line.length > 0)
-      : []
-
-    const lines: string[] = domLines
-    if (lines.length === 0) {
-      const buffer = term.buffer.active
-      const start = Math.max(0, buffer.length - 400)
-      for (let i = start; i < buffer.length; i += 1) {
-        const line = buffer.getLine(i)
-        if (!line) {
-          continue
-        }
-        const text = line.translateToString(true)
-        if (text.length > 0) {
-          lines.push(text)
-        }
-      }
-    }
-
-    if (lines.length === 0) {
-      return
-    }
-    terminalSnapshotsRef.current.set(terminalId, lines.join('\r\n'))
-  }
-
-  const restoreTerminalSnapshot = (terminalId: string): boolean => {
-    const term = terminalRef.current
-    if (!term) {
-      return false
-    }
-
-    const snapshot = terminalSnapshotsRef.current.get(terminalId)
-    term.clear()
-    if (!snapshot) {
-      return false
-    }
-
-    term.write(snapshot)
-    scheduleScrollToBottom()
-    return true
   }
 
   const sendAttachRequest = (terminalId: string, forceRefresh: boolean) => {
@@ -653,14 +599,10 @@ function App() {
 
     pendingEnsureRef.current = null
     resetAttachRecovery()
-    const previousTerminalId = terminalIdRef.current
-    if (previousTerminalId && previousTerminalId !== activeThreadTerminalId) {
-      captureCurrentTerminalSnapshot()
-    }
     terminalIdRef.current = activeThreadTerminalId
     setTerminalId(activeThreadTerminalId)
     clearUnreadForActiveThread()
-    restoreTerminalSnapshot(activeThreadTerminalId)
+    terminalRef.current?.clear()
     sendAttachRequest(activeThreadTerminalId, runtimeWarmupActive)
     scheduleScrollToBottom()
   }, [
@@ -895,7 +837,6 @@ function App() {
       if (activeThreadTerminalId) {
         terminalIdRef.current = activeThreadTerminalId
         setTerminalId(activeThreadTerminalId)
-        restoreTerminalSnapshot(activeThreadTerminalId)
         sendAttachRequest(activeThreadTerminalId, false)
       }
     }
