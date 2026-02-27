@@ -578,6 +578,7 @@ export class Session {
   >()
   private readonly terminalStreamByTerminalId = new Map<string, number>()
   private readonly detachedTerminalStreams = new Map<number, DetachedTerminalStreamInfo>()
+  private readonly pendingThreadProvisioning = new Set<Promise<void>>()
   private nextTerminalStreamId = 1
   private readonly checkoutDiffSubscriptions = new Map<string, { targetKey: string }>()
   private readonly checkoutDiffTargets = new Map<string, CheckoutDiffWatchTarget>()
@@ -1777,11 +1778,36 @@ export class Session {
 
   private handleTerminalBinaryFrame(frame: BinaryMuxFrame): void {
     if (frame.messageType === TerminalBinaryMessageType.InputUtf8) {
+      const payload = frame.payload ?? new Uint8Array(0)
+      if (payload.byteLength === 0) {
+        return
+      }
+
+      const text = Buffer.from(payload).toString('utf8')
+      if (!text) {
+        return
+      }
+
+      const sendInputToTerminal = (terminalId: string): boolean => {
+        if (!this.terminalManager) {
+          return false
+        }
+        const session = this.terminalManager.getTerminal(terminalId)
+        if (!session) {
+          return false
+        }
+        session.send({ type: 'input', data: text })
+        return true
+      }
+
       const binding = this.terminalStreams.get(frame.streamId)
       if (!binding) {
         this.pruneDetachedTerminalStreams()
         const stale = this.detachedTerminalStreams.get(frame.streamId)
         if (stale) {
+          if (sendInputToTerminal(stale.terminalId)) {
+            return
+          }
           this.sessionLogger.warn(
             {
               streamId: frame.streamId,
@@ -1804,6 +1830,9 @@ export class Session {
 
       const activeStreamId = this.terminalStreamByTerminalId.get(binding.terminalId)
       if (activeStreamId !== frame.streamId) {
+        if (sendInputToTerminal(binding.terminalId)) {
+          return
+        }
         this.sessionLogger.warn(
           {
             streamId: frame.streamId,
@@ -1824,14 +1853,6 @@ export class Session {
         return
       }
 
-      const payload = frame.payload ?? new Uint8Array(0)
-      if (payload.byteLength === 0) {
-        return
-      }
-      const text = Buffer.from(payload).toString('utf8')
-      if (!text) {
-        return
-      }
       session.send({ type: 'input', data: text })
       return
     }
@@ -4929,6 +4950,14 @@ export class Session {
       })
       this.emitThreadStatusUpdated(created.thread)
       this.emitThreadUnreadUpdated(created.thread)
+      const provisioningPromise = this.finalizeCreatedThreadProvisioning(
+        created.thread.projectId,
+        created.thread.threadId
+      ).finally(() => {
+        this.pendingThreadProvisioning.delete(provisioningPromise)
+      })
+      this.pendingThreadProvisioning.add(provisioningPromise)
+      void provisioningPromise
     } catch (error) {
       this.emit({
         type: 'thread_create_response',
@@ -4940,6 +4969,43 @@ export class Session {
           error: error instanceof Error ? error.message : String(error),
         },
       })
+    }
+  }
+
+  private async finalizeCreatedThreadProvisioning(
+    projectId: string,
+    threadId: string
+  ): Promise<void> {
+    try {
+      const updated = await this.threadLifecycle.startThreadProvisioning({
+        projectId,
+        threadId,
+      })
+      this.emitThreadStatusUpdated(updated)
+      this.emitThreadUnreadUpdated(updated)
+    } catch (error) {
+      this.sessionLogger.warn(
+        { err: error, projectId, threadId },
+        'Thread provisioning failed after create response'
+      )
+
+      try {
+        await this.threadRegistry.updateThreadStatus({
+          projectId,
+          threadId,
+          status: 'error',
+        })
+        const errored = await this.threadRegistry.getThread(projectId, threadId)
+        if (errored) {
+          this.emitThreadStatusUpdated(errored)
+          this.emitThreadUnreadUpdated(errored)
+        }
+      } catch (statusError) {
+        this.sessionLogger.warn(
+          { err: statusError, projectId, threadId },
+          'Failed to publish provisioning error status'
+        )
+      }
     }
   }
 
@@ -6591,6 +6657,14 @@ export class Session {
     // Abort any ongoing operations
     this.abortController.abort()
 
+    if (this.pendingThreadProvisioning.size > 0) {
+      const pending = [...this.pendingThreadProvisioning]
+      await Promise.race([
+        Promise.allSettled(pending),
+        new Promise<void>((resolve) => setTimeout(resolve, 5000)),
+      ])
+    }
+
     // Clear timeouts
     this.clearVoiceModeInactivityTimeout()
     this.clearBufferTimeout()
@@ -6803,6 +6877,8 @@ export class Session {
           terminal: null,
           threadId: 'active',
           threadScope: 'phase2-active-thread-placeholder',
+          projectId: null,
+          resolvedThreadId: null,
           sessionKey: null,
           cwd: null,
           error: 'Terminal manager not available',
@@ -6816,8 +6892,7 @@ export class Session {
       const ensured = await this.terminalManager.ensureDefaultTerminal()
       this.rememberKnownDefaultTerminal(ensured.terminal.id)
       this.ensureTerminalExitSubscription(ensured.terminal)
-      // Phase 2 handoff marker: `threadId: "active"` is a placeholder identity.
-      // Replace with real project/thread lifecycle IDs in Phase 3 (PROJ-02 / PROJ-04).
+      const activeThread = await this.threadRegistry.getActiveThread()
       this.emit({
         type: 'ensure_default_terminal_response',
         payload: {
@@ -6828,6 +6903,8 @@ export class Session {
           },
           threadId: ensured.threadId,
           threadScope: ensured.threadScope,
+          projectId: activeThread?.projectId ?? null,
+          resolvedThreadId: activeThread?.threadId ?? null,
           sessionKey: ensured.sessionKey,
           cwd: ensured.cwd,
           error: null,
@@ -6842,6 +6919,8 @@ export class Session {
           terminal: null,
           threadId: 'active',
           threadScope: 'phase2-active-thread-placeholder',
+          projectId: null,
+          resolvedThreadId: null,
           sessionKey: null,
           cwd: null,
           error: error.message,
@@ -6877,7 +6956,39 @@ export class Session {
     }
 
     if (!this.knownDefaultTerminalIds.has(terminalId)) {
-      return undefined
+      try {
+        const thread = await this.threadRegistry.findThreadByTerminalId(terminalId)
+        if (!thread) {
+          return undefined
+        }
+        const worktreePath = thread.links.worktreePath
+        if (!worktreePath) {
+          return undefined
+        }
+        const ensured = await this.terminalManager.ensureThreadTerminal({
+          projectId: thread.projectId,
+          threadId: thread.threadId,
+          cwd: worktreePath,
+        })
+        this.ensureTerminalExitSubscription(ensured.terminal)
+
+        if (ensured.terminal.id !== terminalId) {
+          await this.threadRegistry.updateThread({
+            projectId: thread.projectId,
+            threadId: thread.threadId,
+            links: {
+              terminalId: ensured.terminal.id,
+            },
+          })
+        }
+        return ensured.terminal
+      } catch (error) {
+        this.sessionLogger.warn(
+          { err: error, terminalId },
+          'Failed to rehydrate missing thread terminal session'
+        )
+        return undefined
+      }
     }
 
     try {
@@ -7015,7 +7126,27 @@ export class Session {
     }
     this.ensureTerminalExitSubscription(session)
 
-    session.send(msg.message)
+    try {
+      session.send(msg.message)
+    } catch (error) {
+      this.sessionLogger.warn(
+        { err: error, terminalId: msg.terminalId },
+        'Terminal input send failed, attempting one-time rehydrate'
+      )
+      const fallback = await this.resolveTerminalSessionWithDefaultFallback(msg.terminalId)
+      if (!fallback) {
+        return
+      }
+      this.ensureTerminalExitSubscription(fallback)
+      try {
+        fallback.send(msg.message)
+      } catch (retryError) {
+        this.sessionLogger.warn(
+          { err: retryError, terminalId: msg.terminalId },
+          'Terminal input retry send failed after rehydrate'
+        )
+      }
+    }
   }
 
   private killTrackedTerminal(terminalId: string, options?: { emitExit: boolean }): void {
@@ -7193,6 +7324,26 @@ export class Session {
       binding.lastOutputOffset = rawSub.replayedFrom
     }
     this.flushPendingTerminalStreamChunks(streamId, binding)
+
+    if (effectiveTerminalId !== msg.terminalId) {
+      try {
+        const owningThread = await this.threadRegistry.findThreadByTerminalId(msg.terminalId)
+        if (owningThread) {
+          await this.threadRegistry.updateThread({
+            projectId: owningThread.projectId,
+            threadId: owningThread.threadId,
+            links: {
+              terminalId: effectiveTerminalId,
+            },
+          })
+        }
+      } catch (error) {
+        this.sessionLogger.warn(
+          { err: error, requestedTerminalId: msg.terminalId, effectiveTerminalId },
+          'Failed to persist effective terminal id remap after attach'
+        )
+      }
+    }
 
     this.emit({
         type: 'attach_terminal_stream_response',
