@@ -16,9 +16,9 @@ Requirements for the v1.1 Hardening milestone.
 
 ### Thread Contract Completion
 
-- [ ] **THRD-01**: Ensure-default terminal response includes `projectId` and `resolvedThreadId` in server payload.
-- [ ] **THRD-02**: Web thread store consumes ensure-default metadata fields without compatibility placeholders.
-- [ ] **THRD-03**: Thread switch and ensure flows keep metadata consistent across reconnect and refresh.
+- [x] **THRD-01**: Ensure-default terminal response includes `projectId` and `resolvedThreadId` in server payload.
+- [x] **THRD-02**: Web thread store consumes ensure-default metadata fields without compatibility placeholders.
+- [x] **THRD-03**: Thread switch and ensure flows keep metadata consistent across reconnect and refresh.
 
 ### Verification Determinism
 
