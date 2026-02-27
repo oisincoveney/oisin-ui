@@ -154,4 +154,81 @@ describe("ThreadRegistry", () => {
     expect(persisted.projects.length).toBe(1);
     expect(persisted.threads.length).toBe(1);
   });
+
+  describe("getActiveThread", () => {
+    it("returns null when no threads exist", async () => {
+      const registry = new ThreadRegistry(paseoHome);
+      await registry.load();
+
+      const active = await registry.getActiveThread();
+      expect(active).toBeNull();
+    });
+
+    it("returns null when active pointer is cleared", async () => {
+      const registry = new ThreadRegistry(paseoHome);
+      await registry.load();
+
+      const thread = await registry.createThread({
+        projectId: "proj-clear",
+        threadId: "thread-clear",
+        title: "Thread to clear",
+        launchConfig: { provider: "opencode" },
+      });
+
+      // Delete the thread — active pointer should clear
+      await registry.deleteThread("proj-clear", thread.threadId);
+
+      const active = await registry.getActiveThread();
+      expect(active).toBeNull();
+    });
+
+    it("returns the active thread after createThread", async () => {
+      const registry = new ThreadRegistry(paseoHome);
+      await registry.load();
+
+      const thread = await registry.createThread({
+        projectId: "proj-active",
+        threadId: "thread-active-1",
+        title: "Active Thread",
+        launchConfig: { provider: "opencode" },
+      });
+
+      const active = await registry.getActiveThread();
+      expect(active).not.toBeNull();
+      expect(active!.projectId).toBe("proj-active");
+      expect(active!.threadId).toBe(thread.threadId);
+      expect(active!.title).toBe("Active Thread");
+    });
+
+    it("returns the switched-to thread after switchThread", async () => {
+      const registry = new ThreadRegistry(paseoHome);
+      await registry.load();
+
+      const threadA = await registry.createThread({
+        projectId: "proj-switch",
+        threadId: "thread-switch-a",
+        title: "Thread A",
+        launchConfig: { provider: "opencode" },
+      });
+
+      const threadB = await registry.createThread({
+        projectId: "proj-switch",
+        threadId: "thread-switch-b",
+        title: "Thread B",
+        launchConfig: { provider: "opencode" },
+      });
+
+      // After creating B, B is active. Switch back to A.
+      await registry.switchThread("proj-switch", threadA.threadId);
+      let active = await registry.getActiveThread();
+      expect(active).not.toBeNull();
+      expect(active!.threadId).toBe(threadA.threadId);
+
+      // Switch to B
+      await registry.switchThread("proj-switch", threadB.threadId);
+      active = await registry.getActiveThread();
+      expect(active).not.toBeNull();
+      expect(active!.threadId).toBe(threadB.threadId);
+    });
+  });
 });
