@@ -34,7 +34,6 @@ import {
   dismissThreadToast,
   getActiveThread,
   markRuntimeWarmupAttachSettled,
-  noteActiveThreadTerminalId,
   noteDaemonServerId,
   switchRelativeThread,
   useThreadStoreSnapshot,
@@ -204,7 +203,10 @@ function App() {
   const diffSnapshot = useDiffStoreSnapshot()
   const isMobile = useIsMobile()
   const activeThread = getActiveThread(threadSnapshot)
-  const activeThreadTerminalId = activeThread?.terminalId ?? null
+  const activeThreadTerminalId =
+    activeThread && activeThread.status !== 'closed' && activeThread.status !== 'error'
+      ? (activeThread.terminalId ?? null)
+      : null
   const activeDiffEntry = getActiveDiffEntry(diffSnapshot)
   const diffFiles = activeDiffEntry?.files ?? []
   const diffPanelOpen = diffSnapshot.panel.isOpen
@@ -217,7 +219,6 @@ function App() {
   const adapterRef = useRef<TerminalStreamAdapter | null>(null)
   const terminalRef = useRef<Terminal | null>(null)
   const terminalIdRef = useRef<string | null>(null)
-  const terminalOffsetsRef = useRef<Map<string, number>>(new Map())
   const activeThreadTerminalIdRef = useRef<string | null>(activeThreadTerminalId)
   const pendingAttachRef = useRef<PendingAttach | null>(null)
   const pendingEnsureRef = useRef<PendingEnsure | null>(null)
@@ -332,16 +333,7 @@ function App() {
     clearPendingScroll()
     pendingScrollToBottomRef.current = setTimeout(() => {
       pendingScrollToBottomRef.current = null
-      const terminal = terminalRef.current
-      if (!terminal || !terminal.element || terminal.rows <= 0 || terminal.cols <= 0) {
-        return
-      }
-
-      try {
-        terminal.scrollToBottom()
-      } catch {
-        // Terminal can be mid-reconfigure during rapid attach/reconnect churn.
-      }
+      terminalRef.current?.scrollToBottom()
     }, 250)
   }
 
@@ -370,7 +362,7 @@ function App() {
       return
     }
 
-    const nextResumeOffset = forceRefresh ? 0 : (terminalOffsetsRef.current.get(terminalId) ?? 0)
+    const nextResumeOffset = forceRefresh ? 0 : (adapterRef.current?.getOffset() ?? 0)
     adapterRef.current?.resetForStreamRollover({ resetOffset: forceRefresh })
     const requestId = randomId('attach')
     const dimensions = getTerminalDimensions()
@@ -383,8 +375,8 @@ function App() {
     }
 
     if (forceRefresh) {
+      terminalRef.current?.clear()
       adapterRef.current?.setOffset(0)
-      terminalOffsetsRef.current.set(terminalId, 0)
       console.info('[terminal] reconnect refresh requested from server')
     }
 
@@ -448,7 +440,6 @@ function App() {
   useEffect(() => {
     statusRef.current = status
     adapterRef.current?.setTransportConnected(status === 'connected')
-    const reconnectTerminalId = activeThreadTerminalIdRef.current
 
     if (status === 'connected') {
       if (hadConnectedOnceRef.current) {
@@ -463,13 +454,13 @@ function App() {
         return
       }
 
-      if (terminalRef.current && reconnectTerminalId) {
+      if (terminalRef.current && activeThreadTerminalId) {
         const forceRefresh = forceRefreshOnAttachRef.current
-        terminalIdRef.current = reconnectTerminalId
-        setTerminalId(reconnectTerminalId)
-        sendAttachRequest(reconnectTerminalId, forceRefresh)
+        terminalIdRef.current = activeThreadTerminalId
+        setTerminalId(activeThreadTerminalId)
+        sendAttachRequest(activeThreadTerminalId, forceRefresh)
         forceRefreshOnAttachRef.current = false
-      } else if (reconnectTerminalId) {
+      } else if (activeThreadTerminalId) {
         ensureDefaultTerminal()
       }
       return
@@ -487,7 +478,7 @@ function App() {
         terminalRef.current.options.cursorBlink = false
       }
     }
-  }, [status])
+  }, [status, activeThreadTerminalId])
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -576,13 +567,7 @@ function App() {
       return
     }
 
-    const runtimeWarmupActive = threadSnapshot.runtimeRecovery.warmup.active
-
-    if (
-      terminalIdRef.current === activeThreadTerminalId &&
-      !pendingAttachRef.current &&
-      !runtimeWarmupActive
-    ) {
+    if (terminalIdRef.current === activeThreadTerminalId && !pendingAttachRef.current) {
       clearUnreadForActiveThread()
       return
     }
@@ -602,15 +587,9 @@ function App() {
     terminalIdRef.current = activeThreadTerminalId
     setTerminalId(activeThreadTerminalId)
     clearUnreadForActiveThread()
-    terminalRef.current?.clear()
-    sendAttachRequest(activeThreadTerminalId, runtimeWarmupActive)
+    sendAttachRequest(activeThreadTerminalId, false)
     scheduleScrollToBottom()
-  }, [
-    status,
-    activeThreadTerminalId,
-    threadSnapshot.activeThreadKey,
-    threadSnapshot.runtimeRecovery.warmup.active,
-  ])
+  }, [status, activeThreadTerminalId, threadSnapshot.activeThreadKey])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -706,9 +685,8 @@ function App() {
           setAttachFailureReason('Daemon did not return a terminal id during ensure')
           return
         }
-        const targetTerminalId = terminal.id
-        noteActiveThreadTerminalId(targetTerminalId)
-        clearAttachRecoveryRetryTimer()
+        const storeActiveThread = getActiveThread()
+        const targetTerminalId = storeActiveThread?.terminalId ?? terminal.id
         terminalIdRef.current = targetTerminalId
         setTerminalId(targetTerminalId)
         sendAttachRequest(targetTerminalId, forceRefreshOnAttachRef.current)
@@ -741,13 +719,7 @@ function App() {
         setAttachRecoveryState(nextRecovery)
         setAttachRecoveryNow(now)
         setAttachFailureReason(attachError)
-        ensureDefaultTerminal()
-        // Only schedule retry if ensure-default isn't pending — the ensure-default
-        // response handler will attach to the fresh terminal directly. Retrying with
-        // the stale terminal ID races against the ensure-default and causes loops.
-        if (!pendingEnsureRef.current) {
-          scheduleAttachRecoveryRetry(nextRecovery, pendingAttach.terminalId)
-        }
+        scheduleAttachRecoveryRetry(nextRecovery, pendingAttach.terminalId)
         console.error('[terminal] attach failed', msg.payload?.error)
         return
       }
@@ -773,23 +745,15 @@ function App() {
 
       const responseReset = Boolean(msg.payload?.reset)
       const replayedFrom = Number(msg.payload?.replayedFrom ?? 0)
-      const responseTerminalId =
-        typeof msg.payload?.terminalId === 'string' && msg.payload.terminalId.length > 0
-          ? msg.payload.terminalId
-          : pendingAttach.terminalId
-      if (responseTerminalId !== pendingAttach.terminalId) {
-        noteActiveThreadTerminalId(responseTerminalId)
-      }
-      terminalIdRef.current = responseTerminalId
-      setTerminalId(responseTerminalId)
       const hasOffsetGap = replayedFrom > pendingAttach.resumeOffset
 
       if ((responseReset || hasOffsetGap) && !pendingAttach.forceRefresh) {
-        console.warn('[terminal] resume offset stale, continuing with server replay baseline')
+        console.warn('[terminal] resume offset stale, forcing full redraw from server')
+        sendAttachRequest(pendingAttach.terminalId, true)
+        return
       }
 
       adapter.confirmAttachedStream(msg.payload.streamId, { offset: replayedFrom })
-      terminalOffsetsRef.current.set(responseTerminalId, replayedFrom)
       if (terminalRef.current) {
         terminalRef.current.options.cursorBlink = true
       }
@@ -818,10 +782,6 @@ function App() {
     terminalRef.current = term
     adapterRef.current = new TerminalStreamAdapter(term, 0, sendWsBinary, {
       onChunkApplied: (chunk) => {
-        const currentTerminalId = terminalIdRef.current
-        if (currentTerminalId) {
-          terminalOffsetsRef.current.set(currentTerminalId, chunk.endOffset)
-        }
         if (!chunk.replay && pendingScrollToBottomRef.current !== null) {
           scheduleScrollToBottom()
         }

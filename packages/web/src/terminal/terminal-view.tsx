@@ -16,17 +16,7 @@ export function TerminalView({ onTerminalReady, onDispose, onResize, className =
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
-  const onTerminalReadyRef = useRef<TerminalViewProps["onTerminalReady"]>(onTerminalReady);
-  const onDisposeRef = useRef<TerminalViewProps["onDispose"]>(onDispose);
   const [terminalState, setTerminalState] = useState<Terminal | null>(null);
-
-  useEffect(() => {
-    onTerminalReadyRef.current = onTerminalReady;
-  }, [onTerminalReady]);
-
-  useEffect(() => {
-    onDisposeRef.current = onDispose;
-  }, [onDispose]);
 
   useTerminalResize({
     terminal: terminalState,
@@ -86,8 +76,8 @@ export function TerminalView({ onTerminalReady, onDispose, onResize, className =
     setTimeout(() => {
       try {
         fitAddon.fit();
-        if (onTerminalReadyRef.current) {
-          onTerminalReadyRef.current(term);
+        if (onTerminalReady) {
+          onTerminalReady(term);
         }
       } catch (e) {
         // ignore fit errors during fast unmount
@@ -95,15 +85,15 @@ export function TerminalView({ onTerminalReady, onDispose, onResize, className =
     }, 10);
 
     return () => {
-      if (onDisposeRef.current) {
-        onDisposeRef.current();
+      if (onDispose) {
+        onDispose();
       }
       term.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;
       setTerminalState(null);
     };
-  }, []);
+  }, [onTerminalReady, onDispose]);
 
   return (
     <div 
