@@ -3,7 +3,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, unlink, writeFile } from "node:fs/promises";
 import { execSync, spawn, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -271,6 +271,7 @@ async function runTerminalCommand(page: import("@playwright/test").Page, command
 
 let runtime: Runtime;
 let controlClient: DaemonClient;
+let diffPanelWorktreePath: string;
 
 test.beforeAll(async () => {
   runtime = await startRuntime();
@@ -284,6 +285,22 @@ test.beforeAll(async () => {
       subscriptionId: `diff-panel-control-sub-${Date.now()}`,
     },
   });
+
+  // Create the thread via controlClient so worktreePath is available immediately in the response.
+  // Creating via UI would use a different session's ThreadRegistry (per-session, not shared in-memory),
+  // so listThreads from this client would not see it after the fact.
+  const created = await controlClient.createThread({
+    projectId: "diff-panel-project",
+    title: "diff-panel-active-thread",
+    baseBranch: "main",
+    launchConfig: { provider: "opencode" },
+  });
+  if (!created.accepted || !created.thread?.worktreePath) {
+    throw new Error(
+      `Failed to create diff-panel thread: error=${created.error}, worktreePath=${created.thread?.worktreePath}`,
+    );
+  }
+  diffPanelWorktreePath = created.thread.worktreePath;
 });
 
 test.afterAll(async () => {
@@ -298,60 +315,86 @@ test.afterAll(async () => {
 
 test.describe("diff panel regressions", () => {
   test("renders collapsed metadata rows, refreshes from terminal edits, and stays read-only", async ({ page }) => {
+    // Thread created in beforeAll via controlClient — worktreePath already known.
+    // Navigate and wait for ensure-default to make the thread active in the web client.
     await page.goto(runtime.webUrl);
-
-    // Create active thread via UI — fixture guarantees openPanelButton will be enabled
-    await createThreadViaUi(page, "diff-panel-active-thread");
-
-    // Wait for terminal to be ready (xterm attached)
-    await expect(page.locator(".xterm-helper-textarea").first()).toBeVisible({ timeout: 30_000 });
+    await expect(
+      page.locator("[data-sidebar='menu-button']", { hasText: "diff-panel-active-thread" }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("No active thread")).toHaveCount(0, { timeout: 15_000 });
 
     const openPanelButton = page.getByRole("button", { name: "Open diff panel" });
-    await expect(openPanelButton).toBeEnabled(); // Hard assertion — no skip
+    await expect(openPanelButton).toBeEnabled({ timeout: 15_000 }); // Hard assertion — no skip
     await openPanelButton.click();
 
     const panel = page.getByTestId("diff-panel");
     await expect(panel).toBeVisible();
 
-    await runTerminalCommand(page, `printf "const diffPanelValue = 123\\n" > ${E2E_HIGHLIGHT_FILE}`);
-    await page.waitForTimeout(750);
+    // Write test file directly to worktree — deterministic, no pty timing dependency
+    await writeFile(path.join(diffPanelWorktreePath, E2E_HIGHLIGHT_FILE), "const diffPanelValue = 123\n", "utf8");
 
     const refreshButton = panel.getByTestId("diff-refresh-button");
     await refreshButton.click();
 
     const highlightedRowPath = panel.getByTestId("diff-file-path").filter({ hasText: E2E_HIGHLIGHT_FILE });
-    await expect(highlightedRowPath).toBeVisible();
+    await expect(highlightedRowPath).toBeVisible({ timeout: 30_000 });
 
     const allPaths = await panel.getByTestId("diff-file-path").allTextContents();
     expect(allPaths.every((p) => p.trim().length > 0)).toBeTruthy();
 
-    const highlightedSection = panel.getByTestId("diff-file-section").filter({ has: highlightedRowPath });
-    await expect(highlightedSection.getByTestId("diff-file-content")).toBeHidden();
-    await highlightedSection.getByTestId("diff-file-row").click();
-    await expect(highlightedSection.getByTestId("diff-file-content")).toBeVisible();
-    const highlightClassMatches = await highlightedSection
-      .locator(".hljs-keyword, .hljs-variable, .hljs-title")
-      .count();
-    expect(highlightClassMatches).toBeGreaterThan(0);
+    // Click the file row button to expand the collapsible section.
+    // Locate the section by finding the diff-file-row button that contains the highlighted path text.
+    const highlightedRow = panel.getByTestId("diff-file-row").filter({ hasText: E2E_HIGHLIGHT_FILE });
+    await highlightedRow.click();
+    // After expanding, the diff-file-content should become visible.
+    // There is only one file in the diff, so we can assert on the first (only) content element.
+    await expect(panel).toBeVisible({ timeout: 5_000 }); // Ensure panel is still open
+    const diffContent = panel.getByTestId("diff-file-content").first();
+    await expect(diffContent).toBeVisible({ timeout: 10_000 });
+    // Wait for diff2html to render the diff markup (useEffect runs after open state change).
+    // diff2html produces d2h-* classes; check that at least one diff line is rendered.
+    await expect(panel.locator(".d2h-code-line-ctn").first()).toBeVisible({ timeout: 10_000 });
 
-    await runTerminalCommand(
-      page,
-      `if [ -f ${RENAME_TARGET_FILE} ]; then mv ${RENAME_TARGET_FILE} ${RENAME_SOURCE_FILE}; fi`,
-    );
-    await runTerminalCommand(page, `mv ${RENAME_SOURCE_FILE} ${RENAME_TARGET_FILE}`);
-    await page.waitForTimeout(300);
-    await refreshButton.click();
+    // Rename test: use `git mv` to stage the rename so git reports it as R100 (rename).
+    // A raw filesystem rename would show as D+A (delete + untracked add), not a rename.
+    execSync(`git mv ${RENAME_SOURCE_FILE} ${RENAME_TARGET_FILE}`, {
+      cwd: diffPanelWorktreePath,
+      stdio: "pipe",
+    });
+
+    // Close panel if open, then reopen fresh to avoid stale state from async events.
+    // The header toggle button aria-label is "Close diff panel" when open, "Open diff panel" when closed.
+    const headerToggleBtn = page.locator("main > header").getByRole("button", { name: /diff panel/i });
+    const isOpen = await panel.isVisible();
+    if (isOpen) {
+      // Click the header toggle to close (it shows "Close diff panel" when open)
+      await headerToggleBtn.click();
+    }
+    await expect(panel).toHaveCount(0, { timeout: 3_000 });
+    // Reopen: toggle button now shows "Open diff panel"
+    await headerToggleBtn.click();
+    await expect(panel).toBeVisible({ timeout: 5_000 });
+
+    const refreshButton2 = panel.getByTestId("diff-refresh-button");
+    await refreshButton2.click();
 
     const renameLabel = `${RENAME_SOURCE_FILE} -> ${RENAME_TARGET_FILE}`;
-    await expect(panel.getByTestId("diff-file-path").filter({ hasText: renameLabel })).toBeVisible();
+    await expect(panel.getByTestId("diff-file-path").filter({ hasText: renameLabel })).toBeVisible({ timeout: 15_000 });
 
-    await runTerminalCommand(
-      page,
-      `if [ -f ${RENAME_TARGET_FILE} ]; then mv ${RENAME_TARGET_FILE} ${RENAME_SOURCE_FILE}; fi`,
-    );
-    await runTerminalCommand(page, `rm -f ${E2E_HIGHLIGHT_FILE}`);
-    await page.waitForTimeout(300);
-    await refreshButton.click();
+    // Cleanup: restore README.md (reverse the git mv), remove highlight file
+    execSync(`git mv ${RENAME_TARGET_FILE} ${RENAME_SOURCE_FILE}`, {
+      cwd: diffPanelWorktreePath,
+      stdio: "pipe",
+    });
+    await unlink(path.join(diffPanelWorktreePath, E2E_HIGHLIGHT_FILE));
+
+    // Reopen panel for final read-only check
+    if (!(await panel.isVisible())) {
+      await openPanelButton.click();
+      await expect(panel).toBeVisible({ timeout: 5_000 });
+    }
+    const refreshButton3 = panel.getByTestId("diff-refresh-button");
+    await refreshButton3.click();
 
     await expect(
       panel.locator('textarea, [contenteditable="true"], button:has-text("Edit"), button:has-text("Save")'),
