@@ -69,7 +69,7 @@ export const ShadcnEnforcerPlugin = async () => {
       const args = output.args ?? {}
 
       // Determine file path
-      const filePath = (args.path ?? args.file ?? args.filename ?? "") as string
+      const filePath = (args.filePath ?? "") as string
       if (!isJsxFile(filePath) || isShadcnUiFile(filePath)) return
 
       // Extract content to check based on tool type
@@ -77,8 +77,11 @@ export const ShadcnEnforcerPlugin = async () => {
 
       if (tool === "write") {
         contentToCheck = (args.content as string) ?? ""
-      } else if (tool === "edit" || tool === "multiedit") {
+      } else if (tool === "edit") {
         contentToCheck = (args.newString as string) ?? ""
+      } else if (tool === "multiedit") {
+        const edits = (args.edits as Array<{ newString?: string }>) ?? []
+        contentToCheck = edits.map((e) => e.newString ?? "").join("\n")
       } else if (tool === "patch") {
         // Only check added lines (lines starting with +)
         const patch = (args.patch as string) ?? ""
