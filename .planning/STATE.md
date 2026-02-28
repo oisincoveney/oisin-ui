@@ -2,20 +2,22 @@
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-02-25)
+See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 **Core value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current focus:** v1.1 Hardening milestone complete — all 10 requirements closed, all 8 phases verified.
+**Current focus:** Between milestones — v1.1 Hardening complete, v2 not yet started.
 
 ## Current Position
 
-**Phase:** 08 of 08 (Deterministic Verification Closure)
-**Plan:** 2 of 2 in current phase
-**Status:** Milestone complete — v1.1 Hardening shipped
-**Last activity:** 2026-02-28 — Phase 08 verified (6/6 must-haves), v1.1 milestone closed
+**Milestone:** v2 (not yet started)
+**Phase:** N/A — awaiting v2 milestone kickoff
+**Status:** Between milestones
+**Last activity:** 2026-02-28 — v1.1 Hardening milestone complete and archived
 
 ```
-Progress: [████████████████████] 100% (8/8 phases complete)
+v1:   [████████████████████] 100% (5/5 phases) — shipped 2026-02-25
+v1.1: [████████████████████] 100% (3/3 phases) — shipped 2026-02-28
+v2:   [ ] Not started
 ```
 
 ## Accumulated Context
@@ -64,9 +66,9 @@ Progress: [████████████████████] 100% (8
 ## Session Continuity
 
 **Last session:** 2026-02-28
-**Stopped at:** Phase 08 verified (6/6), v1.1 milestone closed
+**Stopped at:** v1.1 milestone archived, planning docs updated for v2
 **Resume file:** None
 
 ---
 
-_State updated: 2026-02-28 after 08 verification. v1.1 Hardening milestone complete._
+_State updated: 2026-02-28 — v1.1 Hardening archived. Ready for v2 milestone kickoff._

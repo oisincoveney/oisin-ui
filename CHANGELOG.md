@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.1 Hardening - 2026-02-28
+
+### Added
+- Added bounded attach recovery state machine (60s deadline) with visible retry UX showing attempt count, remaining window, and last error.
+- Added bounded queued terminal input with flush-on-attach and oldest-first FIFO eviction semantics.
+- Added `waitForPostConnectReady` barrier to eliminate first-request WebSocket race on session startup.
+- Added `getActiveThread()` registry to daemon thread manager.
+- Added deterministic diff-panel browser regression with isolated server/e2e fixture (no conditional skip path).
+- Added create->switch->delete deterministic thread management browser regression.
+- Added daemon e2e first-RPC reliability assertion with bounded latency across repeated fresh connections.
+
+### Improved
+- Hardened create-thread failure contract: typed dialog with `summary`, `details`, `copyText`, `requestId` instead of flat error strings.
+- Active-delete now immediately transitions to `No active thread` null state with stale attach retry cancellation.
+- Restart detection now keys off `serverId` identity change rather than WebSocket transport state alone.
+- Warm-up lock gates create/switch/delete until thread refresh and attach settle after restart recovery.
+- Restart recovery restores prior active thread if present, else falls back to newest thread by `updatedAt`.
+- Reconnect success toast is token-deduped so `Reconnected` emits exactly once per recovery cycle.
+- Claude provider availability probing is async and cached (no constructor-time sync shell checks on startup path).
+- Ensure-default response now emits real `projectId` and `resolvedThreadId` from server registry.
+- `threadScope` relaxed to `z.string()` for backward compatibility; `projectId`/`resolvedThreadId` required-nullable in ensure-default schema.
+
+### Fixed
+- Fixed server-side first-request WebSocket race where inbound messages arrived before session dispatch was ready.
+- Fixed ensure-default metadata placeholders: web store now consumes real server-emitted project/thread context.
+- Fixed terminal-manager env tests: time-bounded retry loop handles shell startup latency under parallel test load.
+- Fixed diff-panel spec conditional skip path by migrating to deterministic worktree fixture with `git mv` for staged rename detection.
+- Fixed attach recovery retry state leaking across active-thread-null transitions; cancels stale pending attach/ensure retries on null.
+
 ## 0.1.15 - 2026-02-19
 ### Added
 - Added a public changelog page on the website so users can browse release notes.
