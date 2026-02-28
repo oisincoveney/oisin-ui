@@ -5,17 +5,17 @@
 See: `.planning/PROJECT.md` (updated 2026-02-25)
 
 **Core value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current focus:** Phase 07 complete; ready for Phase 08 - Deterministic Verification Closure.
+**Current focus:** Phase 08 complete — all verification closure plans executed.
 
 ## Current Position
 
-**Phase:** 07 of 08 (Thread Contract Completion)
+**Phase:** 08 of 08 (Deterministic Verification Closure)
 **Plan:** 2 of 2 in current phase
-**Status:** Phase complete
-**Last activity:** 2026-02-27 — Completed 07-02-PLAN.md
+**Status:** Phase complete — all phases done
+**Last activity:** 2026-02-28 — Completed 08-02-PLAN.md
 
 ```
-Progress: [████████████████████] 87.5% (7/8 phases complete)
+Progress: [████████████████████] 100% (8/8 phases complete)
 ```
 
 ## Accumulated Context
@@ -29,6 +29,7 @@ Progress: [████████████████████] 87.5% (
 ### Open Follow-ups for Next Milestone
 
 - Deterministic diff-panel browser regression fixture (avoid skip path).
+- VER-02 create->click-switch->delete regression now covered (08-02 complete).
 
 ### Decisions Logged
 
@@ -56,13 +57,14 @@ Progress: [████████████████████] 87.5% (
 - First-request regression now validates readiness + immediate ping/fetchAgents bounded latency across repeated fresh connections.
 - Phase verification evidence must come from one concrete passing command chain run (typecheck -> daemon e2e -> web e2e).
 - threadScope relaxed from z.literal to z.string() for backward compat; projectId/resolvedThreadId now required-nullable in ensure-default schema.
+- VER-02 browser e2e: create->click-switch->delete test uses sidebar row click (not keyboard); daemon-killing tests must be last in shared-runtime suites.
 
 ## Session Continuity
 
-**Last session:** 2026-02-27T23:15:36Z
-**Stopped at:** Completed 07-02-PLAN.md (phase 07 complete)
+**Last session:** 2026-02-28T04:05:17Z
+**Stopped at:** Completed 08-02-PLAN.md (phase 08 complete — all phases done)
 **Resume file:** None
 
 ---
 
-_State updated: 2026-02-27 after 07-02 execution_
+_State updated: 2026-02-28 after 08-02 execution_
