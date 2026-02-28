@@ -5,19 +5,19 @@
 See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 **Core value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current focus:** Between milestones — v1.1 Hardening complete, v2 not yet started.
+**Current focus:** v2 Code Review — hunk-level staging/unstaging and commit from browser.
 
 ## Current Position
 
-**Milestone:** v2 (not yet started)
-**Phase:** N/A — awaiting v2 milestone kickoff
-**Status:** Between milestones
-**Last activity:** 2026-02-28 — v1.1 Hardening milestone complete and archived
+**Milestone:** v2 Code Review
+**Phase:** Phase 09 (pending kickoff)
+**Status:** Planning — roadmap being defined
+**Last activity:** 2026-02-28 — v2 requirements defined, roadmap in progress
 
 ```
 v1:   [████████████████████] 100% (5/5 phases) — shipped 2026-02-25
 v1.1: [████████████████████] 100% (3/3 phases) — shipped 2026-02-28
-v2:   [ ] Not started
+v2:   [░░░░░░░░░░░░░░░░░░░░]   0% — started 2026-02-28
 ```
 
 ## Accumulated Context
@@ -28,10 +28,13 @@ v2:   [ ] Not started
 - All 11 v1 requirements closed.
 - Runtime verification closure complete with restart + runtime evidence gates.
 
-### Open Follow-ups for Next Milestone
+### v2 Scope Decisions
 
-- None from v1.1 — all requirements closed.
-- v2 candidates: TERM-05 (multi-terminal), DIFF-02/03/04 (code review UI), REMO-01/02 (remote access).
+- DIFF-02/03/04 are the v2 focus. TERM-05 and REMO-01/02 deferred.
+- Diff panel keeps toggle behaviour (not always-visible column).
+- Hunk staging: inline "Stage hunk" / "Unstage hunk" button per hunk (not per-file checkbox).
+- Target layout: two-column (file list left with +/- stats + tabs, diff viewer right) + commit bar at bottom.
+- Reference UI: Superset.sh "See Changes" panel.
 
 ### Decisions Logged
 
@@ -66,9 +69,9 @@ v2:   [ ] Not started
 ## Session Continuity
 
 **Last session:** 2026-02-28
-**Stopped at:** v1.1 milestone archived, planning docs updated for v2
+**Stopped at:** v2 requirements defined, roadmap being generated
 **Resume file:** None
 
 ---
 
-_State updated: 2026-02-28 — v1.1 Hardening archived. Ready for v2 milestone kickoff._
+_State updated: 2026-02-28 — v2 Code Review milestone started. Requirements defined. Roadmap pending._

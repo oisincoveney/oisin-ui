@@ -8,13 +8,15 @@ v1.1 Hardening closes the remaining reliability and verification gaps from v1 so
 
 - ✅ **v1 MVP** — shipped 2026-02-25 (phases 01-05, 34 plans) → `.planning/milestones/v1-ROADMAP.md`
 - ✅ **v1.1 Hardening** — shipped 2026-02-28 (phases 06-08, 12 plans) → `.planning/milestones/v1.1-ROADMAP.md`
-- **v2** — not yet started (candidates: TERM-05, DIFF-02/03/04, REMO-01/02)
+- 🚧 **v2 Code Review** — in progress (phases 09-10) → DIFF-02, DIFF-03, DIFF-04
 
 ## Phases
 
 - [x] **Phase 06: Runtime Reliability Hardening** - Restart/reconnect/create/delete flows remain bounded and recoverable. (Completed 2026-02-26)
 - [x] **Phase 07: Thread Metadata Contract Closure** - Active thread context remains consistent across ensure/reconnect/refresh. (Completed 2026-02-27)
 - [x] **Phase 08: Deterministic Verification Closure** - Browser/runtime hardening checks run deterministically in one repeatable path. (Completed 2026-02-28)
+- [ ] **Phase 09: Diff Panel Redesign** - Users see a two-column diff panel with per-file stats and Unstaged/Staged/Against Main tabs.
+- [ ] **Phase 10: Hunk Staging & Commit** - Users can stage/unstage individual hunks and commit staged changes directly from the browser.
 
 ## Phase Details
 
@@ -73,6 +75,34 @@ Plans:
 - [x] 08-01-PLAN.md — Migrate diff-panel.spec.ts to isolated server/e2e runtime fixture, no conditional skip (VER-01)
 - [x] 08-02-PLAN.md — Add create->click-switch->delete test to thread-management-web.spec.ts (VER-02, VER-03)
 
+### Phase 09: Diff Panel Redesign
+
+**Goal**: Users see a structured two-column diff panel replacing the flat single-column layout.
+**Depends on**: Phase 08
+**Requirements**: DIFF-02
+**Success Criteria** (what must be TRUE):
+
+  1. User opens the diff panel and sees a left column listing all changed files with per-file +/- line counts.
+  2. User can switch between Unstaged, Staged, and Against Main tabs; the file list and diff content update to reflect the selected view.
+  3. User clicks a file in the left column and the right column renders that file's diff inline.
+  4. Renamed files (R status) appear correctly in the file list without broken display.
+**Plans**: TBD
+Plans:
+
+### Phase 10: Hunk Staging & Commit
+
+**Goal**: Users can stage individual diff hunks and commit staged changes without leaving the browser.
+**Depends on**: Phase 09
+**Requirements**: DIFF-03, DIFF-04
+**Success Criteria** (what must be TRUE):
+
+  1. User sees a "Stage hunk" button on each unstaged hunk; clicking it moves the hunk to the Staged tab and updates the file's +/- counts in the file list.
+  2. User sees an "Unstage hunk" button on each staged hunk; clicking it moves the hunk back to Unstaged.
+  3. User types a commit message in the commit bar and clicks Commit; staged changes are committed and the Staged tab clears.
+  4. User cannot submit an empty commit message; the Commit button is disabled until text is entered.
+**Plans**: TBD
+Plans:
+
 ## Progress
 
 | Phase | Milestone | Requirements | Plans Complete | Status | Completed |
@@ -80,6 +110,8 @@ Plans:
 | 06. Runtime Reliability Hardening | v1.1 | RUN-01, RUN-02, RUN-03, RUN-04 | 8/8 | Complete | 2026-02-26 |
 | 07. Thread Metadata Contract Closure | v1.1 | THRD-01, THRD-02, THRD-03 | 2/2 | Complete | 2026-02-27 |
 | 08. Deterministic Verification Closure | v1.1 | VER-01, VER-02, VER-03 | 2/2 | Complete | 2026-02-28 |
+| 09. Diff Panel Redesign | v2 | DIFF-02 | 0/TBD | Pending | — |
+| 10. Hunk Staging & Commit | v2 | DIFF-03, DIFF-04 | 0/TBD | Pending | — |
 
 ---
-_Roadmap updated: 2026-02-28 — v1.1 Hardening archived. Awaiting v2 milestone definition._
+_Roadmap updated: 2026-02-28 — v2 Code Review milestone added (phases 09-10)._

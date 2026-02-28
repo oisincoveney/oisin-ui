@@ -47,12 +47,18 @@ Work on your code from anywhere with your OpenCode instance and settings, reliab
 - Multi-user/auth (still single-user local-first)
 - ACP-based protocol rewrite (terminal-first remains canonical)
 
-## Next Milestone: v2
+## Current Milestone: v2 Code Review
 
-Candidates (from REQUIREMENTS.md v2 section):
-- TERM-05: Multiple terminal panes/tabs per thread
-- DIFF-02/03/04: 3-panel code review UI (stage/unstage hunks, commit from web)
-- REMO-01/02: Remote relay access with WSS encryption
+**Goal:** Improved code review UI — file list with per-file stats, hunk-level staging/unstaging, and commit from browser.
+
+**Requirements:** DIFF-02, DIFF-03, DIFF-04
+**Phases:** 09+ (starting 2026-02-28)
+
+### What ships in v2
+
+- Redesigned diff panel: two-column layout (file list left, diff viewer right) with per-file +/- stats, Unstaged/Staged/Against Main tabs
+- Inline "Stage hunk" / "Unstage hunk" buttons on each diff hunk
+- Commit message input + Commit button to commit staged changes from the browser
 
 ## Context
 
@@ -76,4 +82,4 @@ Candidates (from REQUIREMENTS.md v2 section):
 | `waitForPostConnectReady` barrier for first-RPC safety | Eliminates race between WS connect and session dispatch readiness | ✓ Good (v1.1) |
 
 ---
-*Last updated: 2026-02-28 after v1.1 Hardening milestone completion*
+*Last updated: 2026-02-28 — v2 Code Review milestone started*

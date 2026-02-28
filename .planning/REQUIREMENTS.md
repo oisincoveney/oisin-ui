@@ -3,80 +3,52 @@
 **Defined:** 2026-02-25
 **Core Value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
 
-## v1.1 Requirements
-
-Requirements for the v1.1 Hardening milestone.
-
-### Runtime Reliability
-
-- [x] **RUN-01**: User can restart the Docker service and reconnect without daemon lock-churn loops.
-- [x] **RUN-02**: User sees terminal attach recover cleanly after reconnect without repeated `Terminal not found` error loops.
-- [x] **RUN-03**: User can create a thread during transient websocket disruption and gets a bounded actionable error instead of indefinite pending state.
-- [x] **RUN-04**: User can delete the active thread and immediately return to `No active thread` without stale attach retries.
-
-### Thread Contract Completion
-
-- [x] **THRD-01**: Ensure-default terminal response includes `projectId` and `resolvedThreadId` in server payload.
-- [x] **THRD-02**: Web thread store consumes ensure-default metadata fields without compatibility placeholders.
-- [x] **THRD-03**: Thread switch and ensure flows keep metadata consistent across reconnect and refresh.
-
-### Verification Determinism
-
-- [x] **VER-01**: Diff-panel browser regression runs with deterministic active-thread fixture and no conditional skip.
-- [x] **VER-02**: Thread management browser regression covers create -> switch -> delete with deterministic fixture setup.
-- [x] **VER-03**: Runtime gate and restart stability checks run reliably in one command sequence for local verification.
-
 ## v2 Requirements
 
-Deferred to future release.
+Requirements for the v2 Code Review milestone.
 
-### Terminal
+### Code Review UI
 
-- **TERM-05**: Multiple terminal panes/tabs per thread
+- **DIFF-02**: User can open an improved diff panel with a file list (left column showing per-file +/- stats) and an inline diff viewer (right column), replacing the current flat single-column layout.
+- **DIFF-03**: User can stage and unstage individual hunks from the diff viewer via inline "Stage hunk" / "Unstage hunk" buttons on each hunk, with the staged/unstaged file list updating accordingly.
+- **DIFF-04**: User can write a commit message and commit staged changes directly from the browser UI without leaving the app.
 
-### Code Review
+## Out of Scope for v2
 
-- **DIFF-02**: 3-panel Codex-inspired layout (sidebar + terminal + diff panel)
-- **DIFF-03**: Stage/unstage hunks from the UI
-- **DIFF-04**: Commit from the web interface
-
-### Remote Access
-
-- **REMO-01**: Remote access via relay server
-- **REMO-02**: WSS/encrypted connections for remote use
-
-## Out of Scope
-
-Explicitly excluded from v1.1.
+Explicitly deferred to future milestones.
 
 | Feature | Reason |
 |---------|--------|
-| New in-browser code editor | Hardening milestone; terminal-first remains core |
-| Multi-user auth model | Not part of v1.1 reliability scope |
-| Mobile native clients | Web flow hardening takes priority |
+| TERM-05: Multiple terminal panes/tabs | Deferred — focus is code review UI |
+| REMO-01/02: Remote relay access | Deferred — not in v2 scope |
+| Side-by-side diff view toggle | Can be added later as DIFF-05 |
+| Push to remote from browser | Post-commit action, deferred to v3 |
 
 ## Traceability
 
-Updated for v1.1 roadmap phase mapping.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RUN-01 | Phase 06 | Complete |
-| RUN-02 | Phase 06 | Complete |
-| RUN-03 | Phase 06 | Complete |
-| RUN-04 | Phase 06 | Complete |
-| THRD-01 | Phase 07 | Complete |
-| THRD-02 | Phase 07 | Complete |
-| THRD-03 | Phase 07 | Complete |
-| VER-01 | Phase 08 | Complete |
-| VER-02 | Phase 08 | Complete |
-| VER-03 | Phase 08 | Complete |
+| DIFF-02 | Phase 09 | Pending |
+| DIFF-03 | Phase 09–10 | Pending |
+| DIFF-04 | Phase 10 | Pending |
 
 **Coverage:**
-- v1.1 requirements: 10 total
-- Mapped to phases: 10
+- v2 requirements: 3 total
+- Mapped to phases: 3
 - Unmapped: 0
 
 ---
+
+## Archive
+
+### v1.1 Requirements (Complete)
+
+All v1.1 requirements closed 2026-02-28. See: `.planning/milestones/v1.1-REQUIREMENTS.md`
+
+### v1 Requirements (Complete)
+
+All v1 requirements closed 2026-02-25. See: `.planning/milestones/v1-REQUIREMENTS.md`
+
+---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-28 after Phase 08 completion — all 10 v1.1 requirements closed*
+*Last updated: 2026-02-28 — v2 Code Review milestone requirements defined*
