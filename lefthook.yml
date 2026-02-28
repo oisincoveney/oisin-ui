@@ -14,3 +14,6 @@ pre-commit:
           echo "package-lock.json is not allowed. Use Bun only."
           exit 1
         fi
+    web-fix:
+      glob: "packages/web/src/**/*.{ts,tsx,js}"
+      run: cd packages/web && bun run fix
