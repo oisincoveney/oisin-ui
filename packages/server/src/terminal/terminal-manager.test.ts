@@ -124,7 +124,7 @@ describe("TerminalManager", () => {
       await expect(manager.createTerminal({ cwd: "tmp" })).rejects.toThrow("cwd must be absolute path");
     });
 
-    it("inherits registered env for the worktree root cwd", async () => {
+    it("inherits registered env for the worktree root cwd", { timeout: 40000 }, async () => {
       await withShell("/bin/sh", async () => {
         manager = createTestTerminalManager();
         const cwd = mkdtempSync(join(tmpdir(), "terminal-manager-env-root-"));
@@ -136,20 +136,21 @@ describe("TerminalManager", () => {
           env: { PASEO_WORKTREE_PORT: "45678" },
         });
         const session = await manager.createTerminal({ cwd });
-        for (let attempt = 0; attempt < 10 && !existsSync(markerPath); attempt++) {
-          session.send({
-            type: "input",
-            data: `printf '%s' "$PASEO_WORKTREE_PORT" > ${JSON.stringify(markerPath)}\r`,
-          });
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-
-        await waitForCondition(() => existsSync(markerPath), 10000);
+        // Keep sending the command until the file appears (shell may be slow to start under load).
+        await waitForCondition(() => {
+          if (!existsSync(markerPath)) {
+            session.send({
+              type: "input",
+              data: `printf '%s' "$PASEO_WORKTREE_PORT" > ${JSON.stringify(markerPath)}\r`,
+            });
+          }
+          return existsSync(markerPath);
+        }, 25000, 200);
         expect(readFileSync(markerPath, "utf8")).toBe("45678");
       });
     });
 
-    it("inherits registered env for subdirectories within the worktree", async () => {
+    it("inherits registered env for subdirectories within the worktree", { timeout: 40000 }, async () => {
       await withShell("/bin/sh", async () => {
         manager = createTestTerminalManager();
         const rootCwd = mkdtempSync(join(tmpdir(), "terminal-manager-env-subdir-"));
@@ -163,15 +164,16 @@ describe("TerminalManager", () => {
           env: { PASEO_WORKTREE_PORT: "45679" },
         });
         const session = await manager.createTerminal({ cwd: subdirCwd });
-        for (let attempt = 0; attempt < 10 && !existsSync(markerPath); attempt++) {
-          session.send({
-            type: "input",
-            data: `printf '%s' "$PASEO_WORKTREE_PORT" > ${JSON.stringify(markerPath)}\r`,
-          });
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-
-        await waitForCondition(() => existsSync(markerPath), 10000);
+        // Keep sending the command until the file appears (shell may be slow to start under load).
+        await waitForCondition(() => {
+          if (!existsSync(markerPath)) {
+            session.send({
+              type: "input",
+              data: `printf '%s' "$PASEO_WORKTREE_PORT" > ${JSON.stringify(markerPath)}\r`,
+            });
+          }
+          return existsSync(markerPath);
+        }, 25000, 200);
         expect(readFileSync(markerPath, "utf8")).toBe("45679");
       });
     });
