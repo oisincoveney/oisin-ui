@@ -666,6 +666,51 @@ test("background thread delete updates sidebar state", async ({ page }) => {
   await expect(betaRow).toHaveCount(0);
 });
 
+test("create->click-switch->delete removes active thread and shows no active thread", async ({ page }) => {
+  const threadATitle = `thread-switch-delete-a-${Date.now()}`;
+  const threadBTitle = `thread-switch-delete-b-${Date.now()}`;
+
+  await page.goto(runtime.webUrl);
+
+  // Create thread A — becomes active
+  await createThreadViaUi(page, threadATitle);
+  await expect(
+    page.locator("[data-sidebar='menu-button'][data-active='true']", { hasText: threadATitle }),
+  ).toBeVisible();
+
+  // Create thread B — becomes active
+  await createThreadViaUi(page, threadBTitle);
+  await expect(
+    page.locator("[data-sidebar='menu-button'][data-active='true']", { hasText: threadBTitle }),
+  ).toBeVisible();
+
+  // Click sidebar row to switch back to thread A (not keyboard)
+  const threadARow = page.locator("[data-sidebar='menu-button']", { hasText: threadATitle }).first();
+  await expect(threadARow).toBeVisible();
+  await threadARow.scrollIntoViewIfNeeded();
+  await threadARow.click();
+  await expect(
+    page.locator("[data-sidebar='menu-button'][data-active='true']", { hasText: threadATitle }),
+  ).toBeVisible();
+
+  // Hover thread A item to reveal delete button
+  const threadAItem = threadARow.locator("xpath=ancestor::*[@data-sidebar='menu-item'][1]");
+  await threadAItem.hover();
+
+  // Delete thread A
+  await page.getByRole("button", { name: `Delete ${threadATitle}` }).click();
+  await expect(page.getByRole("alertdialog", { name: "Delete Thread" })).toBeVisible();
+  await page.getByRole("button", { name: "Delete Thread" }).click();
+
+  // Verify no active thread state
+  await expect(page.getByText("No active thread")).toBeVisible({ timeout: 2_000 });
+  await expect(
+    page.locator("[data-sidebar='menu-button'][data-active='true']", { hasText: threadATitle }),
+  ).toHaveCount(0);
+  await expect(threadAItem).toHaveCount(0);
+  await expect(page.getByText(/Reattaching terminal \(attempt \d+\)/)).toHaveCount(0);
+});
+
 test("create thread exits pending immediately with disconnected error when websocket is offline", async ({ page }) => {
   await page.addInitScript(() => {
     const globalWindow = window as Window & {
