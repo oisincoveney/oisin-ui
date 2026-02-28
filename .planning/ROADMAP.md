@@ -7,13 +7,13 @@ v1.1 Hardening closes the remaining reliability and verification gaps from v1 so
 ## Milestones
 
 - ✅ **v1 MVP** — shipped 2026-02-25 (phases 01-05, 34 plans) → `.planning/milestones/v1-ROADMAP.md`
-- 🚧 **v1.1 Hardening** — in progress (phases 06-08)
+- ✅ **v1.1 Hardening** — shipped 2026-02-28 (phases 06-08, 12 plans) → `.planning/milestones/v1.1-ROADMAP.md`
 
 ## Phases
 
 - [x] **Phase 06: Runtime Reliability Hardening** - Restart/reconnect/create/delete flows remain bounded and recoverable. (Completed 2026-02-26)
 - [x] **Phase 07: Thread Metadata Contract Closure** - Active thread context remains consistent across ensure/reconnect/refresh. (Completed 2026-02-27)
-- [ ] **Phase 08: Deterministic Verification Closure** - Browser/runtime hardening checks run deterministically in one repeatable path.
+- [x] **Phase 08: Deterministic Verification Closure** - Browser/runtime hardening checks run deterministically in one repeatable path. (Completed 2026-02-28)
 
 ## Phase Details
 
@@ -69,8 +69,8 @@ Plans:
 **Plans**: 2 plans
 Plans:
 
-- [ ] 08-01-PLAN.md — Migrate diff-panel.spec.ts to isolated server/e2e runtime fixture, no conditional skip (VER-01)
-- [ ] 08-02-PLAN.md — Add create->click-switch->delete test to thread-management-web.spec.ts (VER-02, VER-03)
+- [x] 08-01-PLAN.md — Migrate diff-panel.spec.ts to isolated server/e2e runtime fixture, no conditional skip (VER-01)
+- [x] 08-02-PLAN.md — Add create->click-switch->delete test to thread-management-web.spec.ts (VER-02, VER-03)
 
 ## Progress
 
@@ -78,7 +78,7 @@ Plans:
 |-------|-----------|--------------|----------------|--------|-----------|
 | 06. Runtime Reliability Hardening | v1.1 | RUN-01, RUN-02, RUN-03, RUN-04 | 8/8 | Complete | 2026-02-26 |
 | 07. Thread Metadata Contract Closure | v1.1 | THRD-01, THRD-02, THRD-03 | 2/2 | Complete | 2026-02-27 |
-| 08. Deterministic Verification Closure | v1.1 | VER-01, VER-02, VER-03 | 0/2 | Not started | - |
+| 08. Deterministic Verification Closure | v1.1 | VER-01, VER-02, VER-03 | 2/2 | Complete | 2026-02-28 |
 
 ---
-_Roadmap updated: 2026-02-27 after 07-02 execution._
+_Roadmap updated: 2026-02-28 after 08-02 execution. v1.1 Hardening milestone complete._

@@ -22,9 +22,9 @@ Requirements for the v1.1 Hardening milestone.
 
 ### Verification Determinism
 
-- [ ] **VER-01**: Diff-panel browser regression runs with deterministic active-thread fixture and no conditional skip.
-- [ ] **VER-02**: Thread management browser regression covers create -> switch -> delete with deterministic fixture setup.
-- [ ] **VER-03**: Runtime gate and restart stability checks run reliably in one command sequence for local verification.
+- [x] **VER-01**: Diff-panel browser regression runs with deterministic active-thread fixture and no conditional skip.
+- [x] **VER-02**: Thread management browser regression covers create -> switch -> delete with deterministic fixture setup.
+- [x] **VER-03**: Runtime gate and restart stability checks run reliably in one command sequence for local verification.
 
 ## v2 Requirements
 
@@ -65,12 +65,12 @@ Updated for v1.1 roadmap phase mapping.
 | RUN-02 | Phase 06 | Complete |
 | RUN-03 | Phase 06 | Complete |
 | RUN-04 | Phase 06 | Complete |
-| THRD-01 | Phase 07 | Pending |
-| THRD-02 | Phase 07 | Pending |
-| THRD-03 | Phase 07 | Pending |
-| VER-01 | Phase 08 | Pending |
-| VER-02 | Phase 08 | Pending |
-| VER-03 | Phase 08 | Pending |
+| THRD-01 | Phase 07 | Complete |
+| THRD-02 | Phase 07 | Complete |
+| THRD-03 | Phase 07 | Complete |
+| VER-01 | Phase 08 | Complete |
+| VER-02 | Phase 08 | Complete |
+| VER-03 | Phase 08 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 10 total
@@ -79,4 +79,4 @@ Updated for v1.1 roadmap phase mapping.
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-02-26 after Phase 06 completion*
+*Last updated: 2026-02-28 after Phase 08 completion — all 10 v1.1 requirements closed*

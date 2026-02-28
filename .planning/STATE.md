@@ -5,14 +5,14 @@
 See: `.planning/PROJECT.md` (updated 2026-02-25)
 
 **Core value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current focus:** Phase 08 complete — all verification closure plans executed.
+**Current focus:** v1.1 Hardening milestone complete — all 10 requirements closed, all 8 phases verified.
 
 ## Current Position
 
 **Phase:** 08 of 08 (Deterministic Verification Closure)
 **Plan:** 2 of 2 in current phase
-**Status:** Phase complete — all phases done
-**Last activity:** 2026-02-28 — Completed 08-02-PLAN.md
+**Status:** Milestone complete — v1.1 Hardening shipped
+**Last activity:** 2026-02-28 — Phase 08 verified (6/6 must-haves), v1.1 milestone closed
 
 ```
 Progress: [████████████████████] 100% (8/8 phases complete)
@@ -28,8 +28,8 @@ Progress: [████████████████████] 100% (8
 
 ### Open Follow-ups for Next Milestone
 
-- Deterministic diff-panel browser regression fixture (avoid skip path).
-- VER-02 create->click-switch->delete regression now covered (08-02 complete).
+- None from v1.1 — all requirements closed.
+- v2 candidates: TERM-05 (multi-terminal), DIFF-02/03/04 (code review UI), REMO-01/02 (remote access).
 
 ### Decisions Logged
 
@@ -57,14 +57,16 @@ Progress: [████████████████████] 100% (8
 - First-request regression now validates readiness + immediate ping/fetchAgents bounded latency across repeated fresh connections.
 - Phase verification evidence must come from one concrete passing command chain run (typecheck -> daemon e2e -> web e2e).
 - threadScope relaxed from z.literal to z.string() for backward compat; projectId/resolvedThreadId now required-nullable in ensure-default schema.
-- VER-02 browser e2e: create->click-switch->delete test uses sidebar row click (not keyboard); daemon-killing tests must be last in shared-runtime suites.
+  - VER-02 browser e2e: create->click-switch->delete test uses sidebar row click (not keyboard); daemon-killing tests must be last in shared-runtime suites.
+  - VER-01 diff-panel: thread created via controlClient.createThread() in beforeAll (worktreePath synchronous); git mv required for staged rename detection (R100 status); main > header scopes toggle button away from diff-panel's internal header.
+  - terminal-manager env tests: use time-bounded retry loop (send command every 200ms until file appears) with 25s/40s timeouts to handle shell startup latency under parallel test load.
 
 ## Session Continuity
 
-**Last session:** 2026-02-28T04:05:17Z
-**Stopped at:** Completed 08-02-PLAN.md (phase 08 complete — all phases done)
+**Last session:** 2026-02-28
+**Stopped at:** Phase 08 verified (6/6), v1.1 milestone closed
 **Resume file:** None
 
 ---
 
-_State updated: 2026-02-28 after 08-02 execution_
+_State updated: 2026-02-28 after 08 verification. v1.1 Hardening milestone complete._
