@@ -12,7 +12,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 **Milestone:** v2 Code Review
 **Phase:** Phase 09 (pending kickoff)
 **Status:** Planning — roadmap being defined
-**Last activity:** 2026-02-28 — v2 requirements defined, roadmap in progress
+**Last activity:** 2026-02-28 — Completed quick task 001: oxlint/oxfmt/shadcn-enforcer/AGENTS.md added to web package
 
 ```
 v1:   [████████████████████] 100% (5/5 phases) — shipped 2026-02-25
@@ -74,4 +74,12 @@ v2:   [░░░░░░░░░░░░░░░░░░░░]   0% — st
 
 ---
 
-_State updated: 2026-02-28 — v2 Code Review milestone started. Requirements defined. Roadmap pending._
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 001 | Add oxlint/oxfmt/shadcn-enforcer/AGENTS.md to web package | 2026-02-28 | 4726a8d | [001-add-oxlint-oxfmt-shadcn-enforcer-plugin](./quick/001-add-oxlint-oxfmt-shadcn-enforcer-plugin/) |
+
+---
+
+_State updated: 2026-02-28 — v2 Code Review milestone started. Requirements defined. Roadmap pending. Quick task 001 complete._
