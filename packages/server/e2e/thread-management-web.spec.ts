@@ -205,6 +205,9 @@ async function startRuntime(): Promise<Runtime> {
     PASEO_CORS_ORIGINS: webUrl,
     PASEO_DICTATION_ENABLED: "0",
     PASEO_VOICE_MODE_ENABLED: "0",
+    // Isolate tmux to paseoHomeRoot so test sessions don't pollute the user's tmux server.
+    TMUX_TMPDIR: paseoHomeRoot,
+    TMUX: "",
   };
 
   const webEnv: NodeJS.ProcessEnv = {
@@ -333,7 +336,7 @@ test("primary button interactions are stable and actionable", async ({ page }) =
   await expect(newThreadButton).toBeEnabled();
 
   const refreshDiffButton = page.getByRole("button", { name: "Refresh diff" });
-  const openDiffButton = page.getByRole("button", { name: "Open diff panel" });
+  const openDiffButton = page.getByRole("button", { name: "Toggle diff panel" });
   await expect(refreshDiffButton).toBeDisabled();
   await expect(openDiffButton).toBeDisabled();
 

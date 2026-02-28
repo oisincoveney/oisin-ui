@@ -209,6 +209,9 @@ async function startRuntime(): Promise<Runtime> {
     PASEO_CORS_ORIGINS: webUrl,
     PASEO_DICTATION_ENABLED: "0",
     PASEO_VOICE_MODE_ENABLED: "0",
+    // Isolate tmux to paseoHomeRoot so test sessions don't pollute the user's tmux server.
+    TMUX_TMPDIR: paseoHomeRoot,
+    TMUX: "",
   };
 
   const webEnv: NodeJS.ProcessEnv = {
@@ -323,7 +326,7 @@ test.describe("diff panel regressions", () => {
     ).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("No active thread")).toHaveCount(0, { timeout: 15_000 });
 
-    const openPanelButton = page.getByRole("button", { name: "Open diff panel" });
+    const openPanelButton = page.getByRole("button", { name: "Toggle diff panel" });
     await expect(openPanelButton).toBeEnabled({ timeout: 15_000 }); // Hard assertion — no skip
     await openPanelButton.click();
 
@@ -364,7 +367,7 @@ test.describe("diff panel regressions", () => {
 
     // Close panel if open, then reopen fresh to avoid stale state from async events.
     // The header toggle button aria-label is "Close diff panel" when open, "Open diff panel" when closed.
-    const headerToggleBtn = page.locator("main > header").getByRole("button", { name: /diff panel/i });
+    const headerToggleBtn = page.getByRole("button", { name: "Toggle diff panel" });
     const isOpen = await panel.isVisible();
     if (isOpen) {
       // Click the header toggle to close (it shows "Close diff panel" when open)

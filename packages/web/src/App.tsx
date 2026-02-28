@@ -857,7 +857,7 @@ function App() {
             size="icon"
             onClick={toggleDiffPanel}
             disabled={!diffSnapshot.activeTarget}
-            aria-label={diffPanelOpen ? 'Close diff panel' : 'Open diff panel'}
+            aria-label="Toggle diff panel"
             title={diffPanelOpen ? 'Close diff panel' : 'Open diff panel'}
           >
             <PanelRightOpen className="h-4 w-4" />
