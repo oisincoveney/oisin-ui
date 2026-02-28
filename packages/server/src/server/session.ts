@@ -6963,25 +6963,26 @@ export class Session {
         }
         const worktreePath = thread.links.worktreePath
         if (!worktreePath) {
-          return undefined
-        }
-        const ensured = await this.terminalManager.ensureThreadTerminal({
-          projectId: thread.projectId,
-          threadId: thread.threadId,
-          cwd: worktreePath,
-        })
-        this.ensureTerminalExitSubscription(ensured.terminal)
-
-        if (ensured.terminal.id !== terminalId) {
-          await this.threadRegistry.updateThread({
+          // Thread exists but has no worktree — fall through to ensureDefaultTerminal
+        } else {
+          const ensured = await this.terminalManager.ensureThreadTerminal({
             projectId: thread.projectId,
             threadId: thread.threadId,
-            links: {
-              terminalId: ensured.terminal.id,
-            },
+            cwd: worktreePath,
           })
+          this.ensureTerminalExitSubscription(ensured.terminal)
+
+          if (ensured.terminal.id !== terminalId) {
+            await this.threadRegistry.updateThread({
+              projectId: thread.projectId,
+              threadId: thread.threadId,
+              links: {
+                terminalId: ensured.terminal.id,
+              },
+            })
+          }
+          return ensured.terminal
         }
-        return ensured.terminal
       } catch (error) {
         this.sessionLogger.warn(
           { err: error, terminalId },
