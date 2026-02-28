@@ -1,0 +1,72 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "jsx-a11y", "vitest", "import"],
+  "env": { "browser": true },
+  "globals": { "exports": "readonly" },
+  "ignorePatterns": [
+    "src/index.css",
+    "src/components/ui/**"
+  ],
+  "rules": {
+    "import/no-barrel-file": "warn",
+    "eslint/curly": "error",
+    "eslint/default-case-last": "error",
+    "eslint/eqeqeq": "error",
+    "eslint/no-case-declarations": "error",
+    "eslint/no-console": ["error", { "allow": ["error"] }],
+    "eslint/no-empty": "error",
+    "eslint/no-fallthrough": "error",
+    "eslint/no-labels": "error",
+    "eslint/no-lone-blocks": "error",
+    "eslint/no-new-wrappers": "error",
+    "eslint/no-prototype-builtins": "error",
+    "eslint/no-redeclare": "error",
+    "eslint/no-regex-spaces": "error",
+    "eslint/no-self-compare": "error",
+    "eslint/no-unneeded-ternary": "error",
+    "eslint/no-use-before-define": "off",
+    "eslint/no-var": "warn",
+    "eslint/no-void": "error",
+    "eslint/no-throw-literal": "error",
+    "eslint/one-var": ["error", "never"],
+    "eslint/prefer-const": "error",
+    "eslint/prefer-regex-literals": "error",
+    "eslint/yoda": "error",
+    "eslint/no-useless-constructor": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.ts", "**/*.tsx"],
+      "rules": { "typescript/no-explicit-any": "error" }
+    },
+    {
+      "files": ["**/*.jsx", "**/*.tsx"],
+      "rules": {
+        "react/jsx-boolean-value": "error",
+        "react/jsx-fragments": "error",
+        "react/jsx-key": "error",
+        "react/jsx-no-comment-textnodes": "error",
+        "react/jsx-no-duplicate-props": "error",
+        "react/jsx-no-target-blank": "error",
+        "react/no-children-prop": "error",
+        "react/no-danger-with-children": "error"
+      }
+    },
+    {
+      "files": ["**/*.test.ts"],
+      "rules": {
+        "eslint/no-restricted-imports": ["error", {
+          "paths": [{ "name": "@/test/browser", "message": "Browser test utilities cannot be imported in .test.ts files. Use .test.tsx for component tests." }]
+        }]
+      }
+    },
+    {
+      "files": ["**/*.test.tsx"],
+      "rules": {
+        "eslint/no-restricted-imports": ["error", {
+          "paths": [{ "name": "@/test/node", "message": "Node test utilities cannot be imported in .test.tsx files. Use .test.ts for non-component tests." }]
+        }]
+      }
+    }
+  ]
+}

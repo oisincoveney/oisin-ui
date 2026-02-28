@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint .",
+    "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b"
+    "lint": "oxlint --type-aware",
+    "lint:fix": "bun run lint --fix --fix-suggestions",
+    "fmt": "oxfmt",
+    "typecheck": "oxlint --type-aware --type-check",
+    "fix": "bun run fmt && bun run lint:fix"
   },
   "dependencies": {
     "@effect/schema": "^0.75.5",
@@ -42,11 +45,12 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.24",
+    "oxfmt": "latest",
     "oxlint": "^1.49.0",
+    "oxlint-tsgolint": "latest",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "~5.9.3",
     "vite": "^7.3.1"
   }
 }
