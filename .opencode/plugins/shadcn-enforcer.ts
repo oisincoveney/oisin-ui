@@ -64,7 +64,7 @@ export const ShadcnEnforcerPlugin = async () => {
       output: { args?: Record<string, unknown> },
     ) => {
       const tool = input.tool
-      if (!tool || !["write", "edit", "multiedit", "patch"].includes(tool)) return
+      if (!tool || !["write", "edit", "multiedit"].includes(tool)) return
 
       const args = output.args ?? {}
 
@@ -80,16 +80,8 @@ export const ShadcnEnforcerPlugin = async () => {
       } else if (tool === "edit") {
         contentToCheck = (args.newString as string) ?? ""
       } else if (tool === "multiedit") {
-        const edits = (args.edits as Array<{ newString?: string }>) ?? []
+        const edits = (args.edits as Array<{ filePath: string; oldString: string; newString: string; replaceAll?: boolean }>) ?? []
         contentToCheck = edits.map((e) => e.newString ?? "").join("\n")
-      } else if (tool === "patch") {
-        // Only check added lines (lines starting with +)
-        const patch = (args.patch as string) ?? ""
-        contentToCheck = patch
-          .split("\n")
-          .filter((l) => l.startsWith("+") && !l.startsWith("+++"))
-          .map((l) => l.slice(1))
-          .join("\n")
       }
 
       if (!contentToCheck) return
