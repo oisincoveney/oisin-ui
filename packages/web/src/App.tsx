@@ -380,7 +380,6 @@ function App() {
     if (forceRefresh) {
       terminalRef.current?.clear()
       adapterRef.current?.setOffset(0)
-      
     }
 
     sendWsMessage({
@@ -748,7 +747,6 @@ function App() {
       const hasOffsetGap = replayedFrom > pendingAttach.resumeOffset
 
       if ((responseReset || hasOffsetGap) && !pendingAttach.forceRefresh) {
-        
         sendAttachRequest(pendingAttach.terminalId, true)
         return
       }

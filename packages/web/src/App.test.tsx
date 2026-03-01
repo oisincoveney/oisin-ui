@@ -25,11 +25,8 @@ async function loadRecoveryApi() {
 
 describe('attach recovery state machine', () => {
   it('retries within the 60 second window and transitions to failed at the deadline', async () => {
-    const {
-      ATTACH_RECOVERY_WINDOW_MS,
-      createIdleAttachRecoveryState,
-      nextAttachRecoveryRetryState,
-    } = await loadRecoveryApi()
+    const { ATTACH_RECOVERY_WINDOW_MS, createIdleAttachRecoveryState, nextAttachRecoveryRetryState } =
+      await loadRecoveryApi()
     const startedAt = 5_000
     const first = nextAttachRecoveryRetryState(createIdleAttachRecoveryState(), startedAt, 'Terminal not found')
 
@@ -42,7 +39,7 @@ describe('attach recovery state machine', () => {
     const nearDeadline = nextAttachRecoveryRetryState(
       first,
       startedAt + ATTACH_RECOVERY_WINDOW_MS - 1,
-      'Terminal not found'
+      'Terminal not found',
     )
     expect(nearDeadline.phase).toBe('retrying')
     expect(nearDeadline.attempt).toBe(2)
@@ -51,7 +48,7 @@ describe('attach recovery state machine', () => {
     const atDeadline = nextAttachRecoveryRetryState(
       nearDeadline,
       startedAt + ATTACH_RECOVERY_WINDOW_MS,
-      'Terminal not found'
+      'Terminal not found',
     )
     expect(atDeadline.phase).toBe('failed')
     expect(atDeadline.attempt).toBe(3)
@@ -77,10 +74,7 @@ describe('attach recovery state machine', () => {
   })
 
   it('fails after max attempts even within the time window', async () => {
-    const {
-      createIdleAttachRecoveryState,
-      nextAttachRecoveryRetryState,
-    } = await loadRecoveryApi()
+    const { createIdleAttachRecoveryState, nextAttachRecoveryRetryState } = await loadRecoveryApi()
     const startedAt = 1_000
     let state = nextAttachRecoveryRetryState(createIdleAttachRecoveryState(), startedAt, 'err')
     let attemptCount = 1
