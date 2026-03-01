@@ -77,166 +77,169 @@ export function AppSidebar() {
 
   return (
     <>
-      <TooltipProvider delayDuration={100}>
+      <TooltipProvider delay={100}>
         <Sidebar>
-        <SidebarHeader>
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Threads</p>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold text-foreground">Projects</p>
-                {actionsLocked ? (
-                  <span
-                    className="inline-flex items-center rounded-full border border-amber-500/35 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-300"
-                    aria-label="Warm-up in progress"
-                  >
-                    Warm-up
-                  </span>
-                ) : null}
+          <SidebarHeader>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Threads</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-foreground">Projects</p>
+                  {actionsLocked ? (
+                    <span
+                      className="inline-flex items-center rounded-full border border-amber-500/35 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-300"
+                      aria-label="Warm-up in progress"
+                    >
+                      Warm-up
+                    </span>
+                  ) : null}
+                </div>
               </div>
+
+              <Tooltip>
+                <TooltipTrigger render={<span />}>
+                    <Button
+                      size="sm"
+                      className="h-8"
+                      aria-label="Create new thread"
+                      disabled={actionsLocked}
+                      onClick={() => {
+                        setCreateProjectId(snapshot.projects[0]?.projectId ?? null)
+                        setCreateDialogOpen(true)
+                      }}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      New Thread
+                    </Button>
+                  </TooltipTrigger>
+                {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
+              </Tooltip>
             </div>
+          </SidebarHeader>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    size="sm"
-                    className="h-8"
-                    aria-label="Create new thread"
-                    disabled={actionsLocked}
-                    onClick={() => {
-                      setCreateProjectId(snapshot.projects[0]?.projectId ?? null)
-                      setCreateDialogOpen(true)
-                    }}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    New Thread
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
-            </Tooltip>
-          </div>
-        </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Configured Projects</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {snapshot.projects.map((project) => {
+                    const threads = snapshot.threadsByProjectId[project.projectId] ?? []
 
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Configured Projects</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {snapshot.projects.map((project) => {
-                  const threads = snapshot.threadsByProjectId[project.projectId] ?? []
+                    return (
+                      <SidebarMenuItem key={project.projectId}>
+                        <Collapsible defaultOpen>
+                          <CollapsibleTrigger
+                            className={cn(
+                              'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm font-medium',
+                              'text-foreground/90 hover:bg-accent/60 hover:text-accent-foreground',
+                            )}
+                          >
+                            <span className="truncate">{project.displayName}</span>
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <span>{threads.length}</span>
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            </span>
+                          </CollapsibleTrigger>
 
-                  return (
-                    <SidebarMenuItem key={project.projectId}>
-                      <Collapsible defaultOpen>
-                        <CollapsibleTrigger
-                          className={cn(
-                            'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm font-medium',
-                            'text-foreground/90 hover:bg-accent/60 hover:text-accent-foreground'
-                          )}
-                        >
-                          <span className="truncate">{project.displayName}</span>
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <span>{threads.length}</span>
-                            <ChevronDown className="h-3.5 w-3.5" />
-                          </span>
-                        </CollapsibleTrigger>
-
-                        <CollapsibleContent className="pt-1">
-                          <div className="mb-1 pl-2">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 w-full justify-start text-xs"
-                                    disabled={actionsLocked}
-                                    onClick={() => {
-                                      setCreateProjectId(project.projectId)
-                                      setCreateDialogOpen(true)
-                                    }}
-                                  >
-                                    <Plus className="h-3.5 w-3.5" />
-                                    New Thread
-                                  </Button>
-                                </span>
-                              </TooltipTrigger>
-                              {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
-                            </Tooltip>
-                          </div>
-
-                          <SidebarMenu className="space-y-1 pl-2">
-                            {threads.map((thread) => {
-                              const threadKey = `${project.projectId}:${thread.threadId}`
-                              const isActive = snapshot.activeThreadKey === threadKey
-
-                              return (
-                                <SidebarMenuItem key={thread.threadId}>
-                                  <div className="group flex items-start gap-1">
-                                    <SidebarMenuButton
-                                      isActive={isActive}
+                          <CollapsibleContent className="pt-1">
+                            <div className="mb-1 pl-2">
+                              <Tooltip>
+                                <TooltipTrigger render={<span />}>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-full justify-start text-xs"
                                       disabled={actionsLocked}
-                                      title={actionsLocked ? actionLockReason ?? undefined : undefined}
                                       onClick={() => {
-                                        switchToThread(project.projectId, thread.threadId)
+                                        setCreateProjectId(project.projectId)
+                                        setCreateDialogOpen(true)
                                       }}
-                                      className="items-start"
                                     >
-                                      <div className="flex min-w-0 flex-1 flex-col">
-                                        <div className="flex items-center gap-2">
-                                          <span className="truncate">{thread.title}</span>
-                                          {thread.unreadCount > 0 ? (
-                                            <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-primary" />
-                                          ) : null}
-                                        </div>
-                                        <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                                          <Circle className={cn('h-2.5 w-2.5 fill-current stroke-current', statusTone(thread.status))} />
-                                          <span>{thread.status}</span>
-                                          <span>{formatRelativeTime(thread.lastOutputAt ?? thread.updatedAt)}</span>
-                                        </div>
-                                      </div>
-                                    </SidebarMenuButton>
+                                      <Plus className="h-3.5 w-3.5" />
+                                      New Thread
+                                    </Button>
+                                  </TooltipTrigger>
+                                {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
+                              </Tooltip>
+                            </div>
 
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <span>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            disabled={actionsLocked}
-                                            className="mt-1 h-6 w-6 opacity-0 group-hover:opacity-100"
-                                            onClick={() => {
-                                              setDeleteDialogTarget({
-                                                projectId: project.projectId,
-                                                threadId: thread.threadId,
-                                                title: thread.title,
-                                              })
-                                            }}
-                                            aria-label={`Delete ${thread.title}`}
-                                            title={actionsLocked ? actionLockReason ?? undefined : `Delete ${thread.title}`}
-                                          >
-                                            <span className="text-xs">x</span>
-                                          </Button>
-                                        </span>
-                                      </TooltipTrigger>
-                                      {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
-                                    </Tooltip>
-                                  </div>
-                                </SidebarMenuItem>
-                              )
-                            })}
-                          </SidebarMenu>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    </SidebarMenuItem>
-                  )
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
+                            <SidebarMenu className="space-y-1 pl-2">
+                              {threads.map((thread) => {
+                                const threadKey = `${project.projectId}:${thread.threadId}`
+                                const isActive = snapshot.activeThreadKey === threadKey
+
+                                return (
+                                  <SidebarMenuItem key={thread.threadId}>
+                                    <div className="group flex items-start gap-1">
+                                      <SidebarMenuButton
+                                        isActive={isActive}
+                                        disabled={actionsLocked}
+                                        title={actionsLocked ? (actionLockReason ?? undefined) : undefined}
+                                        onClick={() => {
+                                          switchToThread(project.projectId, thread.threadId)
+                                        }}
+                                        className="items-start"
+                                      >
+                                        <div className="flex min-w-0 flex-1 flex-col">
+                                          <div className="flex items-center gap-2">
+                                            <span className="truncate">{thread.title}</span>
+                                            {thread.unreadCount > 0 ? (
+                                              <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-primary" />
+                                            ) : null}
+                                          </div>
+                                          <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                                            <Circle
+                                              className={cn(
+                                                'h-2.5 w-2.5 fill-current stroke-current',
+                                                statusTone(thread.status),
+                                              )}
+                                            />
+                                            <span>{thread.status}</span>
+                                            <span>{formatRelativeTime(thread.lastOutputAt ?? thread.updatedAt)}</span>
+                                          </div>
+                                        </div>
+                                      </SidebarMenuButton>
+
+                                      <Tooltip>
+                                        <TooltipTrigger render={<span />}>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              disabled={actionsLocked}
+                                              className="mt-1 h-6 w-6 opacity-0 group-hover:opacity-100"
+                                              onClick={() => {
+                                                setDeleteDialogTarget({
+                                                  projectId: project.projectId,
+                                                  threadId: thread.threadId,
+                                                  title: thread.title,
+                                                })
+                                              }}
+                                              aria-label={`Delete ${thread.title}`}
+                                              title={
+                                                actionsLocked
+                                                  ? (actionLockReason ?? undefined)
+                                                  : `Delete ${thread.title}`
+                                              }
+                                            >
+                                              <span className="text-xs">x</span>
+                                            </Button>
+                                          </TooltipTrigger>
+                                        {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
+                                      </Tooltip>
+                                    </div>
+                                  </SidebarMenuItem>
+                                )
+                              })}
+                            </SidebarMenu>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
         </Sidebar>
       </TooltipProvider>
 

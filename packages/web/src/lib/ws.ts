@@ -1,560 +1,502 @@
-import { Effect, Ref } from "effect";
-import { useEffect, useState } from "react";
+import { Effect, Ref } from 'effect'
+import { useEffect, useState } from 'react'
 
-export type ConnectionStatus =
-  | "connecting"
-  | "reconnecting"
-  | "connected"
-  | "disconnected";
+export type ConnectionStatus = 'connecting' | 'reconnecting' | 'connected' | 'disconnected'
 
 export type ConnectionDiagnostics = {
-  wsUrl: string;
-  endpoint: string;
-  lastFailureReason: string | null;
-  lastFailureHint: string | null;
-};
+  wsUrl: string
+  endpoint: string
+  lastFailureReason: string | null
+  lastFailureHint: string | null
+}
 
-type ConnectionStatusListener = (status: ConnectionStatus) => void;
-type ConnectionDiagnosticsListener = (diagnostics: ConnectionDiagnostics) => void;
+type ConnectionStatusListener = (status: ConnectionStatus) => void
+type ConnectionDiagnosticsListener = (diagnostics: ConnectionDiagnostics) => void
 
 type PingMessage = {
-  type: "ping";
-  requestId?: string;
-};
+  type: 'ping'
+  requestId?: string
+}
 
 type PongMessage = {
-  type: "pong";
-  requestId?: string;
-};
+  type: 'pong'
+  requestId?: string
+}
 
 type WrappedSessionMessage = {
-  type: "session";
-  message: unknown;
-};
+  type: 'session'
+  message: unknown
+}
 
 type StatusMessage = {
-  type: "status";
-  payload?: unknown;
-};
+  type: 'status'
+  payload?: unknown
+}
 
 export type ServerInfoStatusPayload = {
-  status: "server_info";
-  serverId: string;
-  hostname?: string | null;
-  version?: string | null;
-};
+  status: 'server_info'
+  serverId: string
+  hostname?: string | null
+  version?: string | null
+}
 
-const DEFAULT_DAEMON_PORT = 6767;
+const DEFAULT_DAEMON_PORT = 6767
 
 function resolveDaemonPort(): string {
-  const configuredPort = import.meta.env.VITE_DAEMON_PORT;
+  const configuredPort = import.meta.env.VITE_DAEMON_PORT
   if (!configuredPort) {
-    return String(DEFAULT_DAEMON_PORT);
+    return String(DEFAULT_DAEMON_PORT)
   }
 
-  const parsedPort = Number.parseInt(configuredPort, 10);
+  const parsedPort = Number.parseInt(configuredPort, 10)
   if (!Number.isFinite(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
-    return String(DEFAULT_DAEMON_PORT);
+    return String(DEFAULT_DAEMON_PORT)
   }
 
-  return String(parsedPort);
+  return String(parsedPort)
 }
 
 function resolveWsTarget(): { wsUrl: string; endpoint: string } {
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  const hostname = window.location.hostname;
-  const port = resolveDaemonPort();
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const hostname = window.location.hostname
+  const port = resolveDaemonPort()
 
   return {
     wsUrl: `${protocol}//${hostname}:${port}/ws?clientSessionKey=web-client`,
     endpoint: `${hostname}:${port}`,
-  };
+  }
 }
 
-const BASE_RETRY_DELAY_MS = 500;
-const MAX_RETRY_DELAY_MS = 30_000;
+const BASE_RETRY_DELAY_MS = 500
+const MAX_RETRY_DELAY_MS = 30_000
 
-const currentStatusRef = Effect.runSync(
-  Ref.make<ConnectionStatus>("disconnected"),
-);
-const listenersRef = Effect.runSync(
-  Ref.make<Set<ConnectionStatusListener>>(new Set()),
-);
-const retryCountRef = Effect.runSync(Ref.make(0));
+const currentStatusRef = Effect.runSync(Ref.make<ConnectionStatus>('disconnected'))
+const listenersRef = Effect.runSync(Ref.make<Set<ConnectionStatusListener>>(new Set()))
+const retryCountRef = Effect.runSync(Ref.make(0))
 
 let connectionDiagnostics: ConnectionDiagnostics = {
   ...resolveWsTarget(),
   lastFailureReason: null,
   lastFailureHint: null,
-};
-const connectionDiagnosticsListeners = new Set<ConnectionDiagnosticsListener>();
+}
+const connectionDiagnosticsListeners = new Set<ConnectionDiagnosticsListener>()
 
-let socket: WebSocket | null = null;
-let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-let shouldStop = false;
-let started = false;
-let subscriberCount = 0;
+let socket: WebSocket | null = null
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let shouldStop = false
+let started = false
+let subscriberCount = 0
 
 function runSync<T>(effect: Effect.Effect<T>): T {
-  return Effect.runSync(effect);
+  return Effect.runSync(effect)
 }
 
 function isPingMessage(message: unknown): message is PingMessage {
-  return (
-    typeof message === "object" &&
-    message !== null &&
-    (message as { type?: unknown }).type === "ping"
-  );
+  return typeof message === 'object' && message !== null && (message as { type?: unknown }).type === 'ping'
 }
 
 function isStatusMessage(message: unknown): message is StatusMessage {
-  return (
-    typeof message === "object" &&
-    message !== null &&
-    (message as { type?: unknown }).type === "status"
-  );
+  return typeof message === 'object' && message !== null && (message as { type?: unknown }).type === 'status'
 }
 
-export function getServerInfoFromSessionMessage(
-  message: unknown,
-): ServerInfoStatusPayload | null {
+export function getServerInfoFromSessionMessage(message: unknown): ServerInfoStatusPayload | null {
   if (!isStatusMessage(message)) {
-    return null;
+    return null
   }
 
-  const payload = message.payload;
-  if (typeof payload !== "object" || payload === null) {
-    return null;
+  const payload = message.payload
+  if (typeof payload !== 'object' || payload === null) {
+    return null
   }
 
-  const status = (payload as { status?: unknown }).status;
-  const serverId = (payload as { serverId?: unknown }).serverId;
-  if (status !== "server_info" || typeof serverId !== "string") {
-    return null;
+  const status = (payload as { status?: unknown }).status
+  const serverId = (payload as { serverId?: unknown }).serverId
+  if (status !== 'server_info' || typeof serverId !== 'string') {
+    return null
   }
 
   return {
-    status: "server_info",
+    status: 'server_info',
     serverId,
     hostname:
-      typeof (payload as { hostname?: unknown }).hostname === "string"
+      typeof (payload as { hostname?: unknown }).hostname === 'string'
         ? ((payload as { hostname?: string }).hostname ?? null)
         : null,
     version:
-      typeof (payload as { version?: unknown }).version === "string"
+      typeof (payload as { version?: unknown }).version === 'string'
         ? ((payload as { version?: string }).version ?? null)
         : null,
-  };
+  }
 }
 
 function emit(status: ConnectionStatus): void {
   runSync(
     Effect.gen(function* () {
-      const current = yield* Ref.get(currentStatusRef);
+      const current = yield* Ref.get(currentStatusRef)
       if (current === status) {
-        return;
+        return
       }
 
-      yield* Ref.set(currentStatusRef, status);
-      const listeners = yield* Ref.get(listenersRef);
+      yield* Ref.set(currentStatusRef, status)
+      const listeners = yield* Ref.get(listenersRef)
       for (const listener of listeners) {
-        listener(status);
+        listener(status)
       }
     }),
-  );
+  )
 }
 
 function currentStatus(): ConnectionStatus {
-  return runSync(Ref.get(currentStatusRef));
+  return runSync(Ref.get(currentStatusRef))
 }
 
 function emitConnectionDiagnostics(next: ConnectionDiagnostics): void {
-  connectionDiagnostics = next;
+  connectionDiagnostics = next
   for (const listener of connectionDiagnosticsListeners) {
-    listener(next);
+    listener(next)
   }
 }
 
-function patchConnectionDiagnostics(
-  patch: Partial<ConnectionDiagnostics>,
-): void {
+function patchConnectionDiagnostics(patch: Partial<ConnectionDiagnostics>): void {
   emitConnectionDiagnostics({
     ...connectionDiagnostics,
     ...patch,
-  });
+  })
 }
 
 function clearReconnectTimer(): void {
   if (reconnectTimer !== null) {
-    clearTimeout(reconnectTimer);
-    reconnectTimer = null;
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
   }
 }
 
 function computeBackoffDelay(retries: number): number {
   if (retries <= 0) {
-    return BASE_RETRY_DELAY_MS;
+    return BASE_RETRY_DELAY_MS
   }
 
-  const exponential = BASE_RETRY_DELAY_MS * 2 ** retries;
-  return Math.min(exponential, MAX_RETRY_DELAY_MS);
+  const exponential = BASE_RETRY_DELAY_MS * 2 ** retries
+  return Math.min(exponential, MAX_RETRY_DELAY_MS)
 }
 
-function scheduleReconnect(reason: "close" | "error"): void {
+function scheduleReconnect(_reason: 'close' | 'error'): void {
   if (shouldStop) {
-    return;
+    return
   }
 
   if (reconnectTimer !== null) {
-    return;
+    return
   }
 
-  emit("disconnected");
+  emit('disconnected')
 
-  const nextRetry = runSync(Ref.get(retryCountRef)) + 1;
-  runSync(Ref.set(retryCountRef, nextRetry));
+  const nextRetry = runSync(Ref.get(retryCountRef)) + 1
+  runSync(Ref.set(retryCountRef, nextRetry))
 
-  const delay = computeBackoffDelay(nextRetry);
-  console.warn(
-    `[ws] ${reason} detected; reconnect attempt #${nextRetry} in ${delay}ms`,
-  );
-  emit("reconnecting");
+  const delay = computeBackoffDelay(nextRetry)
+
+  emit('reconnecting')
 
   reconnectTimer = setTimeout(() => {
-    reconnectTimer = null;
+    reconnectTimer = null
     if (shouldStop) {
-      return;
+      return
     }
-    connect();
-  }, delay);
+    connect()
+  }, delay)
 }
 
 function sendIfOpen(payload: PongMessage): void {
   if (socket?.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify(payload));
+    socket.send(JSON.stringify(payload))
   }
 }
 
 export function sendWsMessage(message: unknown): boolean {
   if (socket?.readyState !== WebSocket.OPEN) {
-    return false;
+    return false
   }
 
   socket.send(
     JSON.stringify({
-      type: "session",
+      type: 'session',
       message,
     } satisfies WrappedSessionMessage),
-  );
+  )
 
-  return true;
+  return true
 }
 
-export function sendWsBinary(data: Uint8Array): void {
+export function sendWsBinary(data: Uint8Array<ArrayBuffer>): void {
   if (socket?.readyState === WebSocket.OPEN) {
-    socket.send(data);
+    socket.send(data)
   }
 }
 
-type TextMessageListener = (data: unknown) => void;
-type BinaryMessageListener = (data: Uint8Array) => void;
+type TextMessageListener = (data: unknown) => void
+type BinaryMessageListener = (data: Uint8Array) => void
 
-const textListenersRef = Effect.runSync(
-  Ref.make<Set<TextMessageListener>>(new Set()),
-);
-const binaryListenersRef = Effect.runSync(
-  Ref.make<Set<BinaryMessageListener>>(new Set()),
-);
+const textListenersRef = Effect.runSync(Ref.make<Set<TextMessageListener>>(new Set()))
+const binaryListenersRef = Effect.runSync(Ref.make<Set<BinaryMessageListener>>(new Set()))
 
 export function subscribeTextMessages(listener: TextMessageListener): () => void {
   runSync(
     Ref.update(textListenersRef, (listeners) => {
-      const next = new Set(listeners);
-      next.add(listener);
-      return next;
+      const next = new Set(listeners)
+      next.add(listener)
+      return next
     }),
-  );
+  )
   return () => {
     runSync(
       Ref.update(textListenersRef, (listeners) => {
-        const next = new Set(listeners);
-        next.delete(listener);
-        return next;
+        const next = new Set(listeners)
+        next.delete(listener)
+        return next
       }),
-    );
-  };
+    )
+  }
 }
 
 export function subscribeBinaryMessages(listener: BinaryMessageListener): () => void {
   runSync(
     Ref.update(binaryListenersRef, (listeners) => {
-      const next = new Set(listeners);
-      next.add(listener);
-      return next;
+      const next = new Set(listeners)
+      next.add(listener)
+      return next
     }),
-  );
+  )
   return () => {
     runSync(
       Ref.update(binaryListenersRef, (listeners) => {
-        const next = new Set(listeners);
-        next.delete(listener);
-        return next;
+        const next = new Set(listeners)
+        next.delete(listener)
+        return next
       }),
-    );
-  };
+    )
+  }
 }
 
 function handleSocketMessage(event: MessageEvent): void {
   if (event.data instanceof Blob) {
-    event.data.arrayBuffer().then((buffer: ArrayBuffer) => {
-      const data = new Uint8Array(buffer);
-      const listeners = runSync(Ref.get(binaryListenersRef));
-      for (const listener of listeners) {
-        listener(data);
-      }
-    });
-    return;
+    return
   }
 
   if (event.data instanceof ArrayBuffer) {
-    const data = new Uint8Array(event.data);
-    const listeners = runSync(Ref.get(binaryListenersRef));
+    const data = new Uint8Array(event.data)
+    const listeners = runSync(Ref.get(binaryListenersRef))
     for (const listener of listeners) {
-      listener(data);
+      listener(data)
     }
-    return;
+    return
   }
 
   if (event.data instanceof Uint8Array) {
-    const listeners = runSync(Ref.get(binaryListenersRef));
+    const listeners = runSync(Ref.get(binaryListenersRef))
     for (const listener of listeners) {
-      listener(event.data);
+      listener(event.data)
     }
-    return;
+    return
   }
 
-  if (typeof event.data !== "string") {
-    return;
+  if (typeof event.data !== 'string') {
+    return
   }
 
-  let parsed: unknown;
+  let parsed: unknown
 
   try {
-    parsed = JSON.parse(event.data);
+    parsed = JSON.parse(event.data)
   } catch {
-    return;
+    return
   }
 
   if (isPingMessage(parsed)) {
-    sendIfOpen({ type: "pong", requestId: parsed.requestId });
-    return;
+    sendIfOpen({ type: 'pong', requestId: parsed.requestId })
+    return
   }
 
-  if (
-    typeof parsed === "object" &&
-    parsed !== null &&
-    (parsed as { type?: unknown }).type === "session"
-  ) {
-    const sessionMessage = (parsed as { message?: unknown }).message;
+  if (typeof parsed === 'object' && parsed !== null && (parsed as { type?: unknown }).type === 'session') {
+    const sessionMessage = (parsed as { message?: unknown }).message
     if (sessionMessage === undefined) {
-      return;
+      return
     }
-    const listeners = runSync(Ref.get(textListenersRef));
+    const listeners = runSync(Ref.get(textListenersRef))
     for (const listener of listeners) {
-      listener(sessionMessage);
+      listener(sessionMessage)
     }
-    return;
+    return
   }
 
-  const listeners = runSync(Ref.get(textListenersRef));
+  const listeners = runSync(Ref.get(textListenersRef))
   for (const listener of listeners) {
-    listener(parsed);
+    listener(parsed)
   }
 }
 
 function connect(): void {
   if (shouldStop || !started) {
-    return;
+    return
   }
 
-  if (
-    socket !== null &&
-    (socket.readyState === WebSocket.CONNECTING ||
-      socket.readyState === WebSocket.OPEN)
-  ) {
-    return;
+  if (socket !== null && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) {
+    return
   }
 
-  const currentRetry = runSync(Ref.get(retryCountRef));
-  const target = resolveWsTarget();
-  patchConnectionDiagnostics(target);
-  emit(currentRetry > 0 ? "reconnecting" : "connecting");
-  console.info(
-    `[ws] connecting to ${target.wsUrl}${
-      currentRetry > 0 ? ` (attempt #${currentRetry})` : ""
-    }`,
-  );
+  const currentRetry = runSync(Ref.get(retryCountRef))
+  const target = resolveWsTarget()
+  patchConnectionDiagnostics(target)
+  emit(currentRetry > 0 ? 'reconnecting' : 'connecting')
 
-  const nextSocket = new WebSocket(target.wsUrl);
-  nextSocket.binaryType = "arraybuffer";
-  socket = nextSocket;
+  const nextSocket = new WebSocket(target.wsUrl)
+  nextSocket.binaryType = 'arraybuffer'
+  socket = nextSocket
 
-  nextSocket.addEventListener("open", () => {
+  nextSocket.addEventListener('open', () => {
     if (socket !== nextSocket) {
-      return;
+      return
     }
-    emit("connected");
-    console.info("[ws] connected");
-    patchConnectionDiagnostics({ lastFailureReason: null, lastFailureHint: null });
-    runSync(Ref.set(retryCountRef, 0));
-    clearReconnectTimer();
-  });
+    emit('connected')
 
-  nextSocket.addEventListener("message", handleSocketMessage);
+    patchConnectionDiagnostics({ lastFailureReason: null, lastFailureHint: null })
+    runSync(Ref.set(retryCountRef, 0))
+    clearReconnectTimer()
+  })
 
-  nextSocket.addEventListener("close", (event) => {
+  nextSocket.addEventListener('message', handleSocketMessage)
+
+  nextSocket.addEventListener('close', (event) => {
     if (socket !== nextSocket) {
-      return;
+      return
     }
 
-    socket = null;
+    socket = null
     if (shouldStop) {
-      emit("disconnected");
-      return;
+      emit('disconnected')
+      return
     }
 
     const closeReason = event.wasClean
       ? `WebSocket closed (${event.code})`
-      : `WebSocket closed unexpectedly (${event.code})`;
+      : `WebSocket closed unexpectedly (${event.code})`
     patchConnectionDiagnostics({
       lastFailureReason: closeReason,
-      lastFailureHint:
-        "Verify daemon is reachable at endpoint and web/daemon ports are aligned",
-    });
+      lastFailureHint: 'Verify daemon is reachable at endpoint and web/daemon ports are aligned',
+    })
 
-    scheduleReconnect("close");
-  });
+    scheduleReconnect('close')
+  })
 
-  nextSocket.addEventListener("error", () => {
+  nextSocket.addEventListener('error', () => {
     if (socket !== nextSocket) {
-      return;
+      return
     }
 
-    console.error("[ws] socket error before reconnect");
+    console.error('[ws] socket error before reconnect')
     patchConnectionDiagnostics({
-      lastFailureReason: "WebSocket transport error while connecting",
-      lastFailureHint:
-        "Check daemon process health and PASEO_LISTEN/VITE_DAEMON_PORT values",
-    });
+      lastFailureReason: 'WebSocket transport error while connecting',
+      lastFailureHint: 'Check daemon process health and PASEO_LISTEN/VITE_DAEMON_PORT values',
+    })
     if (shouldStop) {
-      emit("disconnected");
-      return;
+      emit('disconnected')
+      return
     }
 
-    scheduleReconnect("error");
-  });
+    scheduleReconnect('error')
+  })
 }
 
 function stop(): void {
-  shouldStop = true;
-  started = false;
-  clearReconnectTimer();
-  emit("disconnected");
+  shouldStop = true
+  started = false
+  clearReconnectTimer()
+  emit('disconnected')
 
-  if (
-    socket !== null &&
-    socket.readyState !== WebSocket.CLOSING &&
-    socket.readyState !== WebSocket.CLOSED
-  ) {
-    socket.close();
+  if (socket !== null && socket.readyState !== WebSocket.CLOSING && socket.readyState !== WebSocket.CLOSED) {
+    socket.close()
   }
 
-  socket = null;
+  socket = null
 }
 
 export function startConnection(): void {
   if (started) {
-    return;
+    return
   }
 
-  shouldStop = false;
-  started = true;
-  connect();
+  shouldStop = false
+  started = true
+  connect()
 }
 
-export function subscribeConnectionStatus(
-  listener: ConnectionStatusListener,
-): () => void {
+export function subscribeConnectionStatus(listener: ConnectionStatusListener): () => void {
   runSync(
     Ref.update(listenersRef, (listeners) => {
-      const next = new Set(listeners);
-      next.add(listener);
-      return next;
+      const next = new Set(listeners)
+      next.add(listener)
+      return next
     }),
-  );
+  )
 
   return () => {
     runSync(
       Ref.update(listenersRef, (listeners) => {
-        const next = new Set(listeners);
-        next.delete(listener);
-        return next;
+        const next = new Set(listeners)
+        next.delete(listener)
+        return next
       }),
-    );
-  };
+    )
+  }
 }
 
 export function useConnectionStatus(): ConnectionStatus {
-  const [status, setStatus] = useState<ConnectionStatus>(currentStatus());
+  const [status, setStatus] = useState<ConnectionStatus>(currentStatus())
 
   useEffect(() => {
-    startConnection();
-    subscriberCount += 1;
+    startConnection()
+    subscriberCount += 1
 
-    const unsubscribe = subscribeConnectionStatus(setStatus);
+    const unsubscribe = subscribeConnectionStatus(setStatus)
 
-    setStatus(currentStatus());
+    setStatus(currentStatus())
 
     return () => {
-      unsubscribe();
-      subscriberCount -= 1;
+      unsubscribe()
+      subscriberCount -= 1
 
       if (subscriberCount <= 0) {
-        stop();
+        stop()
       }
-    };
-  }, []);
+    }
+  }, [])
 
-  return status;
+  return status
 }
 
 export function getConnectionDiagnostics(): ConnectionDiagnostics {
-  return connectionDiagnostics;
+  return connectionDiagnostics
 }
 
-export function subscribeConnectionDiagnostics(
-  listener: ConnectionDiagnosticsListener,
-): () => void {
-  connectionDiagnosticsListeners.add(listener);
+export function subscribeConnectionDiagnostics(listener: ConnectionDiagnosticsListener): () => void {
+  connectionDiagnosticsListeners.add(listener)
   return () => {
-    connectionDiagnosticsListeners.delete(listener);
-  };
+    connectionDiagnosticsListeners.delete(listener)
+  }
 }
 
 export function useConnectionDiagnostics(): ConnectionDiagnostics {
-  const [diagnostics, setDiagnostics] = useState<ConnectionDiagnostics>(
-    getConnectionDiagnostics(),
-  );
+  const [diagnostics, setDiagnostics] = useState<ConnectionDiagnostics>(getConnectionDiagnostics())
 
   useEffect(() => {
-    const unsubscribe = subscribeConnectionDiagnostics(setDiagnostics);
-    setDiagnostics(getConnectionDiagnostics());
-    return unsubscribe;
-  }, []);
+    const unsubscribe = subscribeConnectionDiagnostics(setDiagnostics)
+    setDiagnostics(getConnectionDiagnostics())
+    return unsubscribe
+  }, [])
 
-  return diagnostics;
+  return diagnostics
 }
 
 export function getConnectionStatus(): ConnectionStatus {
-  return currentStatus();
+  return currentStatus()
 }

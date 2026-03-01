@@ -75,11 +75,7 @@ export function ThreadCreateDialog({ open, onOpenChange, initialProjectId }: Thr
         branchSuggestions[0]
       setBaseBranch(suggestedBase ?? '')
     }
-  }, [
-    open,
-    initialProjectId,
-    snapshot.projects,
-  ])
+  }, [open, initialProjectId, snapshot.projects])
 
   useEffect(() => {
     if (!open) {
@@ -125,7 +121,7 @@ export function ThreadCreateDialog({ open, onOpenChange, initialProjectId }: Thr
 
     setCopyState('idle')
     setDetailsOpen(Boolean(snapshot.create.error.details))
-  }, [snapshot.create.error?.summary, snapshot.create.error?.details, snapshot.create.error?.requestId])
+  }, [snapshot.create.error, snapshot.create.error?.summary, snapshot.create.error?.details, snapshot.create.error?.requestId])
 
   useEffect(() => {
     if (!open) {
@@ -247,7 +243,9 @@ export function ThreadCreateDialog({ open, onOpenChange, initialProjectId }: Thr
               </Label>
               <Input
                 id="create-thread-command-args"
-                placeholder={commandMode === 'append' ? '--model gpt-5 --approval on-failure' : 'opencode --model gpt-5'}
+                placeholder={
+                  commandMode === 'append' ? '--model gpt-5 --approval on-failure' : 'opencode --model gpt-5'
+                }
                 value={commandArgsRaw}
                 onChange={(event) => setCommandArgsRaw(event.target.value)}
                 disabled={snapshot.create.pending}
@@ -277,16 +275,9 @@ export function ThreadCreateDialog({ open, onOpenChange, initialProjectId }: Thr
               <p>{snapshot.create.error.summary}</p>
               {snapshot.create.error.details ? (
                 <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
-                  <CollapsibleTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1 text-xs font-medium text-destructive underline-offset-2 hover:underline"
-                    >
-                      <ChevronDown
-                        className={`h-3.5 w-3.5 transition-transform ${detailsOpen ? 'rotate-180' : ''}`}
-                      />
-                      Technical details
-                    </button>
+                  <CollapsibleTrigger className="inline-flex items-center gap-1 text-xs font-medium text-destructive underline-offset-2 hover:underline">
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
+                    Technical details
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <pre className="mt-2 max-h-40 overflow-auto rounded border border-destructive/40 bg-background/80 p-2 text-xs text-foreground">

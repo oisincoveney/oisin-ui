@@ -58,10 +58,8 @@ export function DiffMobileSheet({
         <SheetHeader className="space-y-0 px-3 py-2 text-left">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <SheetClose asChild>
-                <Button type="button" variant="ghost" size="icon" aria-label="Back to terminal">
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
+              <SheetClose render={<Button type="button" variant="ghost" size="icon" aria-label="Back to terminal" />}>
+                <ChevronLeft className="h-4 w-4" />
               </SheetClose>
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Code Diff</p>

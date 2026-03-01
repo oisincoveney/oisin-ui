@@ -59,20 +59,16 @@ export function DiffFileSection({ file }: DiffFileSectionProps) {
         data-testid="diff-file-section"
         className="overflow-hidden rounded-md border border-border/70 bg-background/70"
       >
-        <CollapsibleTrigger asChild>
-          <button
-            type="button"
-            data-testid="diff-file-row"
-            className="flex w-full items-start gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/35"
-          >
+        <CollapsibleTrigger
+          data-testid="diff-file-row"
+          className="flex w-full items-start gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/35"
+        >
             <FileCode2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
               <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <p className="truncate text-sm font-medium text-foreground" data-testid="diff-file-path">
-                      {displayPath}
-                    </p>
+                  <TooltipTrigger data-testid="diff-file-path" className="truncate text-sm font-medium text-foreground">
+                    {displayPath}
                   </TooltipTrigger>
                   <TooltipContent side="left" className="max-w-xs break-all text-xs">
                     {getDiffFileDisplayPath(file)}
@@ -99,7 +95,6 @@ export function DiffFileSection({ file }: DiffFileSectionProps) {
             <ChevronDown
               className={cn('mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
             />
-          </button>
         </CollapsibleTrigger>
 
         <CollapsibleContent data-testid="diff-file-content" className="border-t border-border/60 bg-card/40">
