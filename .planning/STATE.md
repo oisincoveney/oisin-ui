@@ -10,14 +10,15 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 ## Current Position
 
 **Milestone:** v2 Code Review
-**Phase:** Phase 09 (pending kickoff)
-**Status:** Planning — roadmap being defined
-**Last activity:** 2026-02-28 — Completed quick task 001: oxlint/oxfmt/shadcn-enforcer/AGENTS.md added to web package
+**Phase:** Phase 09 — diff-panel-redesign (in progress)
+**Plan:** 09-01 complete, 09-02 pending
+**Status:** In progress
+**Last activity:** 2026-03-01 — Completed 09-01: DiffPanel commit bar + Changes section + DiffFileSection tooltip/badges
 
 ```
 v1:   [████████████████████] 100% (5/5 phases) — shipped 2026-02-25
 v1.1: [████████████████████] 100% (3/3 phases) — shipped 2026-02-28
-v2:   [░░░░░░░░░░░░░░░░░░░░]   0% — started 2026-02-28
+v2:   [██░░░░░░░░░░░░░░░░░░]  ~10% — 09-01 complete
 ```
 
 ## Accumulated Context
@@ -65,11 +66,13 @@ v2:   [░░░░░░░░░░░░░░░░░░░░]   0% — st
   - VER-02 browser e2e: create->click-switch->delete test uses sidebar row click (not keyboard); daemon-killing tests must be last in shared-runtime suites.
   - VER-01 diff-panel: thread created via controlClient.createThread() in beforeAll (worktreePath synchronous); git mv required for staged rename detection (R100 status); main > header scopes toggle button away from diff-panel's internal header.
   - terminal-manager env tests: use time-bounded retry loop (send command every 200ms until file appears) with 25s/40s timeouts to handle shell startup latency under parallel test load.
+- 09-01: `baseUrl` removed from tsconfig — TS5.x supports `paths` without it; eliminates oxlint tsgolint false positive.
+- 09-01: `payload?: any` in SessionMessage kept with eslint-disable — WS payload is genuinely dynamic; `unknown` would require 50+ type assertions.
 
 ## Session Continuity
 
-**Last session:** 2026-02-28
-**Stopped at:** v2 requirements defined, roadmap being generated
+**Last session:** 2026-03-01
+**Stopped at:** Completed 09-01-PLAN.md
 **Resume file:** None
 
 ---
@@ -82,4 +85,4 @@ v2:   [░░░░░░░░░░░░░░░░░░░░]   0% — st
 
 ---
 
-_State updated: 2026-02-28 — v2 Code Review milestone started. Requirements defined. Roadmap pending. Quick task 001 complete._
+_State updated: 2026-03-01 — Phase 09 plan 01 complete. DiffPanel commit bar + Changes collapsible + DiffFileSection tooltip/badges shipped._
