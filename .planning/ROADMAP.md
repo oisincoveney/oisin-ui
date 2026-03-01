@@ -86,8 +86,14 @@ Plans:
   2. User can switch between Unstaged, Staged, and Against Main tabs; the file list and diff content update to reflect the selected view.
   3. User clicks a file in the left column and the right column renders that file's diff inline.
   4. Renamed files (R status) appear correctly in the file list without broken display.
-**Plans**: TBD
+**Plans**: 5 plans
 Plans:
+
+- [x] 09-01-PLAN.md — Add commit bar + Changes section to DiffPanel; tooltip path + new/del badges in DiffFileSection
+- [x] 09-02-PLAN.md — Verify/update e2e spec for updated layout
+- [ ] 09-03-PLAN.md — Split daemon diff into stagedFiles/unstagedFiles; propagate through schema, session, web types
+- [ ] 09-04-PLAN.md — Replace single Changes section with Staged/Unstaged collapsibles in DiffPanel
+- [ ] 09-05-PLAN.md — Add section header assertions to e2e spec
 
 ### Phase 10: Hunk Staging & Commit
 
@@ -103,8 +109,8 @@ Plans:
 **Plans**: 2 plans
 Plans:
 
-- [ ] 09-01-PLAN.md — Add commit bar + Changes section to DiffPanel; tooltip path + new/del badges in DiffFileSection
-- [ ] 09-02-PLAN.md — Verify/update e2e spec for updated layout
+- [ ] 10-01-PLAN.md — TBD
+- [ ] 10-02-PLAN.md — TBD
 
 ## Progress
 
