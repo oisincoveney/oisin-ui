@@ -86,7 +86,7 @@ Plans:
   2. User expands a section and clicks a file to see its diff rendered inline within the same panel (no separate right-pane viewer).
   3. Staged and unstaged files are sourced from separate daemon diff calls and displayed in their respective sections.
   4. Renamed files (R status) appear correctly in the file list without broken display.
-**Plans**: 5 plans
+**Plans**: 9 plans
 Plans:
 
 - [x] 09-01-PLAN.md — Add commit bar + Changes section to DiffPanel; tooltip path + new/del badges in DiffFileSection
@@ -94,6 +94,10 @@ Plans:
 - [x] 09-03-PLAN.md — Split daemon diff into stagedFiles/unstagedFiles; propagate through schema, session, web types
 - [x] 09-04-PLAN.md — Replace single Changes section with Staged/Unstaged collapsibles in DiffPanel
 - [x] 09-05-PLAN.md — Add section header assertions to e2e spec
+- [ ] 09-06-PLAN.md — Fix terminal thrash on diff panel open/close (UAT gap 1)
+- [ ] 09-07-PLAN.md — Wire updatedAt to DiffPanel; guard stale scroll-to-bottom (UAT gap 2)
+- [ ] 09-08-PLAN.md — Server-side stale worktree cwd recovery in diff subscription (UAT gap 3)
+- [ ] 09-09-PLAN.md — Re-verify and fix renamed file display after gaps 1-3 closed (UAT gap 4)
 
 ### Phase 10: Hunk Staging & Commit
 
