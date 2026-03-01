@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, FileCode2 } from 'lucide-react'
 import type { ParsedDiffFile } from '@/diff/diff-types'
-import {
-  DEFAULT_VISIBLE_HUNK_COUNT,
-  getDiffFileDisplayPath,
-  toDiff2Html,
-} from '@/diff/diff2html-adapter'
+import { DEFAULT_VISIBLE_HUNK_COUNT, getDiffFileDisplayPath, toDiff2Html } from '@/diff/diff2html-adapter'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 type DiffFileSectionProps = {
@@ -46,7 +43,7 @@ export function DiffFileSection({ file }: DiffFileSectionProps) {
     setHtml(
       toDiff2Html(file, {
         hunkLimit: visibleHunkCount,
-      })
+      }),
     )
   }, [file, open, summaryOnly, visibleHunkCount])
 
@@ -58,7 +55,10 @@ export function DiffFileSection({ file }: DiffFileSectionProps) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <article data-testid="diff-file-section" className="overflow-hidden rounded-md border border-border/70 bg-background/70">
+      <article
+        data-testid="diff-file-section"
+        className="overflow-hidden rounded-md border border-border/70 bg-background/70"
+      >
         <CollapsibleTrigger asChild>
           <button
             type="button"
@@ -67,9 +67,18 @@ export function DiffFileSection({ file }: DiffFileSectionProps) {
           >
             <FileCode2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-foreground" data-testid="diff-file-path">
-                {displayPath}
-              </p>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <p className="truncate text-sm font-medium text-foreground" data-testid="diff-file-path">
+                      {displayPath}
+                    </p>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="max-w-xs break-all text-xs">
+                    {getDiffFileDisplayPath(file)}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <p className="text-xs text-muted-foreground">
                 <span data-testid="diff-file-additions" className="text-emerald-500">
                   +{file.additions}
@@ -79,6 +88,12 @@ export function DiffFileSection({ file }: DiffFileSectionProps) {
                   -{file.deletions}
                 </span>
                 {statusLabel ? <span className="ml-2 uppercase tracking-wide">{statusLabel}</span> : null}
+                {file.isNew ? (
+                  <span className="ml-2 text-[10px] font-medium uppercase tracking-wide text-emerald-400">new</span>
+                ) : null}
+                {file.isDeleted ? (
+                  <span className="ml-2 text-[10px] font-medium uppercase tracking-wide text-rose-400">del</span>
+                ) : null}
               </p>
             </div>
             <ChevronDown
