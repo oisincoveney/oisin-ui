@@ -211,7 +211,8 @@ function App() {
       ? (activeThread.terminalId ?? null)
       : null
   const activeDiffEntry = getActiveDiffEntry(diffSnapshot)
-  const diffFiles = activeDiffEntry?.files ?? []
+  const diffStagedFiles = activeDiffEntry?.stagedFiles ?? []
+  const diffUnstagedFiles = activeDiffEntry?.unstagedFiles ?? []
   const diffPanelOpen = diffSnapshot.panel.isOpen
   const diffPanelWidth = diffSnapshot.panel.widthPercent
   const previousActiveThreadKeyRef = useRef<string | null>(threadSnapshot.activeThreadKey)
@@ -879,7 +880,8 @@ function App() {
               }}
             >
               <DiffPanel
-                files={diffFiles}
+                stagedFiles={diffStagedFiles}
+                unstagedFiles={diffUnstagedFiles}
                 loading={diffSnapshot.loading}
                 error={diffSnapshot.error}
                 onClose={() => {
@@ -906,7 +908,7 @@ function App() {
             }, 0)
           }
         }}
-        files={diffFiles}
+        files={[...diffStagedFiles, ...diffUnstagedFiles]}
         loading={diffSnapshot.loading}
         error={diffSnapshot.error}
         onRefresh={() => {

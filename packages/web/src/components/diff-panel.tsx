@@ -9,7 +9,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 
 type DiffPanelProps = {
-  files: ParsedDiffFile[]
+  stagedFiles: ParsedDiffFile[]
+  unstagedFiles: ParsedDiffFile[]
   loading: boolean
   error: string | null
   updatedAt?: string | null
@@ -39,8 +40,10 @@ function formatUpdatedAt(updatedAt: string | null | undefined): string {
   return `Updated ${Math.floor(deltaSeconds / 60)}m ago`
 }
 
-export function DiffPanel({ files, loading, error, updatedAt, onClose, onRefresh, refreshAction }: DiffPanelProps) {
-  const sortedFiles = [...files].sort((a, b) => a.path.localeCompare(b.path))
+export function DiffPanel({ stagedFiles, unstagedFiles, loading, error, updatedAt, onClose, onRefresh, refreshAction }: DiffPanelProps) {
+  const sortedStaged = [...stagedFiles].sort((a, b) => a.path.localeCompare(b.path))
+  const sortedUnstaged = [...unstagedFiles].sort((a, b) => a.path.localeCompare(b.path))
+  const hasNoChanges = stagedFiles.length === 0 && unstagedFiles.length === 0
 
   return (
     <section data-testid="diff-panel" className="flex h-full min-w-0 flex-col bg-card">
@@ -48,7 +51,7 @@ export function DiffPanel({ files, loading, error, updatedAt, onClose, onRefresh
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Code Diff</p>
           <p data-testid="diff-files-count" className="truncate text-sm font-medium text-foreground">
-            {files.length} changed files
+            {stagedFiles.length + unstagedFiles.length} changed files
           </p>
           <p className="text-xs text-muted-foreground">{formatUpdatedAt(updatedAt)}</p>
         </div>
@@ -96,29 +99,41 @@ export function DiffPanel({ files, loading, error, updatedAt, onClose, onRefresh
           {loading ? <p className="text-sm text-muted-foreground">Refreshing changes from active thread...</p> : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-          {files.length === 0 && !loading ? (
-            <p className="text-sm text-muted-foreground">No uncommitted changes in this thread.</p>
-          ) : (
+          {hasNoChanges && !loading ? (
+            <p className="text-sm text-muted-foreground">No changes</p>
+          ) : null}
+
+          {sortedStaged.length > 0 ? (
             <Collapsible defaultOpen>
-              <CollapsibleTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-muted/35"
-                >
-                  <span>Changes ({files.length})</span>
-                  <ChevronDown className="h-3 w-3 transition-transform [[data-state=open]_&]:rotate-180" />
-                </Button>
+              <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-muted/35 rounded-sm">
+                <span>Staged ({sortedStaged.length})</span>
+                <ChevronDown className="h-3 w-3 transition-transform [[data-state=open]_&]:rotate-180" />
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="space-y-2 px-3 pb-3">
-                  {sortedFiles.map((file) => (
+                  {sortedStaged.map((file) => (
                     <DiffFileSection key={file.path} file={file} />
                   ))}
                 </div>
               </CollapsibleContent>
             </Collapsible>
-          )}
+          ) : null}
+
+          {sortedUnstaged.length > 0 ? (
+            <Collapsible defaultOpen>
+              <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-muted/35 rounded-sm">
+                <span>Unstaged ({sortedUnstaged.length})</span>
+                <ChevronDown className="h-3 w-3 transition-transform [[data-state=open]_&]:rotate-180" />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-2 px-3 pb-3">
+                  {sortedUnstaged.map((file) => (
+                    <DiffFileSection key={file.path} file={file} />
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          ) : null}
         </div>
       </ScrollArea>
     </section>
