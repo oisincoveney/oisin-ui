@@ -345,6 +345,9 @@ test.describe("diff panel regressions", () => {
     const highlightedRowPath = panel.getByTestId("diff-file-path").filter({ hasText: E2E_HIGHLIGHT_FILE });
     await expect(highlightedRowPath).toBeVisible({ timeout: 30_000 });
 
+    // Untracked file appears in Unstaged section
+    await expect(panel.getByText(/^Unstaged \(\d+\)/)).toBeVisible({ timeout: 10_000 });
+
     const allPaths = await panel.getByTestId("diff-file-path").allTextContents();
     expect(allPaths.every((p) => p.trim().length > 0)).toBeTruthy();
 
@@ -386,6 +389,9 @@ test.describe("diff panel regressions", () => {
 
     const renameLabel = `${RENAME_SOURCE_FILE} -> ${RENAME_TARGET_FILE}`;
     await expect(panel.getByTestId("diff-file-path").filter({ hasText: renameLabel })).toBeVisible({ timeout: 15_000 });
+
+    // git mv stages the rename — it should appear in Staged section
+    await expect(panel.getByText(/^Staged \(\d+\)/)).toBeVisible({ timeout: 10_000 });
 
     // Cleanup: restore README.md (reverse the git mv), remove highlight file
     execSync(`git mv ${RENAME_TARGET_FILE} ${RENAME_SOURCE_FILE}`, {
