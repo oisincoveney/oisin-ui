@@ -1,13 +1,9 @@
 import { atom, getDefaultStore, useAtomValue } from 'jotai'
-import {
-  sendWsMessage,
-  subscribeConnectionStatus,
-  subscribeTextMessages,
-  type ConnectionStatus,
-} from '@/lib/ws'
+import { sendWsMessage, subscribeConnectionStatus, subscribeTextMessages, type ConnectionStatus } from '@/lib/ws'
 
 type SessionMessage = {
   type: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload?: any
 }
 
@@ -149,10 +145,8 @@ const jotaiStore = getDefaultStore()
 const pendingRequests = new Map<string, PendingRequestEntry>()
 
 const CREATE_THREAD_RESPONSE_TIMEOUT_MS = 120_000
-const CREATE_THREAD_DISCONNECTED_SUMMARY =
-  'Create Thread could not be sent because the daemon connection is offline.'
-const CREATE_THREAD_TIMEOUT_SUMMARY =
-  'Create Thread timed out waiting for daemon response after 120s.'
+const CREATE_THREAD_DISCONNECTED_SUMMARY = 'Create Thread could not be sent because the daemon connection is offline.'
+const CREATE_THREAD_TIMEOUT_SUMMARY = 'Create Thread timed out waiting for daemon response after 120s.'
 const RESTART_WARMUP_REASON = 'Daemon restarted. Actions are temporarily locked until thread recovery completes.'
 const PROJECT_LIST_REFRESH_PENDING_KEY = '__project-list__'
 
@@ -434,8 +428,7 @@ function completeRuntimeWarmup(snapshot: ThreadStoreState): ThreadStoreState {
     activeThreadClearedByDelete: restoreKey === null ? snapshot.activeThreadClearedByDelete : false,
     create: {
       ...snapshot.create,
-      error:
-        snapshot.create.error?.summary === RESTART_WARMUP_REASON ? null : snapshot.create.error,
+      error: snapshot.create.error?.summary === RESTART_WARMUP_REASON ? null : snapshot.create.error,
     },
     switch: {
       ...snapshot.switch,
@@ -478,7 +471,7 @@ function maybeCompleteRuntimeWarmup(snapshot: ThreadStoreState): ThreadStoreStat
 function sendRequest(
   request: Record<string, unknown>,
   pendingRequest: PendingRequest,
-  options?: SendRequestOptions
+  options?: SendRequestOptions,
 ): boolean {
   const requestId = String(request.requestId)
   const pendingEntry: PendingRequestEntry = {
@@ -517,7 +510,7 @@ function refreshProjectList(): void {
       type: 'project_list_request',
       requestId,
     },
-    { kind: 'project-list' }
+    { kind: 'project-list' },
   )
 }
 
@@ -529,7 +522,7 @@ function refreshThreadList(projectId: string): void {
       projectId,
       requestId,
     },
-    { kind: 'thread-list', projectId }
+    { kind: 'thread-list', projectId },
   )
 }
 
@@ -566,10 +559,10 @@ function makeThreadStatusToast(input: {
 
 function pushThreadToast(
   snapshot: ThreadStoreState,
-  toast: ThreadStoreState['toasts'][number]
+  toast: ThreadStoreState['toasts'][number],
 ): ThreadStoreState['toasts'] {
   const deduped = snapshot.toasts.filter(
-    (entry) => !(entry.projectId === toast.projectId && entry.threadId === toast.threadId)
+    (entry) => !(entry.projectId === toast.projectId && entry.threadId === toast.threadId),
   )
   return [...deduped, toast].slice(-4)
 }
@@ -613,9 +606,7 @@ function handleProjectListResponse(message: SessionMessage): void {
   }
 
   const error = typeof message.payload?.error === 'string' ? message.payload.error : null
-  const projects = Array.isArray(message.payload?.projects)
-    ? (message.payload.projects as ProjectSummary[])
-    : []
+  const projects = Array.isArray(message.payload?.projects) ? (message.payload.projects as ProjectSummary[]) : []
 
   updateState((previous) => {
     const nextProjectIds = new Set(projects.map((project) => project.projectId))
@@ -675,11 +666,8 @@ function handleThreadListResponse(message: SessionMessage): void {
   }
 
   const projectId = pending.projectId
-  const threads = Array.isArray(message.payload?.threads)
-    ? sortThreads(message.payload.threads as ThreadSummary[])
-    : []
-  const activeThreadId =
-    typeof message.payload?.activeThreadId === 'string' ? message.payload.activeThreadId : null
+  const threads = Array.isArray(message.payload?.threads) ? sortThreads(message.payload.threads as ThreadSummary[]) : []
+  const activeThreadId = typeof message.payload?.activeThreadId === 'string' ? message.payload.activeThreadId : null
 
   updateState((previous) => {
     const nextState: ThreadStoreState = {
@@ -694,7 +682,7 @@ function handleThreadListResponse(message: SessionMessage): void {
               ...project,
               activeThreadId,
             }
-          : project
+          : project,
       ),
     }
 
@@ -706,7 +694,7 @@ function handleThreadListResponse(message: SessionMessage): void {
           warmup: {
             ...previous.runtimeRecovery.warmup,
             pendingProjectIds: previous.runtimeRecovery.warmup.pendingProjectIds.filter(
-              (pendingProjectId) => pendingProjectId !== projectId
+              (pendingProjectId) => pendingProjectId !== projectId,
             ),
           },
         }
@@ -721,7 +709,7 @@ function handleThreadListResponse(message: SessionMessage): void {
         warmup: {
           ...previous.runtimeRecovery.warmup,
           pendingProjectIds: previous.runtimeRecovery.warmup.pendingProjectIds.filter(
-            (pendingProjectId) => pendingProjectId !== projectId
+            (pendingProjectId) => pendingProjectId !== projectId,
           ),
         },
       }
@@ -892,8 +880,7 @@ function handleThreadStatusUpdated(message: SessionMessage): void {
   }
 
   const status = message.payload?.status
-  const lastStatusAt =
-    typeof message.payload?.lastStatusAt === 'string' ? message.payload.lastStatusAt : null
+  const lastStatusAt = typeof message.payload?.lastStatusAt === 'string' ? message.payload.lastStatusAt : null
 
   updateState((previous) => {
     const current = previous.threadsByProjectId[projectId] ?? []
@@ -934,7 +921,7 @@ function handleThreadStatusUpdated(message: SessionMessage): void {
               threadId,
               threadTitle,
               status,
-            })
+            }),
           )
         : previous.toasts,
     }
@@ -948,11 +935,8 @@ function handleThreadUnreadUpdated(message: SessionMessage): void {
     return
   }
 
-  const unreadCount = Number.isFinite(Number(message.payload?.unreadCount))
-    ? Number(message.payload?.unreadCount)
-    : 0
-  const lastOutputAt =
-    typeof message.payload?.lastOutputAt === 'string' ? message.payload.lastOutputAt : null
+  const unreadCount = Number.isFinite(Number(message.payload?.unreadCount)) ? Number(message.payload?.unreadCount) : 0
+  const lastOutputAt = typeof message.payload?.lastOutputAt === 'string' ? message.payload.lastOutputAt : null
 
   updateState((previous) => {
     const current = previous.threadsByProjectId[projectId] ?? []
@@ -1014,9 +998,7 @@ function handleBranchSuggestionsResponse(message: SessionMessage): void {
     return
   }
 
-  const branches = Array.isArray(message.payload?.branches)
-    ? (message.payload.branches as string[])
-    : []
+  const branches = Array.isArray(message.payload?.branches) ? (message.payload.branches as string[]) : []
   const error = typeof message.payload?.error === 'string' ? message.payload.error : null
 
   updateState((previous) => ({
@@ -1255,7 +1237,7 @@ export function switchToThread(projectId: string, threadId: string): void {
       projectId,
       threadId,
       previousActiveThreadKey,
-    }
+    },
   )
 }
 
@@ -1318,8 +1300,7 @@ export function noteDaemonServerId(serverId: string): void {
           reason: RESTART_WARMUP_REASON,
           detectedAtMs: Date.now(),
           previousActiveThreadKey: previous.activeThreadKey,
-          pendingProjectIds:
-            pendingProjectIds.length > 0 ? pendingProjectIds : [PROJECT_LIST_REFRESH_PENDING_KEY],
+          pendingProjectIds: pendingProjectIds.length > 0 ? pendingProjectIds : [PROJECT_LIST_REFRESH_PENDING_KEY],
           attachSettled: false,
         },
         reconnectedToastPending: false,
@@ -1392,7 +1373,7 @@ export function listProviders(): void {
       type: 'list_available_providers_request',
       requestId,
     },
-    { kind: 'provider-list' }
+    { kind: 'provider-list' },
   )
 }
 
@@ -1423,7 +1404,7 @@ export function listBranchSuggestions(projectId: string, query?: string): void {
       limit: 50,
       requestId,
     },
-    { kind: 'branch-suggestions', projectId }
+    { kind: 'branch-suggestions', projectId },
   )
 }
 
@@ -1433,7 +1414,7 @@ export function createThread(input: ThreadLaunchConfigInput): void {
     setCreateError(
       buildCreateThreadError({
         summary: warmupLockReason,
-      })
+      }),
     )
     return
   }
@@ -1515,7 +1496,7 @@ export function createThread(input: ThreadLaunchConfigInput): void {
             summary: CREATE_THREAD_DISCONNECTED_SUMMARY,
             details: 'WebSocket readyState was not OPEN, so the request was not sent.',
             requestId,
-          })
+          }),
         )
       },
       onTimeout: () => {
@@ -1524,10 +1505,10 @@ export function createThread(input: ThreadLaunchConfigInput): void {
             summary: CREATE_THREAD_TIMEOUT_SUMMARY,
             details: `No thread_create_response received within ${CREATE_THREAD_RESPONSE_TIMEOUT_MS / 1000}s.`,
             requestId,
-          })
+          }),
         )
       },
-    }
+    },
   )
 }
 
@@ -1586,7 +1567,7 @@ export function requestDeleteThread(projectId: string, threadId: string, force: 
       kind: 'thread-delete',
       projectId,
       threadId,
-    }
+    },
   )
 }
 

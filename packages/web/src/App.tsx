@@ -42,6 +42,7 @@ import { toast } from 'sonner'
 
 type SessionMessage = {
   type: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload?: any
 }
 
@@ -102,11 +103,13 @@ export function getAttachRecoveryRemainingMs(state: AttachRecoveryState, now: nu
 export function nextAttachRecoveryRetryState(
   current: AttachRecoveryState,
   now: number,
-  error: string
+  error: string,
 ): AttachRecoveryState {
   const starting = current.phase !== 'retrying'
   const startedAt = starting ? now : (current.startedAt ?? now)
-  const deadlineAt = starting ? now + ATTACH_RECOVERY_WINDOW_MS : (current.deadlineAt ?? now + ATTACH_RECOVERY_WINDOW_MS)
+  const deadlineAt = starting
+    ? now + ATTACH_RECOVERY_WINDOW_MS
+    : (current.deadlineAt ?? now + ATTACH_RECOVERY_WINDOW_MS)
   const attempt = starting ? 1 : current.attempt + 1
   const token = starting ? current.token + 1 : current.token
 
@@ -133,7 +136,7 @@ export function nextAttachRecoveryRetryState(
 
 export function resolveAttachRecoverySuccess(
   current: AttachRecoveryState,
-  lastToastToken: number | null
+  lastToastToken: number | null,
 ): {
   nextState: AttachRecoveryState
   emitToast: boolean
@@ -265,7 +268,7 @@ function App() {
     setAttachRecoveryNow(Date.now())
     markRuntimeWarmupAttachSettled()
     setAttachFailureReason(
-      `Attach recovery timed out after 60s. Last error: ${next.lastError ?? 'attach failed'}. Try switching threads or restarting the daemon.`
+      `Attach recovery timed out after 60s. Last error: ${next.lastError ?? 'attach failed'}. Try switching threads or restarting the daemon.`,
     )
   }
 
@@ -377,7 +380,7 @@ function App() {
     if (forceRefresh) {
       terminalRef.current?.clear()
       adapterRef.current?.setOffset(0)
-      console.info('[terminal] reconnect refresh requested from server')
+      
     }
 
     sendWsMessage({
@@ -574,10 +577,7 @@ function App() {
 
     // If recovery is actively retrying for the same terminal, don't reset
     // it and send a duplicate attach — that would bypass the backoff timer.
-    if (
-      attachRecoveryRef.current.phase === 'retrying' &&
-      terminalIdRef.current === activeThreadTerminalId
-    ) {
+    if (attachRecoveryRef.current.phase === 'retrying' && terminalIdRef.current === activeThreadTerminalId) {
       clearUnreadForActiveThread()
       return
     }
@@ -728,7 +728,7 @@ function App() {
 
       const recoveryResolution = resolveAttachRecoverySuccess(
         attachRecoveryRef.current,
-        attachRecoveryToastTokenRef.current
+        attachRecoveryToastTokenRef.current,
       )
       setAttachRecoveryState(recoveryResolution.nextState)
       attachRecoveryToastTokenRef.current = recoveryResolution.nextToastToken
@@ -748,7 +748,7 @@ function App() {
       const hasOffsetGap = replayedFrom > pendingAttach.resumeOffset
 
       if ((responseReset || hasOffsetGap) && !pendingAttach.forceRefresh) {
-        console.warn('[terminal] resume offset stale, forcing full redraw from server')
+        
         sendAttachRequest(pendingAttach.terminalId, true)
         return
       }
@@ -869,11 +869,7 @@ function App() {
         {!isMobile && diffPanelOpen ? (
           <ResizablePanelGroup direction="horizontal" className="h-full w-full">
             <ResizablePanel defaultSize={100 - diffPanelWidth} minSize={40}>
-              <TerminalView
-                onTerminalReady={handleTerminalReady}
-                onResize={handleResize}
-                className="h-full w-full"
-              />
+              <TerminalView onTerminalReady={handleTerminalReady} onResize={handleResize} className="h-full w-full" />
             </ResizablePanel>
             <ResizableHandle withHandle />
             <ResizablePanel
@@ -898,11 +894,7 @@ function App() {
             </ResizablePanel>
           </ResizablePanelGroup>
         ) : (
-          <TerminalView
-            onTerminalReady={handleTerminalReady}
-            onResize={handleResize}
-            className="h-full w-full"
-          />
+          <TerminalView onTerminalReady={handleTerminalReady} onResize={handleResize} className="h-full w-full" />
         )}
       </div>
 

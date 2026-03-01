@@ -1,8 +1,10 @@
-import { RefreshCw, X } from 'lucide-react'
+import { ChevronDown, RefreshCw, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { ParsedDiffFile } from '@/diff/diff-types'
 import { DiffFileSection } from '@/components/diff-file-section'
 import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 
@@ -37,15 +39,9 @@ function formatUpdatedAt(updatedAt: string | null | undefined): string {
   return `Updated ${Math.floor(deltaSeconds / 60)}m ago`
 }
 
-export function DiffPanel({
-  files,
-  loading,
-  error,
-  updatedAt,
-  onClose,
-  onRefresh,
-  refreshAction,
-}: DiffPanelProps) {
+export function DiffPanel({ files, loading, error, updatedAt, onClose, onRefresh, refreshAction }: DiffPanelProps) {
+  const sortedFiles = [...files].sort((a, b) => a.path.localeCompare(b.path))
+
   return (
     <section data-testid="diff-panel" className="flex h-full min-w-0 flex-col bg-card">
       <header className="flex items-center justify-between gap-2 px-3 py-2">
@@ -86,15 +82,42 @@ export function DiffPanel({
 
       <Separator />
 
+      <form className="flex gap-2 px-3 py-2">
+        <Input placeholder="Commit message" disabled className="h-8 flex-1 text-sm" aria-label="Commit message" />
+        <Button type="submit" size="sm" disabled>
+          Commit
+        </Button>
+      </form>
+
+      <Separator />
+
       <ScrollArea className="h-full">
-        <div className="space-y-2 p-3">
+        <div className="p-3">
           {loading ? <p className="text-sm text-muted-foreground">Refreshing changes from active thread...</p> : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-          {files.length === 0 ? (
+          {files.length === 0 && !loading ? (
             <p className="text-sm text-muted-foreground">No uncommitted changes in this thread.</p>
           ) : (
-            files.map((file) => <DiffFileSection key={file.path} file={file} />)
+            <Collapsible defaultOpen>
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex w-full items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:bg-muted/35"
+                >
+                  <span>Changes ({files.length})</span>
+                  <ChevronDown className="h-3 w-3 transition-transform [[data-state=open]_&]:rotate-180" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-2 px-3 pb-3">
+                  {sortedFiles.map((file) => (
+                    <DiffFileSection key={file.path} file={file} />
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           )}
         </div>
       </ScrollArea>

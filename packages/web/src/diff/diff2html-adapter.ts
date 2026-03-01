@@ -250,7 +250,7 @@ export function toDiff2Html(file: ParsedDiffFile, options?: { contextLines?: num
     blocks: hunks.map(toDiff2HtmlBlock),
   }
 
-  return renderDiffHtml([diffFile] as any, {
+  return renderDiffHtml([diffFile] as unknown as Parameters<typeof renderDiffHtml>[0], {
     drawFileList: false,
     matching: 'none',
     outputFormat: 'side-by-side',
