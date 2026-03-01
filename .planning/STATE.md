@@ -10,15 +10,15 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 ## Current Position
 
 **Milestone:** v2 Code Review
-**Phase:** Phase 09 — diff-panel-redesign (in progress)
-**Plan:** 09-05 complete (09-04 backfilled)
-**Status:** In progress
-**Last activity:** 2026-03-01 — Completed 09-04: Staged/Unstaged two-section layout in DiffPanel
+**Phase:** Phase 09 — diff-panel-redesign (complete)
+**Plan:** 09-05 complete
+**Status:** Phase 09 complete; Phase 10 pending
+**Last activity:** 2026-03-01 — Phase 09 complete: accordion/collapsible Staged/Unstaged design shipped
 
 ```
 v1:   [████████████████████] 100% (5/5 phases) — shipped 2026-02-25
 v1.1: [████████████████████] 100% (3/3 phases) — shipped 2026-02-28
-v2:   [█████░░░░░░░░░░░░░░░]  ~25% — 09-01 + 09-02 + 09-03 + 09-04 + 09-05 complete
+v2:   [██████████░░░░░░░░░░]  ~50% — Phase 09 complete (5/5 plans)
 ```
 
 ## Accumulated Context
@@ -34,8 +34,8 @@ v2:   [█████░░░░░░░░░░░░░░░]  ~25% — 0
 - DIFF-02/03/04 are the v2 focus. TERM-05 and REMO-01/02 deferred.
 - Diff panel keeps toggle behaviour (not always-visible column).
 - Hunk staging: inline "Stage hunk" / "Unstage hunk" button per hunk (not per-file checkbox).
-- Target layout: two-column (file list left with +/- stats + tabs, diff viewer right) + commit bar at bottom.
-- Reference UI: Superset.sh "See Changes" panel.
+- Target layout: accordion/collapsible — "Staged (N)" and "Unstaged (N)" sections with inline diff expansion; commit bar at bottom. No two-column layout, no tabs, no right-pane viewer.
+- Reference UI: Superset.sh "See Changes" panel (accordion pattern adopted, not two-column).
 
 ### Decisions Logged
 
@@ -76,7 +76,7 @@ v2:   [█████░░░░░░░░░░░░░░░]  ~25% — 0
 ## Session Continuity
 
 **Last session:** 2026-03-01
-**Stopped at:** Completed 09-04-PLAN.md (backfilled; 09-05 already complete)
+**Stopped at:** Phase 09 complete (all 5 plans shipped)
 **Resume file:** None
 
 ---
@@ -89,4 +89,4 @@ v2:   [█████░░░░░░░░░░░░░░░]  ~25% — 0
 
 ---
 
-_State updated: 2026-03-01 — Phase 09 plan 04 backfilled. DiffPanel now renders Staged/Unstaged collapsibles from stagedFiles/unstagedFiles props; CollapsibleTrigger asChild bug fixed._
+_State updated: 2026-03-01 — Phase 09 complete. Accordion/collapsible design shipped: Staged(N)/Unstaged(N) sections with inline diff expansion, no two-column layout, no tabs, no right-pane viewer._
