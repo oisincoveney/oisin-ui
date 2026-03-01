@@ -100,13 +100,11 @@ Plans:
   2. User sees an "Unstage hunk" button on each staged hunk; clicking it moves the hunk back to Unstaged.
   3. User types a commit message in the commit bar and clicks Commit; staged changes are committed and the Staged tab clears.
   4. User cannot submit an empty commit message; the Commit button is disabled until text is entered.
-**Plans**: 4 plans
+**Plans**: 2 plans
 Plans:
 
-- [ ] 09-01-PLAN.md — Extend diff-types + diff-store for staged/unstaged dual subscriptions and tab state
-- [ ] 09-02-PLAN.md — Create DiffFileRow component (slim file row for left column)
-- [ ] 09-03-PLAN.md — Rewrite DiffPanel with two-column layout (file list + inline diff viewer)
-- [ ] 09-04-PLAN.md — Wire App.tsx to new DiffPanel props + update e2e spec
+- [ ] 09-01-PLAN.md — Add commit bar + Changes section to DiffPanel; tooltip path + new/del badges in DiffFileSection
+- [ ] 09-02-PLAN.md — Verify/update e2e spec for updated layout
 
 ## Progress
 
@@ -115,7 +113,7 @@ Plans:
 | 06. Runtime Reliability Hardening | v1.1 | RUN-01, RUN-02, RUN-03, RUN-04 | 8/8 | Complete | 2026-02-26 |
 | 07. Thread Metadata Contract Closure | v1.1 | THRD-01, THRD-02, THRD-03 | 2/2 | Complete | 2026-02-27 |
 | 08. Deterministic Verification Closure | v1.1 | VER-01, VER-02, VER-03 | 2/2 | Complete | 2026-02-28 |
-| 09. Diff Panel Redesign | v2 | DIFF-02 | 0/4 | Pending | — |
+| 09. Diff Panel Redesign | v2 | DIFF-02 | 0/2 | Pending | — |
 | 10. Hunk Staging & Commit | v2 | DIFF-03, DIFF-04 | 0/TBD | Pending | — |
 
 ---
