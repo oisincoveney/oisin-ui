@@ -294,6 +294,119 @@ async function listCheckoutFileChanges(cwd: string, ref: string): Promise<Checko
   return Array.from(byPath.values());
 }
 
+async function listStagedFileChanges(cwd: string): Promise<CheckoutFileChange[]> {
+  const changes: CheckoutFileChange[] = [];
+
+  const { stdout: nameStatusOut } = await execGit("git diff --cached --name-status", {
+    cwd,
+    env: READ_ONLY_GIT_ENV,
+  });
+  for (const line of nameStatusOut.split("\n").map((l) => l.trim()).filter(Boolean)) {
+    const tabParts = line.split("\t");
+    const rawStatus = (tabParts[0] ?? "").trim();
+    if (!rawStatus) continue;
+
+    if (rawStatus.startsWith("R") || rawStatus.startsWith("C")) {
+      const oldPath = tabParts[1];
+      const newPath = tabParts[2];
+      if (newPath) {
+        changes.push({
+          path: newPath,
+          ...(oldPath ? { oldPath } : {}),
+          status: rawStatus,
+          isNew: false,
+          isDeleted: false,
+        });
+      }
+      continue;
+    }
+
+    const path = tabParts[1];
+    if (!path) continue;
+    const code = rawStatus[0];
+    changes.push({
+      path,
+      status: rawStatus,
+      isNew: code === "A",
+      isDeleted: code === "D",
+    });
+  }
+
+  const byPath = new Map<string, CheckoutFileChange>();
+  for (const change of changes) {
+    if (!byPath.has(change.path)) {
+      byPath.set(change.path, change);
+    }
+  }
+  return Array.from(byPath.values());
+}
+
+async function listUnstagedFileChanges(cwd: string): Promise<CheckoutFileChange[]> {
+  const changes: CheckoutFileChange[] = [];
+
+  const { stdout: nameStatusOut } = await execGit("git diff --name-status", {
+    cwd,
+    env: READ_ONLY_GIT_ENV,
+  });
+  for (const line of nameStatusOut.split("\n").map((l) => l.trim()).filter(Boolean)) {
+    const tabParts = line.split("\t");
+    const rawStatus = (tabParts[0] ?? "").trim();
+    if (!rawStatus) continue;
+
+    if (rawStatus.startsWith("R") || rawStatus.startsWith("C")) {
+      const oldPath = tabParts[1];
+      const newPath = tabParts[2];
+      if (newPath) {
+        changes.push({
+          path: newPath,
+          ...(oldPath ? { oldPath } : {}),
+          status: rawStatus,
+          isNew: false,
+          isDeleted: false,
+        });
+      }
+      continue;
+    }
+
+    const path = tabParts[1];
+    if (!path) continue;
+    const code = rawStatus[0];
+    changes.push({
+      path,
+      status: rawStatus,
+      isNew: code === "A",
+      isDeleted: code === "D",
+    });
+  }
+
+  const { stdout: untrackedOut } = await execGit("git ls-files --others --exclude-standard", {
+    cwd,
+    env: READ_ONLY_GIT_ENV,
+  });
+  for (const file of untrackedOut.split("\n").map((l) => l.trim()).filter(Boolean)) {
+    changes.push({
+      path: file,
+      status: "U",
+      isNew: true,
+      isDeleted: false,
+      isUntracked: true,
+    });
+  }
+
+  const byPath = new Map<string, CheckoutFileChange>();
+  for (const change of changes) {
+    const existing = byPath.get(change.path);
+    if (!existing) {
+      byPath.set(change.path, change);
+      continue;
+    }
+    if (existing.isUntracked && !change.isUntracked) {
+      byPath.set(change.path, change);
+    }
+  }
+  return Array.from(byPath.values());
+}
+
 async function tryResolveMergeBase(cwd: string, baseRef: string): Promise<string | null> {
   try {
     const { stdout } = await execGit(`git merge-base ${baseRef} HEAD`, { cwd, env: READ_ONLY_GIT_ENV });
@@ -324,13 +437,13 @@ function normalizeNumstatPath(pathField: string): string {
 const TRACKED_DIFF_NUMSTAT_MAX_BYTES = 2 * 1024 * 1024; // 2MB
 const TRACKED_MAX_CHANGED_LINES = 40_000;
 
-async function getTrackedNumstatByPath(
+async function getNumstatByPath(
   cwd: string,
-  ref: string
+  args: string[]
 ): Promise<Map<string, FileStat>> {
   const result = await spawnLimitedText({
     cmd: "git",
-    args: ["diff", "--numstat", ref],
+    args: ["diff", "--numstat", ...args],
     cwd,
     env: READ_ONLY_GIT_ENV,
     maxBytes: TRACKED_DIFF_NUMSTAT_MAX_BYTES,
@@ -498,6 +611,8 @@ export type CheckoutStatusLiteResult =
 export interface CheckoutDiffResult {
   diff: string;
   structured?: ParsedDiffFile[];
+  stagedFiles?: ParsedDiffFile[];
+  unstagedFiles?: ParsedDiffFile[];
 }
 
 export interface CheckoutDiffCompare {
@@ -1139,7 +1254,7 @@ export async function getCheckoutDiff(
   const untrackedChanges = changes.filter((change) => change.isUntracked === true);
 
   const trackedNumstatByPath =
-    trackedChanges.length > 0 ? await getTrackedNumstatByPath(cwd, refForDiff) : new Map<string, FileStat>();
+    trackedChanges.length > 0 ? await getNumstatByPath(cwd, [refForDiff]) : new Map<string, FileStat>();
   const trackedDiffPaths: string[] = [];
   const trackedPlaceholderByPath = new Map<
     string,
@@ -1290,6 +1405,133 @@ export async function getCheckoutDiff(
   }
 
   if (compare.includeStructured) {
+    if (compare.mode === "uncommitted") {
+      const [stagedChanges, unstagedChanges] = await Promise.all([
+        listStagedFileChanges(cwd),
+        listUnstagedFileChanges(cwd),
+      ]);
+
+      const [stagedNumstat, unstagedNumstat] = await Promise.all([
+        stagedChanges.length > 0 ? getNumstatByPath(cwd, ["--cached"]) : Promise.resolve(new Map<string, FileStat>()),
+        unstagedChanges.filter((c) => !c.isUntracked).length > 0
+          ? getNumstatByPath(cwd, [])
+          : Promise.resolve(new Map<string, FileStat>()),
+      ]);
+
+      const buildParsedFiles = async (
+        changes: CheckoutFileChange[],
+        numstat: Map<string, FileStat>,
+        diffArgs: string[]
+      ): Promise<ParsedDiffFile[]> => {
+        const result: ParsedDiffFile[] = [];
+        const trackedCh = changes.filter((c) => !c.isUntracked);
+        const untrackedCh = changes.filter((c) => c.isUntracked === true);
+
+        const placeholderByPath = new Map<string, { status: "binary" | "too_large"; stat: FileStat }>();
+        const diffPaths: string[] = [];
+        for (const change of trackedCh) {
+          const stat = numstat.get(change.path) ?? null;
+          if (stat?.isBinary) {
+            placeholderByPath.set(change.path, { status: "binary", stat });
+            continue;
+          }
+          if (isTrackedDiffTooLarge(stat)) {
+            placeholderByPath.set(change.path, { status: "too_large", stat });
+            continue;
+          }
+          diffPaths.push(change.path);
+        }
+
+        let diffTextLocal = "";
+        let diffTruncated = false;
+        if (diffPaths.length > 0) {
+          const diffResult = await spawnLimitedText({
+            cmd: "git",
+            args: [...diffArgs, "--", ...diffPaths],
+            cwd,
+            env: READ_ONLY_GIT_ENV,
+            maxBytes: TOTAL_DIFF_MAX_BYTES,
+          });
+          diffTextLocal = diffResult.text;
+          diffTruncated = diffResult.truncated;
+        }
+
+        const parsedTracked = diffTextLocal.length > 0 ? await parseAndHighlightDiff(diffTextLocal, cwd) : [];
+        const parsedByPath = new Map(parsedTracked.map((f) => [f.path, f]));
+
+        for (const change of trackedCh) {
+          const placeholder = placeholderByPath.get(change.path);
+          if (placeholder) {
+            result.push(buildPlaceholderParsedDiffFile(change, { status: placeholder.status, stat: placeholder.stat }));
+            continue;
+          }
+          const stat = numstat.get(change.path) ?? null;
+          const parsedFile = parsedByPath.get(change.path);
+          if (parsedFile) {
+            result.push({
+              ...parsedFile,
+              path: change.path,
+              ...(change.oldPath ? { oldPath: change.oldPath } : {}),
+              isNew: change.isNew,
+              isDeleted: change.isDeleted,
+              status: "ok",
+            });
+            continue;
+          }
+          result.push({
+            path: change.path,
+            ...(change.oldPath ? { oldPath: change.oldPath } : {}),
+            isNew: change.isNew,
+            isDeleted: change.isDeleted,
+            additions: stat?.additions ?? 0,
+            deletions: stat?.deletions ?? 0,
+            hunks: [],
+            status: diffTruncated ? "too_large" : "ok",
+          });
+        }
+
+        for (const change of untrackedCh) {
+          const { text, truncated, stat } = await getUntrackedDiffText(cwd, change);
+          if (stat?.isBinary) {
+            result.push(buildPlaceholderParsedDiffFile(change, { status: "binary", stat }));
+            continue;
+          }
+          if (truncated) {
+            result.push(buildPlaceholderParsedDiffFile(change, { status: "too_large", stat }));
+            continue;
+          }
+          const parsed = await parseAndHighlightDiff(text, cwd);
+          const parsedFile =
+            parsed[0] ??
+            ({
+              path: change.path,
+              isNew: change.isNew,
+              isDeleted: change.isDeleted,
+              additions: stat?.additions ?? 0,
+              deletions: stat?.deletions ?? 0,
+              hunks: [],
+            } satisfies ParsedDiffFile);
+          result.push({
+            ...parsedFile,
+            path: change.path,
+            ...(change.oldPath ? { oldPath: change.oldPath } : {}),
+            isNew: change.isNew,
+            isDeleted: change.isDeleted,
+            status: "ok",
+          });
+        }
+
+        return result;
+      };
+
+      const [stagedFiles, unstagedFiles] = await Promise.all([
+        buildParsedFiles(stagedChanges, stagedNumstat, ["diff", "--cached"]),
+        buildParsedFiles(unstagedChanges, unstagedNumstat, ["diff"]),
+      ]);
+
+      return { diff: diffText, structured: [...stagedFiles, ...unstagedFiles], stagedFiles, unstagedFiles };
+    }
+
     return { diff: diffText, structured };
   }
   return { diff: diffText };
