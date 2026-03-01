@@ -318,6 +318,9 @@ test.afterAll(async () => {
 
 test.describe("diff panel regressions", () => {
   test("renders collapsed metadata rows, refreshes from terminal edits, and stays read-only", async ({ page }) => {
+    // Layout updated in Phase 09: commit bar + Changes collapsible added.
+    // All testids preserved — no selector changes required.
+
     // Thread created in beforeAll via controlClient — worktreePath already known.
     // Navigate and wait for ensure-default to make the thread active in the web client.
     await page.goto(runtime.webUrl);
