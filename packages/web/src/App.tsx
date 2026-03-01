@@ -777,6 +777,11 @@ function App() {
     }
   }, [])
 
+  const handleTerminalDispose = () => {
+    clearPendingScroll()
+    terminalRef.current = null
+  }
+
   const handleTerminalReady = (term: Terminal) => {
     terminalRef.current = term
     adapterRef.current = new TerminalStreamAdapter(term, 0, sendWsBinary, {
@@ -865,37 +870,38 @@ function App() {
       </header>
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {!isMobile && diffPanelOpen ? (
-          <ResizablePanelGroup direction="horizontal" className="h-full w-full">
-            <ResizablePanel defaultSize={100 - diffPanelWidth} minSize={40}>
-              <TerminalView onTerminalReady={handleTerminalReady} onResize={handleResize} className="h-full w-full" />
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel
-              defaultSize={diffPanelWidth}
-              minSize={30}
-              maxSize={60}
-              onResize={(size: PanelSize) => {
-                setDiffPanelWidthPercent(size.asPercentage)
-              }}
-            >
-              <DiffPanel
-                stagedFiles={diffStagedFiles}
-                unstagedFiles={diffUnstagedFiles}
-                loading={diffSnapshot.loading}
-                error={diffSnapshot.error}
-                onClose={() => {
-                  setDiffPanelOpen(false)
+        <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
+          <ResizablePanel minSize={40} className="overflow-hidden">
+            <TerminalView onTerminalReady={handleTerminalReady} onDispose={handleTerminalDispose} onResize={handleResize} className="h-full w-full" />
+          </ResizablePanel>
+          {!isMobile && diffPanelOpen && (
+            <>
+              <ResizableHandle withHandle />
+              <ResizablePanel
+                defaultSize={diffPanelWidth}
+                minSize={30}
+                maxSize={60}
+                onResize={(size: PanelSize) => {
+                  setDiffPanelWidthPercent(size.asPercentage)
                 }}
-                onRefresh={() => {
-                  refreshActiveDiffSnapshot()
-                }}
-              />
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        ) : (
-          <TerminalView onTerminalReady={handleTerminalReady} onResize={handleResize} className="h-full w-full" />
-        )}
+              >
+                <DiffPanel
+                  stagedFiles={diffStagedFiles}
+                  unstagedFiles={diffUnstagedFiles}
+                  updatedAt={activeDiffEntry?.updatedAt ?? null}
+                  loading={diffSnapshot.loading}
+                  error={diffSnapshot.error}
+                  onClose={() => {
+                    setDiffPanelOpen(false)
+                  }}
+                  onRefresh={() => {
+                    refreshActiveDiffSnapshot()
+                  }}
+                />
+              </ResizablePanel>
+            </>
+          )}
+        </ResizablePanelGroup>
       </div>
 
       <DiffMobileSheet

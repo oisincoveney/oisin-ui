@@ -4247,10 +4247,39 @@ export class Session {
     return target
   }
 
+  private async resolveValidDiffCwd(requestedCwd: string): Promise<string> {
+    // Fast path: cwd is already a valid git repo
+    try {
+      await execAsync('git rev-parse --git-dir', { cwd: requestedCwd, env: READ_ONLY_GIT_ENV })
+      return requestedCwd
+    } catch {
+      // not a git repo — attempt recovery via project repoRoots
+    }
+
+    const projects = await this.threadRegistry.listProjects()
+    for (const project of projects) {
+      const repoRoot = project.repoRoot
+      if (!repoRoot) continue
+      try {
+        await execAsync('git rev-parse --git-dir', { cwd: repoRoot, env: READ_ONLY_GIT_ENV })
+        this.sessionLogger.warn(
+          { requestedCwd, recoveredCwd: repoRoot },
+          'Diff cwd is not a git repo; recovered to project repoRoot'
+        )
+        return repoRoot
+      } catch {
+        // this project's repoRoot is also invalid — try next
+      }
+    }
+
+    // No valid fallback found — return original cwd and let the error surface normally
+    return requestedCwd
+  }
+
   private async handleSubscribeCheckoutDiffRequest(
     msg: SubscribeCheckoutDiffRequest
   ): Promise<void> {
-    const cwd = expandTilde(msg.cwd)
+    const cwd = await this.resolveValidDiffCwd(expandTilde(msg.cwd))
     const compare = this.normalizeCheckoutDiffCompare(msg.compare)
 
     this.removeCheckoutDiffSubscription(msg.subscriptionId)

@@ -18,6 +18,16 @@ export function TerminalView({ onTerminalReady, onDispose, onResize, className =
   const fitAddonRef = useRef<FitAddon | null>(null)
   const [terminalState, setTerminalState] = useState<Terminal | null>(null)
 
+  // Bridge callbacks through refs so the init effect doesn't re-run on prop identity change
+  const onTerminalReadyRef = useRef(onTerminalReady)
+  const onDisposeRef = useRef(onDispose)
+  useEffect(() => {
+    onTerminalReadyRef.current = onTerminalReady
+  }, [onTerminalReady])
+  useEffect(() => {
+    onDisposeRef.current = onDispose
+  }, [onDispose])
+
   useTerminalResize({
     terminal: terminalState,
     fitAddon: fitAddonRef.current,
@@ -26,7 +36,9 @@ export function TerminalView({ onTerminalReady, onDispose, onResize, className =
   })
 
   useEffect(() => {
-    if (!containerRef.current) {return}
+    if (!containerRef.current) {
+      return
+    }
 
     // Create terminal instance
     const term = new Terminal({
@@ -76,24 +88,21 @@ export function TerminalView({ onTerminalReady, onDispose, onResize, className =
     setTimeout(() => {
       try {
         fitAddon.fit()
-        if (onTerminalReady) {
-          onTerminalReady(term)
-        }
-      } catch  {
+        onTerminalReadyRef.current?.(term)
+      } catch {
         // ignore fit errors during fast unmount
       }
     }, 10)
 
     return () => {
-      if (onDispose) {
-        onDispose()
-      }
+      onDisposeRef.current?.()
+      webglAddon?.dispose()
       term.dispose()
       terminalRef.current = null
       fitAddonRef.current = null
       setTerminalState(null)
     }
-  }, [onTerminalReady, onDispose])
+  }, []) // runs once on mount — callbacks accessed via refs
 
   return <div ref={containerRef} className={`w-full h-full overflow-hidden ${className}`} style={{ padding: '8px' }} />
 }
