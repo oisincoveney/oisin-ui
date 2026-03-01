@@ -11,14 +11,14 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 **Milestone:** v2 Code Review
 **Phase:** Phase 09 — diff-panel-redesign (in progress)
-**Plan:** 09-05 complete
+**Plan:** 09-05 complete (09-04 backfilled)
 **Status:** In progress
-**Last activity:** 2026-03-01 — Completed 09-05: e2e section header assertions (Staged/Unstaged)
+**Last activity:** 2026-03-01 — Completed 09-04: Staged/Unstaged two-section layout in DiffPanel
 
 ```
 v1:   [████████████████████] 100% (5/5 phases) — shipped 2026-02-25
 v1.1: [████████████████████] 100% (3/3 phases) — shipped 2026-02-28
-v2:   [█████░░░░░░░░░░░░░░░]  ~25% — 09-01 + 09-02 + 09-03 + 09-05 complete
+v2:   [█████░░░░░░░░░░░░░░░]  ~25% — 09-01 + 09-02 + 09-03 + 09-04 + 09-05 complete
 ```
 
 ## Accumulated Context
@@ -70,12 +70,13 @@ v2:   [█████░░░░░░░░░░░░░░░]  ~25% — 0
 - 09-01: `payload?: any` in SessionMessage kept with eslint-disable — WS payload is genuinely dynamic; `unknown` would require 50+ type assertions.
 - 09-03: `structured` kept as `[...stagedFiles, ...unstagedFiles]` union for backward compat; `stagedFiles`/`unstagedFiles` optional in schema (older daemons won't send them); web defaults to `[]`.
 - 09-03: `getNumstatByPath` replaces `getTrackedNumstatByPath` with variadic args to support `--cached`, no-ref, and ref-based numstat.
+- 09-04: DiffMobileSheet kept with `files[]` (combined array) — out of scope; CollapsibleTrigger `asChild` removed (base-ui has no asChild).
 - 09-05: Regex matchers `/^Staged \(\d+\)/` used in e2e assertions — count-agnostic, matches any N.
 
 ## Session Continuity
 
 **Last session:** 2026-03-01
-**Stopped at:** Completed 09-05-PLAN.md
+**Stopped at:** Completed 09-04-PLAN.md (backfilled; 09-05 already complete)
 **Resume file:** None
 
 ---
@@ -88,4 +89,4 @@ v2:   [█████░░░░░░░░░░░░░░░]  ~25% — 0
 
 ---
 
-_State updated: 2026-03-01 — Phase 09 plan 05 complete. Added Staged/Unstaged section header assertions to diff-panel e2e spec; count-agnostic regex matchers._
+_State updated: 2026-03-01 — Phase 09 plan 04 backfilled. DiffPanel now renders Staged/Unstaged collapsibles from stagedFiles/unstagedFiles props; CollapsibleTrigger asChild bug fixed._
