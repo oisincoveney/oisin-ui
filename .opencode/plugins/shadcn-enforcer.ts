@@ -1,23 +1,5 @@
-const SHADCN_COMPONENTS = [
-  { name: "AlertDialog", path: "@/components/ui/alert-dialog" },
-  { name: "Button", path: "@/components/ui/button" },
-  { name: "Collapsible", path: "@/components/ui/collapsible" },
-  { name: "Dialog", path: "@/components/ui/dialog" },
-  { name: "Input", path: "@/components/ui/input" },
-  { name: "Label", path: "@/components/ui/label" },
-  { name: "Resizable", path: "@/components/ui/resizable" },
-  { name: "ScrollArea", path: "@/components/ui/scroll-area" },
-  { name: "Separator", path: "@/components/ui/separator" },
-  { name: "Sheet", path: "@/components/ui/sheet" },
-  { name: "Sidebar", path: "@/components/ui/sidebar" },
-  { name: "Skeleton", path: "@/components/ui/skeleton" },
-  { name: "Sonner", path: "@/components/ui/sonner" },
-  { name: "Tooltip", path: "@/components/ui/tooltip" },
-]
-
-const SHADCN_COMPONENT_LIST = SHADCN_COMPONENTS.map(
-  (c) => `  - ${c.name}: import from '${c.path}'`,
-).join("\n")
+import * as fs from "fs"
+import * as path from "path"
 
 // Matches lowercase JSX tags except <form
 const LOWERCASE_JSX_TAG = /<(?!form\b)[a-z][a-z0-9-]*[\s>/]/g
@@ -33,7 +15,6 @@ function getViolations(content: string): Array<{ tag: string; line: number }> {
     const lineNum = i + 1
 
     for (const match of line.matchAll(LOWERCASE_JSX_TAG)) {
-      // Extract tag name from match (strip leading < and trailing char)
       const tag = match[0].slice(1).replace(/[\s>/].*/, "")
       violations.push({ tag: `<${tag}>`, line: lineNum })
     }
@@ -49,15 +30,37 @@ function getViolations(content: string): Array<{ tag: string; line: number }> {
   return violations
 }
 
-function isJsxFile(path: string): boolean {
-  return path.endsWith(".tsx") || path.endsWith(".jsx")
+function isJsxFile(filePath: string): boolean {
+  return filePath.endsWith(".tsx") || filePath.endsWith(".jsx")
 }
 
-function isShadcnUiFile(path: string): boolean {
-  return path.includes("components/ui/")
+function isShadcnUiFile(filePath: string): boolean {
+  return filePath.includes("components/ui/")
 }
 
-export const ShadcnEnforcerPlugin = async () => {
+function getShadcnComponentList(directory: string): string {
+  const uiDir = path.join(directory, "packages/web/src/components/ui")
+  try {
+    return fs
+      .readdirSync(uiDir)
+      .filter((f) => f.endsWith(".tsx"))
+      .map((f) => {
+        const slug = f.replace(/\.tsx$/, "")
+        const name = slug
+          .split("-")
+          .map((p) => p[0].toUpperCase() + p.slice(1))
+          .join("")
+        return `  - ${name}: import from '@/components/ui/${slug}'`
+      })
+      .join("\n")
+  } catch {
+    return "  (could not read components/ui directory)"
+  }
+}
+
+export const ShadcnEnforcerPlugin = async ({ directory }: { directory: string }) => {
+  const componentList = getShadcnComponentList(directory)
+
   return {
     "tool.execute.before": async (
       input: { tool?: string },
@@ -68,11 +71,9 @@ export const ShadcnEnforcerPlugin = async () => {
 
       const args = output.args ?? {}
 
-      // Determine file path
       const filePath = (args.filePath ?? "") as string
       if (!isJsxFile(filePath) || isShadcnUiFile(filePath)) return
 
-      // Extract content to check based on tool type
       let contentToCheck = ""
 
       if (tool === "write") {
@@ -80,7 +81,8 @@ export const ShadcnEnforcerPlugin = async () => {
       } else if (tool === "edit") {
         contentToCheck = (args.newString as string) ?? ""
       } else if (tool === "multiedit") {
-        const edits = (args.edits as Array<{ filePath: string; oldString: string; newString: string; replaceAll?: boolean }>) ?? []
+        const edits =
+          (args.edits as Array<{ filePath: string; oldString: string; newString: string; replaceAll?: boolean }>) ?? []
         contentToCheck = edits.map((e) => e.newString ?? "").join("\n")
       }
 
@@ -100,7 +102,7 @@ export const ShadcnEnforcerPlugin = async () => {
           violationList,
           "",
           "Available ShadCN components:",
-          SHADCN_COMPONENT_LIST,
+          componentList,
         ].join("\n"),
       )
     },
