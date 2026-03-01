@@ -3,10 +3,7 @@
   "plugins": ["react", "typescript", "jsx-a11y", "vitest", "import"],
   "env": { "browser": true },
   "globals": { "exports": "readonly" },
-  "ignorePatterns": [
-    "src/index.css",
-    "src/components/ui/**"
-  ],
+  "ignorePatterns": ["src/index.css", "src/components/ui/**"],
   "rules": {
     "import/no-barrel-file": "warn",
     "eslint/curly": "error",
@@ -37,9 +34,7 @@
   "overrides": [
     {
       "files": ["**/*.ts", "**/*.tsx"],
-      "rules": {
-        "typescript/no-explicit-any": "error"
-      }
+      "rules": { "typescript/no-explicit-any": "error" }
     },
     {
       "files": ["**/*.jsx", "**/*.tsx"],
@@ -57,17 +52,33 @@
     {
       "files": ["**/*.test.ts"],
       "rules": {
-        "eslint/no-restricted-imports": ["error", {
-          "paths": [{ "name": "@/test/browser", "message": "Browser test utilities cannot be imported in .test.ts files. Use .test.tsx for component tests." }]
-        }]
+        "eslint/no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@/test/browser",
+                "message": "Browser test utilities cannot be imported in .test.ts files. Use .test.tsx for component tests."
+              }
+            ]
+          }
+        ]
       }
     },
     {
       "files": ["**/*.test.tsx"],
       "rules": {
-        "eslint/no-restricted-imports": ["error", {
-          "paths": [{ "name": "@/test/node", "message": "Node test utilities cannot be imported in .test.tsx files. Use .test.ts for non-component tests." }]
-        }]
+        "eslint/no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@/test/node",
+                "message": "Node test utilities cannot be imported in .test.tsx files. Use .test.ts for non-component tests."
+              }
+            ]
+          }
+        ]
       }
     }
   ]
