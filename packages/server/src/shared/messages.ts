@@ -1707,6 +1707,8 @@ const CheckoutDiffSubscriptionPayloadSchema = z.object({
   subscriptionId: z.string(),
   cwd: z.string(),
   files: z.array(ParsedDiffFileSchema),
+  stagedFiles: z.array(ParsedDiffFileSchema).optional(),
+  unstagedFiles: z.array(ParsedDiffFileSchema).optional(),
   error: CheckoutErrorSchema.nullable(),
 })
 

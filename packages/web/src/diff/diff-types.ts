@@ -39,6 +39,8 @@ export type CheckoutDiffPayload = {
   subscriptionId: string
   cwd: string
   files: ParsedDiffFile[]
+  stagedFiles: ParsedDiffFile[]
+  unstagedFiles: ParsedDiffFile[]
   error: CheckoutError | null
 }
 
@@ -67,6 +69,8 @@ export type DiffCacheEntry = {
   threadId: string
   cwd: string
   files: ParsedDiffFile[]
+  stagedFiles: ParsedDiffFile[]
+  unstagedFiles: ParsedDiffFile[]
   error: string | null
   updatedAt: string
 }

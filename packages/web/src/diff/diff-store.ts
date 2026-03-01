@@ -1,10 +1,5 @@
 import { atom, getDefaultStore, useAtomValue } from 'jotai'
-import {
-  getConnectionStatus,
-  sendWsMessage,
-  subscribeConnectionStatus,
-  subscribeTextMessages,
-} from '@/lib/ws'
+import { getConnectionStatus, sendWsMessage, subscribeConnectionStatus, subscribeTextMessages } from '@/lib/ws'
 import type {
   CheckoutDiffPayload,
   DiffCacheEntry,
@@ -70,6 +65,8 @@ function parseCheckoutDiffPayload(payload: unknown): CheckoutDiffPayload | null 
   const subscriptionId = payload.subscriptionId
   const cwd = payload.cwd
   const files = payload.files
+  const stagedFiles = payload.stagedFiles
+  const unstagedFiles = payload.unstagedFiles
   const error = payload.error
 
   if (typeof subscriptionId !== 'string' || typeof cwd !== 'string' || !Array.isArray(files)) {
@@ -80,7 +77,12 @@ function parseCheckoutDiffPayload(payload: unknown): CheckoutDiffPayload | null 
     subscriptionId,
     cwd,
     files,
-    error: isRecord(error) && typeof error.message === 'string' && typeof error.code === 'string' ? { code: error.code, message: error.message } : null,
+    stagedFiles: Array.isArray(stagedFiles) ? stagedFiles : [],
+    unstagedFiles: Array.isArray(unstagedFiles) ? unstagedFiles : [],
+    error:
+      isRecord(error) && typeof error.message === 'string' && typeof error.code === 'string'
+        ? { code: error.code, message: error.message }
+        : null,
   }
 }
 
@@ -132,6 +134,8 @@ function toCacheEntry(target: ThreadDiffTarget, payload: CheckoutDiffPayload): D
     threadId: target.threadId,
     cwd: payload.cwd,
     files: payload.files,
+    stagedFiles: payload.stagedFiles,
+    unstagedFiles: payload.unstagedFiles,
     error: payload.error?.message ?? null,
     updatedAt: new Date().toISOString(),
   }
@@ -273,8 +277,7 @@ export function setActiveDiffThread(nextTarget: ThreadDiffTarget | null): void {
   ensureStarted()
 
   const previousTarget = state.activeTarget
-  const targetUnchanged =
-    previousTarget?.threadKey === nextTarget?.threadKey && previousTarget?.cwd === nextTarget?.cwd
+  const targetUnchanged = previousTarget?.threadKey === nextTarget?.threadKey && previousTarget?.cwd === nextTarget?.cwd
   if (targetUnchanged) {
     return
   }
