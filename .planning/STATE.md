@@ -11,14 +11,14 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 **Milestone:** v2 Code Review
 **Phase:** Phase 09 — diff-panel-redesign (in progress)
-**Plan:** 09-02 complete
+**Plan:** 09-03 complete
 **Status:** In progress
-**Last activity:** 2026-03-01 — Completed 09-02: diff-panel e2e spec audit — all testids confirmed intact
+**Last activity:** 2026-03-01 — Completed 09-03: staged/unstaged split in daemon + schema + web types
 
 ```
 v1:   [████████████████████] 100% (5/5 phases) — shipped 2026-02-25
 v1.1: [████████████████████] 100% (3/3 phases) — shipped 2026-02-28
-v2:   [███░░░░░░░░░░░░░░░░░]  ~15% — 09-01 + 09-02 complete
+v2:   [████░░░░░░░░░░░░░░░░]  ~20% — 09-01 + 09-02 + 09-03 complete
 ```
 
 ## Accumulated Context
@@ -68,11 +68,13 @@ v2:   [███░░░░░░░░░░░░░░░░░]  ~15% — 0
   - terminal-manager env tests: use time-bounded retry loop (send command every 200ms until file appears) with 25s/40s timeouts to handle shell startup latency under parallel test load.
 - 09-01: `baseUrl` removed from tsconfig — TS5.x supports `paths` without it; eliminates oxlint tsgolint false positive.
 - 09-01: `payload?: any` in SessionMessage kept with eslint-disable — WS payload is genuinely dynamic; `unknown` would require 50+ type assertions.
+- 09-03: `structured` kept as `[...stagedFiles, ...unstagedFiles]` union for backward compat; `stagedFiles`/`unstagedFiles` optional in schema (older daemons won't send them); web defaults to `[]`.
+- 09-03: `getNumstatByPath` replaces `getTrackedNumstatByPath` with variadic args to support `--cached`, no-ref, and ref-based numstat.
 
 ## Session Continuity
 
 **Last session:** 2026-03-01
-**Stopped at:** Completed 09-02-PLAN.md
+**Stopped at:** Completed 09-03-PLAN.md
 **Resume file:** None
 
 ---
@@ -85,4 +87,4 @@ v2:   [███░░░░░░░░░░░░░░░░░]  ~15% — 0
 
 ---
 
-_State updated: 2026-03-01 — Phase 09 plan 02 complete. diff-panel e2e spec audited; all testids confirmed intact after Phase 09 layout changes._
+_State updated: 2026-03-01 — Phase 09 plan 03 complete. Staged/unstaged split added to daemon getCheckoutDiff; propagated through message schema, session, and web diff-store types._
