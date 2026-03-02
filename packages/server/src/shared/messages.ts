@@ -763,6 +763,20 @@ export const CheckoutCommitRequestSchema = z.object({
   requestId: z.string(),
 })
 
+export const CheckoutStageRequestSchema = z.object({
+  type: z.literal('checkout_stage_request'),
+  cwd: z.string(),
+  path: z.string(),
+  requestId: z.string(),
+})
+
+export const CheckoutUnstageRequestSchema = z.object({
+  type: z.literal('checkout_unstage_request'),
+  cwd: z.string(),
+  path: z.string(),
+  requestId: z.string(),
+})
+
 export const CheckoutMergeRequestSchema = z.object({
   type: z.literal('checkout_merge_request'),
   cwd: z.string(),
@@ -1148,6 +1162,8 @@ export const SessionInboundMessageSchema = z.discriminatedUnion('type', [
   SubscribeCheckoutDiffRequestSchema,
   UnsubscribeCheckoutDiffRequestSchema,
   CheckoutCommitRequestSchema,
+  CheckoutStageRequestSchema,
+  CheckoutUnstageRequestSchema,
   CheckoutMergeRequestSchema,
   CheckoutMergeFromBaseRequestSchema,
   CheckoutPushRequestSchema,
@@ -1736,6 +1752,28 @@ export const CheckoutCommitResponseSchema = z.object({
   }),
 })
 
+export const CheckoutStageResponseSchema = z.object({
+  type: z.literal('checkout_stage_response'),
+  payload: z.object({
+    cwd: z.string(),
+    path: z.string(),
+    success: z.boolean(),
+    error: CheckoutErrorSchema.nullable(),
+    requestId: z.string(),
+  }),
+})
+
+export const CheckoutUnstageResponseSchema = z.object({
+  type: z.literal('checkout_unstage_response'),
+  payload: z.object({
+    cwd: z.string(),
+    path: z.string(),
+    success: z.boolean(),
+    error: CheckoutErrorSchema.nullable(),
+    requestId: z.string(),
+  }),
+})
+
 export const CheckoutMergeResponseSchema = z.object({
   type: z.literal('checkout_merge_response'),
   payload: z.object({
@@ -2220,6 +2258,8 @@ export const SessionOutboundMessageSchema = z.discriminatedUnion('type', [
   SubscribeCheckoutDiffResponseSchema,
   CheckoutDiffUpdateSchema,
   CheckoutCommitResponseSchema,
+  CheckoutStageResponseSchema,
+  CheckoutUnstageResponseSchema,
   CheckoutMergeResponseSchema,
   CheckoutMergeFromBaseResponseSchema,
   CheckoutPushResponseSchema,
