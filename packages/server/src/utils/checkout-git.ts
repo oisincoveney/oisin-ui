@@ -50,7 +50,7 @@ async function spawnLimitedText(params: {
     let truncated = false;
 
     const stop = () => {
-      if (child.killed) return;
+      if (child.killed) {return;}
       try {
         child.kill("SIGKILL");
       } catch {
@@ -59,7 +59,7 @@ async function spawnLimitedText(params: {
     };
 
     child.stdout.on("data", (chunk: Buffer) => {
-      if (truncated) return;
+      if (truncated) {return;}
       stdoutBytes += chunk.length;
       if (stdoutBytes > params.maxBytes) {
         truncated = true;
@@ -72,7 +72,7 @@ async function spawnLimitedText(params: {
     // We don't buffer stderr (it can be large too). Keep it minimal for debugging.
     let stderrPreview = "";
     child.stderr.on("data", (chunk: Buffer) => {
-      if (stderrPreview.length > 2048) return;
+      if (stderrPreview.length > 2048) {return;}
       stderrPreview += chunk.toString("utf8");
     });
 
@@ -237,7 +237,7 @@ async function listCheckoutFileChanges(cwd: string, ref: string): Promise<Checko
     // `--name-status` uses TAB separators, which preserves filenames with spaces.
     const tabParts = line.split("\t");
     const rawStatus = (tabParts[0] ?? "").trim();
-    if (!rawStatus) continue;
+    if (!rawStatus) {continue;}
 
     if (rawStatus.startsWith("R") || rawStatus.startsWith("C")) {
       const oldPath = tabParts[1];
@@ -255,7 +255,7 @@ async function listCheckoutFileChanges(cwd: string, ref: string): Promise<Checko
     }
 
     const path = tabParts[1];
-    if (!path) continue;
+    if (!path) {continue;}
     const code = rawStatus[0];
     changes.push({
       path,
@@ -304,7 +304,7 @@ async function listStagedFileChanges(cwd: string): Promise<CheckoutFileChange[]>
   for (const line of nameStatusOut.split("\n").map((l) => l.trim()).filter(Boolean)) {
     const tabParts = line.split("\t");
     const rawStatus = (tabParts[0] ?? "").trim();
-    if (!rawStatus) continue;
+    if (!rawStatus) {continue;}
 
     if (rawStatus.startsWith("R") || rawStatus.startsWith("C")) {
       const oldPath = tabParts[1];
@@ -322,7 +322,7 @@ async function listStagedFileChanges(cwd: string): Promise<CheckoutFileChange[]>
     }
 
     const path = tabParts[1];
-    if (!path) continue;
+    if (!path) {continue;}
     const code = rawStatus[0];
     changes.push({
       path,
@@ -351,7 +351,7 @@ async function listUnstagedFileChanges(cwd: string): Promise<CheckoutFileChange[
   for (const line of nameStatusOut.split("\n").map((l) => l.trim()).filter(Boolean)) {
     const tabParts = line.split("\t");
     const rawStatus = (tabParts[0] ?? "").trim();
-    if (!rawStatus) continue;
+    if (!rawStatus) {continue;}
 
     if (rawStatus.startsWith("R") || rawStatus.startsWith("C")) {
       const oldPath = tabParts[1];
@@ -369,7 +369,7 @@ async function listUnstagedFileChanges(cwd: string): Promise<CheckoutFileChange[
     }
 
     const path = tabParts[1];
-    if (!path) continue;
+    if (!path) {continue;}
     const code = rawStatus[0];
     changes.push({
       path,
@@ -1235,8 +1235,8 @@ export async function getCheckoutDiff(
   let diffText = "";
   let diffBytes = 0;
   const appendDiff = (text: string) => {
-    if (!text) return;
-    if (diffBytes >= TOTAL_DIFF_MAX_BYTES) return;
+    if (!text) {return;}
+    if (diffBytes >= TOTAL_DIFF_MAX_BYTES) {return;}
     const buf = Buffer.from(text, "utf8");
     if (diffBytes + buf.length <= TOTAL_DIFF_MAX_BYTES) {
       diffText += text;
@@ -1557,7 +1557,7 @@ export async function stageFile(cwd: string, filePath: string): Promise<void> {
 
 export async function unstageFile(cwd: string, filePath: string): Promise<void> {
   await requireGitRepo(cwd);
-  await execFileAsync("git", ["reset", "HEAD", "--", filePath], { cwd });
+  await execFileAsync("git", ["restore", "--staged", "--", filePath], { cwd });
 }
 
 export async function commitAll(cwd: string, message: string): Promise<void> {
