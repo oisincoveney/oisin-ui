@@ -5,14 +5,14 @@
 See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 **Core value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current focus:** Phase 11 File Staging & Commit — frontend staging/unstaging and commit UX wiring complete.
+**Current focus:** v2 Code Review milestone complete — file staging and commit from browser delivered.
 
 ## Current Position
 
 **Milestone:** v2 Code Review
 **Phase:** Phase 11 of 11 — hunk-staging-commit
 **Plan:** 11-02 of 2 complete
-**Status:** Phase complete
+**Status:** Milestone complete
 **Last activity:** 2026-03-02 — Completed 11-02: Frontend stage/unstage + commit workflow wiring
 
 ```
@@ -113,4 +113,4 @@ Plans: [████████████████████] 100% (64/6
 
 ---
 
-_State updated: 2026-03-02 — Completed 11-02-PLAN.md (phase 11 complete)._
+_State updated: 2026-03-02 — Completed Phase 11. v2 Code Review milestone complete._

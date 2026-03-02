@@ -30,8 +30,8 @@ Explicitly deferred to future milestones.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | DIFF-02 | Phase 09 | Complete |
-| DIFF-03 | Phase 11 | Pending |
-| DIFF-04 | Phase 11 | Pending |
+| DIFF-03 | Phase 11 | Complete |
+| DIFF-04 | Phase 11 | Complete |
 
 **Coverage:**
 - v2 requirements: 3 total
@@ -52,4 +52,4 @@ All v1 requirements closed 2026-02-25. See: `.planning/milestones/v1-REQUIREMENT
 
 ---
 *Requirements defined: 2026-02-25*
-*Last updated: 2026-03-02 — DIFF-03 scope narrowed to file-level staging (hunk-level deferred)*
+*Last updated: 2026-03-02 — Phase 11 complete; DIFF-03, DIFF-04 closed*

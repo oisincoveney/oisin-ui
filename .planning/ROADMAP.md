@@ -17,7 +17,7 @@ v1.1 Hardening closes the remaining reliability and verification gaps from v1 so
 - [x] **Phase 08: Deterministic Verification Closure** - Browser/runtime hardening checks run deterministically in one repeatable path. (Completed 2026-02-28)
 - [x] **Phase 09: Diff Panel Redesign** - Users see collapsible Staged/Unstaged sections with inline diff expansion and per-file stats. (Completed 2026-03-01)
 - [x] **Phase 10: SQLite Thread Registry** - ThreadRegistry backed by SQLite; startup-only orphan reconciliation; reaper deleted; worktree path validation. (Completed 2026-03-01)
-- [ ] **Phase 11: File Staging & Commit** - Users can stage/unstage individual files and commit staged changes directly from the browser.
+- [x] **Phase 11: File Staging & Commit** - Users can stage/unstage individual files and commit staged changes directly from the browser. (Completed 2026-03-02)
 
 ## Phase Details
 
@@ -138,8 +138,8 @@ Plans:
 **Plans**: 2 plans
 Plans:
 
-- [ ] 11-01-PLAN.md — Backend: Add stage/unstage message types and session handlers
-- [ ] 11-02-PLAN.md — Frontend: Wire commit form, add Stage/Unstage buttons to file rows
+- [x] 11-01-PLAN.md — Backend: Add stage/unstage message types and session handlers
+- [x] 11-02-PLAN.md — Frontend: Wire commit form, add Stage/Unstage buttons to file rows
 
 ## Progress
 
@@ -150,7 +150,7 @@ Plans:
 | 08. Deterministic Verification Closure | v1.1 | VER-01, VER-02, VER-03 | 2/2 | Complete | 2026-02-28 |
 | 09. Diff Panel Redesign | v2 | DIFF-02 | 11/11 | Complete | 2026-03-01 |
 | 10. SQLite Thread Registry | v2 | INFRA-01 | 5/5 | Complete | 2026-03-01 |
-| 11. Hunk Staging & Commit | v2 | DIFF-03, DIFF-04 | 0/2 | Planned | — |
+| 11. Hunk Staging & Commit | v2 | DIFF-03, DIFF-04 | 2/2 | Complete | 2026-03-02 |
 
 ---
-_Roadmap updated: 2026-03-02 — Phase 11 plans created (file-level staging, commit from browser)._
+_Roadmap updated: 2026-03-02 — Phase 11 complete (file-level staging, commit from browser)._
