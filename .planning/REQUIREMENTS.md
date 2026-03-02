@@ -28,7 +28,7 @@ Explicitly deferred to future milestones.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DIFF-02 | Phase 09 | Pending |
+| DIFF-02 | Phase 09 | Complete |
 | DIFF-03 | Phase 09–10 | Pending |
 | DIFF-04 | Phase 10 | Pending |
 

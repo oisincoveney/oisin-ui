@@ -12,7 +12,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 **Milestone:** v2 Code Review
 **Phase:** Phase 09 of 10 — diff-panel-redesign
 **Plan:** 09-11 of 11 complete
-**Status:** In progress
+**Status:** Phase 09 complete; Phase 10 pending
 **Last activity:** 2026-03-02 — Completed 09-11: terminal rehydrate cwd recovery + stale tmux invalidation
 
 ```

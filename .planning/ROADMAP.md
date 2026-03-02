@@ -15,7 +15,7 @@ v1.1 Hardening closes the remaining reliability and verification gaps from v1 so
 - [x] **Phase 06: Runtime Reliability Hardening** - Restart/reconnect/create/delete flows remain bounded and recoverable. (Completed 2026-02-26)
 - [x] **Phase 07: Thread Metadata Contract Closure** - Active thread context remains consistent across ensure/reconnect/refresh. (Completed 2026-02-27)
 - [x] **Phase 08: Deterministic Verification Closure** - Browser/runtime hardening checks run deterministically in one repeatable path. (Completed 2026-02-28)
-- [ ] **Phase 09: Diff Panel Redesign** - Users see collapsible Staged/Unstaged sections with inline diff expansion and per-file stats. (UAT gap closure in progress)
+- [x] **Phase 09: Diff Panel Redesign** - Users see collapsible Staged/Unstaged sections with inline diff expansion and per-file stats. (Completed 2026-03-01)
 - [ ] **Phase 10: SQLite Thread Registry** - ThreadRegistry backed by SQLite; provisioning status pattern; startup-only reconciliation; reaper deleted; worktree path validation.
 - [ ] **Phase 11: Hunk Staging & Commit** - Users can stage/unstage individual hunks and commit staged changes directly from the browser.
 
@@ -99,8 +99,8 @@ Plans:
 - [x] 09-07-PLAN.md — Wire updatedAt to DiffPanel; guard stale scroll-to-bottom (UAT gap 2)
 - [x] 09-08-PLAN.md — Server-side stale worktree cwd recovery in diff subscription (UAT gap 3)
 - [x] 09-09-PLAN.md — Re-verify and fix renamed file display after gaps 1-3 closed (UAT gap 4)
-- [ ] 09-10-PLAN.md — Thread-scoped diff cwd recovery; add projectId/threadId to subscribe contract (UAT gap 4 re-open)
-- [ ] 09-11-PLAN.md — Terminal stale-cwd validation on rehydrate; kill stale tmux sessions (UAT gap 5)
+- [x] 09-10-PLAN.md — Thread-scoped diff cwd recovery; add projectId/threadId to subscribe contract (UAT gap 4 re-open)
+- [x] 09-11-PLAN.md — Terminal stale-cwd validation on rehydrate; kill stale tmux sessions (UAT gap 5)
 
 ### Phase 10: SQLite Thread Registry
 
@@ -148,7 +148,7 @@ Plans:
 | 06. Runtime Reliability Hardening | v1.1 | RUN-01, RUN-02, RUN-03, RUN-04 | 8/8 | Complete | 2026-02-26 |
 | 07. Thread Metadata Contract Closure | v1.1 | THRD-01, THRD-02, THRD-03 | 2/2 | Complete | 2026-02-27 |
 | 08. Deterministic Verification Closure | v1.1 | VER-01, VER-02, VER-03 | 2/2 | Complete | 2026-02-28 |
-| 09. Diff Panel Redesign | v2 | DIFF-02 | 9/11 | In Progress | — |
+| 09. Diff Panel Redesign | v2 | DIFF-02 | 11/11 | Complete | 2026-03-01 |
 | 10. SQLite Thread Registry | v2 | INFRA-01 | 0/5 | Pending | — |
 | 11. Hunk Staging & Commit | v2 | DIFF-03, DIFF-04 | 0/TBD | Pending | — |
 

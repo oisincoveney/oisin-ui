@@ -1,120 +1,131 @@
 ---
 phase: 09-diff-panel-redesign
-verified: 2026-03-01T05:04:13Z
+verified: 2026-03-02T02:00:00Z
 status: passed
 score: 4/4 must-haves verified
 re_verification:
-  previous_status: gaps_found
-  previous_score: 7/9 (plan) / 1.5/4 (ROADMAP)
+  previous_status: passed
+  previous_score: 4/4
   gaps_closed:
-    - "ROADMAP success criteria updated (9bc07fc) to reflect accordion/collapsible design — two-column, tabs, right-pane requirements removed"
-    - "Truth 1: Staged(N)/Unstaged(N) collapsible sections with per-file +/- counts — verified"
-    - "Truth 2: Clicking a file shows diff inline via Collapsible expand-in-place — verified"
-    - "Truth 3: Staged/unstaged sourced from separate daemon diff calls (git diff --cached vs git diff) — verified"
-    - "Truth 4: Renamed files displayed as 'old -> new' via getDiffFileDisplayPath — verified"
+    - "09-10: SubscribeCheckoutDiffRequestSchema extended with optional projectId/threadId (messages.ts:749-750); diff-store sends them on every subscribe (diff-store.ts:127-128); resolveValidDiffCwd prefers hinted project repoRoot before global fallback (session.ts:4262-4282)"
+    - "09-11: resolveValidTerminalCwd added (session.ts:4304-4323); existsSync guard + kill-session before has-session in tmux-terminal.ts:121-128; registry worktreePath updated on fallback (session.ts:7052-7059)"
   gaps_remaining: []
   regressions: []
 ---
 
-# Phase 09: Diff Panel Redesign — Verification Report (Re-verification #2)
+# Phase 09: Diff Panel Redesign — Verification Report (Re-verification #3)
 
 **Phase Goal:** Users see collapsible Staged/Unstaged sections with inline diff expansion replacing the flat single-column layout.
-**Verified:** 2026-03-01T05:04:13Z
+**Verified:** 2026-03-02T02:00:00Z
 **Status:** ✅ PASSED
-**Re-verification:** Yes — after ROADMAP goal realignment (9bc07fc) and 09-03/04/05 gap closure
+**Re-verification:** Yes — after 09-10 (thread-scoped diff isolation) and 09-11 (stale terminal cwd recovery) gap closure plans
 
-## Gap Closure Since Previous Verification
+## New Plans Since Last Verification
 
-The previous verification (2026-03-01T04:48:49Z) had `gaps_found` for truth 1, 2, 3 against the *original* two-column ROADMAP goal. Since then:
-
-| Commit | What Changed | Gap Resolved |
-|--------|-------------|--------------|
-| `9bc07fc` | ROADMAP success criteria updated to match accordion design | All three "two-column" gaps resolved — ROADMAP now describes what was built |
-
-The previous gaps were an architecture mismatch between ROADMAP specification and CONTEXT.md decisions. The ROADMAP was updated to accept the accordion/expand-in-place design as the canonical Phase 09 delivery.
-
-**No regressions** — all 10 plan must-haves that passed previously still pass.
+Plans 09-10 and 09-11 introduced UAT gap closure work. Neither touches the core diff panel UI; both fix server-side reliability bugs. Verified against their plan `must_haves`.
 
 ---
 
-## Goal Achievement
+## Plan 09-10: Thread-Scoped Diff Recovery
 
-### Observable Truths (Updated ROADMAP Success Criteria)
+| Must-Have | Status | Evidence |
+|-----------|--------|----------|
+| `SubscribeCheckoutDiffRequestSchema` has optional `projectId`/`threadId` | ✓ VERIFIED | `messages.ts:749-750` — `projectId: z.string().optional(), threadId: z.string().optional()` |
+| Web diff-store sends `projectId`/`threadId` on subscribe | ✓ VERIFIED | `diff-store.ts:127-128` — both fields from `target` in `sendWsMessage` payload |
+| `resolveValidDiffCwd` uses hint for thread-scoped fallback before global | ✓ VERIFIED | `session.ts:4262-4282` — `hint?.projectId` branch calls `getProject(hint.projectId)` before global project loop |
+
+**Key Link:** `diff-store.ts` → `session.ts` via `subscribe_checkout_diff_request.projectId/threadId` ✓ WIRED
+
+---
+
+## Plan 09-11: Stale Terminal Cwd Recovery
+
+| Must-Have | Status | Evidence |
+|-----------|--------|----------|
+| `resolveValidTerminalCwd` validates path existence before `ensureThreadTerminal` | ✓ VERIFIED | `session.ts:4304-4323` — `existsSync(requestedCwd)` fast path; `getProject(hint.projectId).repoRoot` fallback |
+| Rehydrate block calls `resolveValidTerminalCwd` before `ensureThreadTerminal` | ✓ VERIFIED | `session.ts:7041-7048` — `validCwd = await this.resolveValidTerminalCwd(...)` then passed to `ensureThreadTerminal` |
+| Registry `worktreePath` updated when fallback cwd used | ✓ VERIFIED | `session.ts:7052-7059` — `if (validCwd !== worktreePath) { updateThread({ links: { worktreePath: validCwd } }) }` |
+| Stale tmux sessions killed when cwd missing before `has-session` reuse | ✓ VERIFIED | `tmux-terminal.ts:121-128` — `cwdExists = existsSync(options.cwd)`; if false → `kill-session` before `has-session` check at line 131 |
+
+**Key Link:** `session.ts:7041` → `terminal-manager.ts` via `ensureThreadTerminal` with validated cwd ✓ WIRED
+
+---
+
+## ROADMAP Success Criteria (Regression Check)
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | User sees collapsible "Staged (N)" and "Unstaged (N)" sections with per-file +/- line counts | ✓ VERIFIED | `diff-panel.tsx:116,132` — `Staged ({sortedStaged.length})` / `Unstaged ({sortedUnstaged.length})`; `diff-file-section.tsx:83-89` — `+{file.additions}` / `-{file.deletions}` |
-| 2 | User expands a section and clicks a file to see diff rendered inline (no separate right-pane viewer) | ✓ VERIFIED | `diff-file-section.tsx:57,62-103` — `Collapsible` with `CollapsibleTrigger` on file row; `useEffect` calls `toDiff2Html` on open; `dangerouslySetInnerHTML` renders HTML at line 114 |
-| 3 | Staged and unstaged files sourced from separate daemon diff calls | ✓ VERIFIED | `checkout-git.ts:1527-1532` — `Promise.all([buildParsedFiles(stagedChanges, ..., ['diff', '--cached']), buildParsedFiles(unstagedChanges, ..., ['diff'])])`; propagated through `session.ts:4094-4100`, `diff-store.ts:68-81`, `App.tsx:214-215`, `DiffPanel` props |
-| 4 | Renamed files (R status) appear correctly without broken display | ✓ VERIFIED | `diff2html-adapter.ts:225-230` — `getDiffFileDisplayPath` returns `${oldPath} -> ${newPath}` for renames; e2e spec asserts rename label at line 390-394 |
+| 1 | User sees collapsible "Staged (N)" / "Unstaged (N)" sections with per-file +/- counts | ✓ VERIFIED | `diff-panel.tsx:116,132` — `Staged ({sortedStaged.length})` / `Unstaged ({sortedUnstaged.length})`; `diff-file-section.tsx` — +/- counts |
+| 2 | User expands a section and clicks a file to see diff rendered inline (no separate right-pane viewer) | ✓ VERIFIED | `diff-file-section.tsx:57,62-109` — `Collapsible` with `CollapsibleTrigger`; `useEffect` calls `toDiff2Html`; `dangerouslySetInnerHTML` renders inline |
+| 3 | Staged and unstaged files sourced from separate daemon diff calls | ✓ VERIFIED | `checkout-git.ts:1528-1529` — `Promise.all([buildParsedFiles(..., ['diff', '--cached']), buildParsedFiles(..., ['diff'])])` |
+| 4 | Renamed files (R status) appear correctly without broken display | ✓ VERIFIED | `diff2html-adapter.ts:225-230` — `getDiffFileDisplayPath` returns `${oldPath} -> ${newPath}` for renames |
 
-**Score: 4/4 truths verified**
+**Score: 4/4 truths verified — no regressions**
 
-### Required Artifacts
+---
+
+## Required Artifacts
 
 | Artifact | Lines | Substantive | Wired | Status |
 |----------|-------|-------------|-------|--------|
-| `packages/web/src/components/diff-panel.tsx` | 148 | ✓ No stubs | ✓ `App.tsx:882-884` | ✓ VERIFIED |
-| `packages/web/src/components/diff-file-section.tsx` | 136 | ✓ No stubs | ✓ `diff-panel.tsx:122,138` | ✓ VERIFIED |
-| `packages/server/src/utils/checkout-git.ts` (diff split) | — | ✓ `git diff --cached` + `git diff` at lines 1527-1529 | ✓ `session.ts:4094-4100` consumes result | ✓ VERIFIED |
-| `packages/web/src/diff/diff-types.ts` (split types) | — | ✓ `stagedFiles`/`unstagedFiles` at lines 42-43, 72-73 | ✓ Used in `diff-store.ts`, `App.tsx`, `DiffPanel` | ✓ VERIFIED |
-| `packages/server/e2e/diff-panel.spec.ts` | 415 | ✓ Full e2e spec | ✓ TypeScript clean | ✓ VERIFIED |
+| `packages/web/src/components/diff-panel.tsx` | 148 | ✓ No stubs | ✓ `App.tsx` renders it | ✓ VERIFIED |
+| `packages/web/src/components/diff-file-section.tsx` | 131 | ✓ No stubs | ✓ `diff-panel.tsx:122,138` | ✓ VERIFIED |
+| `packages/server/src/shared/messages.ts` (diff schema) | — | ✓ `projectId`/`threadId` at lines 749-750 | ✓ Consumed by `session.ts:4329-4330` | ✓ VERIFIED |
+| `packages/web/src/diff/diff-store.ts` (subscribe payload) | — | ✓ Lines 127-128 send identity hints | ✓ WS message reaches server handler | ✓ VERIFIED |
+| `packages/server/src/server/session.ts` (`resolveValidDiffCwd`) | — | ✓ Thread-scoped hint branch at 4262-4282 | ✓ Called from `handleSubscribeCheckoutDiffRequest` | ✓ VERIFIED |
+| `packages/server/src/server/session.ts` (`resolveValidTerminalCwd`) | — | ✓ `existsSync` + project fallback at 4304-4323 | ✓ Called from rehydrate at line 7041 | ✓ VERIFIED |
+| `packages/server/src/terminal/tmux-terminal.ts` (stale kill) | — | ✓ `existsSync` guard + `kill-session` at 121-128 | ✓ Runs before `has-session` at line 131 | ✓ VERIFIED |
 
-### Key Link Verification
+---
+
+## Key Link Verification
 
 | From | To | Via | Status |
 |------|----|-----|--------|
-| `checkout-git.ts:1527-1529` | `stagedFiles`/`unstagedFiles` | `Promise.all` — `git diff --cached` + `git diff` | ✓ WIRED |
-| `session.ts:4094-4100` | `DiffSnapshot` | `stagedFiles`/`unstagedFiles` propagated to websocket message | ✓ WIRED |
-| `diff-store.ts:68-81` | `DiffState` | `stagedFiles`/`unstagedFiles` parsed from payload | ✓ WIRED |
-| `App.tsx:214-215` | `DiffPanel` | `diffStagedFiles`/`diffUnstagedFiles` from store → props | ✓ WIRED — lines 882-884 |
-| `diff-panel.tsx` | `diff-file-section.tsx` | `DiffFileSection` per-file in sorted mapped arrays | ✓ WIRED — lines 122, 138 |
-| `diff-file-section.tsx` | `diff2html-adapter.ts` | `getDiffFileDisplayPath` (tooltip + display), `toDiff2Html` (diff HTML) | ✓ WIRED — lines 37, 44 |
-| `diff-file-section.tsx` state `open` | `html` render | `useEffect` calls `toDiff2Html` when `open=true`; rendered at line 114 | ✓ WIRED |
-| `diff2html-adapter.ts:225-230` | renamed file display | `getDiffFileDisplayPath` → `"${oldPath} -> ${newPath}"` | ✓ WIRED |
+| `checkout-git.ts:1528-1529` | `stagedFiles`/`unstagedFiles` | `Promise.all` — `git diff --cached` + `git diff` | ✓ WIRED |
+| `diff-store.ts:127-128` | `session.ts:4329-4330` | `subscribe_checkout_diff_request.projectId/threadId` | ✓ WIRED |
+| `session.ts:4262-4282` | project `repoRoot` | `hint.projectId` → `getProject()` before global loop | ✓ WIRED |
+| `session.ts:7041` | `ensureThreadTerminal` | `resolveValidTerminalCwd` validates before call | ✓ WIRED |
+| `session.ts:7052-7059` | `threadRegistry` | `updateThread({ links: { worktreePath: validCwd } })` on fallback | ✓ WIRED |
+| `tmux-terminal.ts:121-128` | filesystem | `existsSync(options.cwd)` → `kill-session` before `has-session` | ✓ WIRED |
+| `diff-panel.tsx` | `diff-file-section.tsx` | `DiffFileSection` per-file in sorted mapped arrays | ✓ WIRED |
+| `diff-file-section.tsx` | `diff2html-adapter.ts` | `getDiffFileDisplayPath` + `toDiff2Html` | ✓ WIRED |
 
-### Requirements Coverage
+---
 
-| Requirement | Status | Notes |
-|-------------|--------|-------|
-| DIFF-02: Improved diff panel | ✓ SATISFIED | Delivered as accordion/expand-in-place (ROADMAP updated to reflect design decision; REQUIREMENTS.md wording still says "left/right column" but ROADMAP is authoritative for phase acceptance) |
+## TypeScript
 
-### Anti-Patterns Found
+`bun run typecheck` — 0 errors in both `packages/server` and `packages/web`. 8 pre-existing lint warnings in `packages/web` (all pre-existing, none in phase-09 files).
 
-None. `bun tsc --noEmit` on `packages/web` → 0 errors. No TODO/FIXME/stubs in any diff component. The `placeholder` attribute in `diff-panel.tsx:98` is a form input placeholder string — not a stub pattern.
+---
+
+## Anti-Patterns
+
+None found in any modified files (09-10/09-11). No TODOs, FIXMEs, placeholder stubs, or console-only handlers.
 
 ---
 
 ## Summary
 
-Phase 09 delivered the accordion/expand-in-place diff panel design as documented in CONTEXT.md. The ROADMAP was updated (9bc07fc) to accept this design, replacing the original two-column specification with the collapsible-sections/inline-expansion description. All four updated success criteria verify against the codebase:
+Phase 09 remains fully verified. The two new gap-closure plans both implemented correctly:
 
-1. **Section headers** — `Staged (N)` and `Unstaged (N)` collapsibles with per-file `+N / -N` counts
-2. **Inline expansion** — click file row → `Collapsible` opens → `useEffect` renders `toDiff2Html` HTML inline
-3. **Daemon split** — `git diff --cached` (staged) and `git diff` (unstaged) via `Promise.all` at `checkout-git.ts:1527`
-4. **Renamed files** — `getDiffFileDisplayPath` returns `old -> new` format; e2e spec asserts rename label visible
+- **09-10:** Thread diff subscriptions carry `projectId`/`threadId`; server-side stale-cwd recovery resolves to the owning project's `repoRoot` first, preventing multiple threads from collapsing to the same global-first repo.
+- **09-11:** Terminal rehydrate validates `worktreePath` existence before `ensureThreadTerminal`; stale tmux sessions for deleted worktree paths are killed before `has-session` reuse; recovered cwd persisted back to thread registry to prevent recurrence.
+
+No regressions to the core diff panel UI (collapsible sections, inline diff, staged/unstaged split, rename display).
 
 ---
 
-## Post-Gap Regression Verification (2026-03-01)
+## Historical Regression Verification (from 09-VERIFICATION.md #2)
 
-After executing 09-06..09-09 gap closure fixes, an additional live browser regression pass confirmed the full happy path remains intact with the final code:
-
-- Terminal remains visible while toggling diff panel (`baselineHtml: 720`, `postCloseHtml: 720`)
+Post 09-06..09-09 browser pass confirmed:
+- Terminal visible while toggling diff panel
 - Diff panel timestamp renders (`"Updated just now"`)
 - Inline diff expansion works (`aria-expanded=true` after keyboard Enter on file row)
-- Thread switching works (`Meta+ArrowDown/Up` changes active thread and returns)
-- Rename label renders in real staged rename flow:
-  - `tracked_old_1772412032409.txt -> tracked_new_1772412032409.txt`
+- Thread switching works (`Meta+ArrowDown/Up`)
+- Rename label renders in staged rename flow: `tracked_old_1772412032409.txt -> tracked_new_1772412032409.txt`
 
-Verification commands run in final pass:
+---
 
-- `bun run --cwd packages/web tsc --noEmit` ✅
-- `bun test packages/web/src/App.test.tsx packages/web/src/terminal/terminal-stream.test.ts` ✅ (`9 pass`, `0 fail`)
-- `bun run test` ⚠️ repository-wide pre-existing failures outside this phase:
-  - `src/server/voice-mcp-bridge.test.ts`
-  - `src/terminal/terminal-manager.test.ts` (2 tests)
-  - `src/server/daemon-e2e/thread-management.e2e.test.ts`
-
-*Verified: 2026-03-01T16:45:00Z*
-*Verifier: OpenCode*
+_Verified: 2026-03-02T02:00:00Z_
+_Verifier: Claude Code (gsd-verifier)_
