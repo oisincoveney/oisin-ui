@@ -34,7 +34,7 @@ patterns-established:
   - "Tmux reuse safety: kill stale session identity before has-session short-circuit"
 
 # Metrics
-duration: 2m 24s
+duration: 4m 28s
 completed: 2026-03-02
 ---
 
@@ -44,9 +44,9 @@ completed: 2026-03-02
 
 ## Performance
 
-- **Duration:** 2m 24s
+- **Duration:** 4m 28s
 - **Started:** 2026-03-02T01:32:26Z
-- **Completed:** 2026-03-02T01:34:50Z
+- **Completed:** 2026-03-02T01:36:54Z
 - **Tasks:** 2
 - **Files modified:** 2
 
