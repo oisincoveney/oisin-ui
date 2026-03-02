@@ -16,7 +16,7 @@ v1.1 Hardening closes the remaining reliability and verification gaps from v1 so
 - [x] **Phase 07: Thread Metadata Contract Closure** - Active thread context remains consistent across ensure/reconnect/refresh. (Completed 2026-02-27)
 - [x] **Phase 08: Deterministic Verification Closure** - Browser/runtime hardening checks run deterministically in one repeatable path. (Completed 2026-02-28)
 - [x] **Phase 09: Diff Panel Redesign** - Users see collapsible Staged/Unstaged sections with inline diff expansion and per-file stats. (Completed 2026-03-01)
-- [ ] **Phase 10: SQLite Thread Registry** - ThreadRegistry backed by SQLite; startup-only orphan reconciliation; reaper deleted; worktree path validation.
+- [x] **Phase 10: SQLite Thread Registry** - ThreadRegistry backed by SQLite; startup-only orphan reconciliation; reaper deleted; worktree path validation. (Completed 2026-03-01)
 - [ ] **Phase 11: Hunk Staging & Commit** - Users can stage/unstage individual hunks and commit staged changes directly from the browser.
 
 ## Phase Details
@@ -118,11 +118,11 @@ Plans:
 **Plans**: 5 plans
 Plans:
 
-- [ ] 10-01-PLAN.md — SQLite setup: db.ts with WAL mode, FK, projects + threads schema
-- [ ] 10-02-PLAN.md — Rewrite ThreadRegistry with SQLite backend (identical public interface)
-- [ ] 10-03-PLAN.md — startup-reconcile.ts: crash recovery + orphan worktree cleanup
-- [ ] 10-04-PLAN.md — Wire bootstrap.ts, delete session-reaper.ts, add worktree path validation
-- [ ] 10-05-PLAN.md — Rewrite thread-registry.test.ts, delete session-reaper.test.ts, add startup-reconcile.test.ts
+- [x] 10-01-PLAN.md — SQLite setup: db.ts with WAL mode, FK, projects + threads schema
+- [x] 10-02-PLAN.md — Rewrite ThreadRegistry with SQLite backend (identical public interface)
+- [x] 10-03-PLAN.md — startup-reconcile.ts: crash recovery + orphan worktree cleanup
+- [x] 10-04-PLAN.md — Wire bootstrap.ts, delete session-reaper.ts, add worktree path validation
+- [x] 10-05-PLAN.md — Rewrite thread-registry.test.ts, delete session-reaper.test.ts, add startup-reconcile.test.ts
 
 ### Phase 11: Hunk Staging & Commit
 
@@ -149,7 +149,7 @@ Plans:
 | 07. Thread Metadata Contract Closure | v1.1 | THRD-01, THRD-02, THRD-03 | 2/2 | Complete | 2026-02-27 |
 | 08. Deterministic Verification Closure | v1.1 | VER-01, VER-02, VER-03 | 2/2 | Complete | 2026-02-28 |
 | 09. Diff Panel Redesign | v2 | DIFF-02 | 11/11 | Complete | 2026-03-01 |
-| 10. SQLite Thread Registry | v2 | INFRA-01 | 0/5 | Pending | — |
+| 10. SQLite Thread Registry | v2 | INFRA-01 | 5/5 | Complete | 2026-03-01 |
 | 11. Hunk Staging & Commit | v2 | DIFF-03, DIFF-04 | 0/TBD | Pending | — |
 
 ---
