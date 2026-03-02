@@ -361,8 +361,12 @@ test.describe("diff panel regressions", () => {
     const diffContent = panel.getByTestId("diff-file-content").first();
     await expect(diffContent).toBeVisible({ timeout: 10_000 });
     // Wait for diff2html to render the diff markup (useEffect runs after open state change).
-    // diff2html produces d2h-* classes; check that at least one diff line is rendered.
-    await expect(panel.locator(".d2h-code-line-ctn").first()).toBeVisible({ timeout: 10_000 });
+    // diff2html produces d2h-* classes; target content-bearing spans (side-by-side format
+    // generates empty placeholder spans on the left column that have no visible dimensions
+    // without diff2html CSS — filter by hasText to get the actual content-bearing right-column span).
+    await expect(
+      panel.locator(".d2h-code-line-ctn").filter({ hasText: /\S/ }).first(),
+    ).toBeVisible({ timeout: 10_000 });
 
     // Rename test: use `git mv` to stage the rename so git reports it as R100 (rename).
     // A raw filesystem rename would show as D+A (delete + untracked add), not a rename.
