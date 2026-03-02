@@ -13,7 +13,7 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 **Phase:** Phase 11 of 11 — hunk-staging-commit
 **Plan:** 11-02 of 2 complete
 **Status:** Milestone complete
-**Last activity:** 2026-03-02 — Completed 11-02: Frontend stage/unstage + commit workflow wiring
+**Last activity:** 2026-03-02 — Completed quick task 004: v2 tech debt fixes (sessionKey runtime-only test + stage/unstage toasts)
 
 ```
 Plans: [████████████████████] 100% (64/64)
@@ -94,11 +94,13 @@ Plans: [████████████████████] 100% (64/6
 - 11-01: Unstage operation uses `git reset HEAD -- <path>` to support newly staged files not present in `HEAD`.
 - 11-02: commit form now resolves from `checkout_commit_response` so failures preserve message and surface toast feedback.
 - 11-02: DiffFileSection stage controls are callback-gated/optional so desktop diff panel gets stage actions without broad mobile sheet API changes.
+- 004-01: ThreadRegistry SQLite tests now assert `sessionKey` remains runtime-only via schema + row checks (`session_key` never persisted).
+- 004-01: Diff store emits stage response callbacks with explicit `action: stage|unstage`, and diff panel surfaces success/error toast feedback per response.
 
 ## Session Continuity
 
-**Last session:** 2026-03-02 22:23 UTC
-**Stopped at:** Completed 11-02-PLAN.md
+**Last session:** 2026-03-02 23:26 UTC
+**Stopped at:** Completed quick/004-fix-v2-tech-debt/004-PLAN.md
 **Resume file:** None
 
 ---
@@ -110,7 +112,8 @@ Plans: [████████████████████] 100% (64/6
 | 001 | Add oxlint/oxfmt/shadcn-enforcer/AGENTS.md to web package | 2026-02-28 | 4726a8d | [001-add-oxlint-oxfmt-shadcn-enforcer-plugin](./quick/001-add-oxlint-oxfmt-shadcn-enforcer-plugin/) |
 | 002 | Refactor app sidebar to use pure ShadCN structure | 2026-03-02 | 73362d7 | [002-refactor-app-sidebar-to-use-pure-shadcn-stru](./quick/002-refactor-app-sidebar-to-use-pure-shadcn-stru/) |
 | 003 | Fix pure ShadCN sidebar layout | 2026-03-02 | 066e5e0 | [003-fix-pure-shadcn-sidebar-layout](./quick/003-fix-pure-shadcn-sidebar-layout/) |
+| 004 | Fix v2 tech debt: runtime-only sessionKey test + stage/unstage toast feedback | 2026-03-02 | 500fffd | [004-fix-v2-tech-debt](./quick/004-fix-v2-tech-debt/) |
 
 ---
 
-_State updated: 2026-03-02 — Completed Phase 11. v2 Code Review milestone complete._
+_State updated: 2026-03-02 — Completed quick task 004 (v2 tech debt closure)._
