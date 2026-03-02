@@ -1545,9 +1545,7 @@ export async function commitChanges(
   if (options.addAll ?? true) {
     await execFileAsync("git", ["add", "-A"], { cwd });
   }
-  await execFileAsync("git", ["-c", "commit.gpgsign=false", "commit", "-m", options.message], {
-    cwd,
-  });
+  await execFileAsync("git", ["commit", "-m", options.message], { cwd });
 }
 
 export async function stageFile(cwd: string, filePath: string): Promise<void> {
@@ -1600,11 +1598,7 @@ export async function mergeToBase(
       await execAsync(`git merge --squash ${currentBranch}`, { cwd: operationCwd });
       const message =
         options.commitMessage ?? `Squash merge ${currentBranch} into ${normalizedBaseRef}`;
-      await execFileAsync(
-        "git",
-        ["-c", "commit.gpgsign=false", "commit", "-m", message],
-        { cwd: operationCwd }
-      );
+      await execFileAsync("git", ["commit", "-m", message], { cwd: operationCwd });
     } else {
       await execAsync(`git merge ${currentBranch}`, { cwd: operationCwd });
     }
