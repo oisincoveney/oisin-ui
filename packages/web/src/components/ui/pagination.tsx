@@ -8,7 +8,6 @@ import { ArrowLeft01Icon, ArrowRight01Icon, MoreHorizontalCircle01Icon } from '@
 function Pagination({ className, ...props }: React.ComponentProps<'nav'>) {
   return (
     <nav
-      
       aria-label="pagination"
       data-slot="pagination"
       className={cn('mx-auto flex w-full justify-center', className)}

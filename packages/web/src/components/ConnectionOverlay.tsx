@@ -83,11 +83,11 @@ export function ConnectionOverlay({ status, diagnostics }: ConnectionOverlayProp
         {failureReason ? (
           <div className="mt-2 text-xs font-normal text-red-100/90">reason: {failureReason}</div>
         ) : (
-          <div className="mt-2 text-xs font-normal text-red-100/75">reason: waiting for daemon websocket + terminal attach</div>
+          <div className="mt-2 text-xs font-normal text-red-100/75">
+            reason: waiting for daemon websocket + terminal attach
+          </div>
         )}
-        {failureHint ? (
-          <div className="mt-2 text-xs font-normal text-red-100/90">hint: {failureHint}</div>
-        ) : null}
+        {failureHint ? <div className="mt-2 text-xs font-normal text-red-100/90">hint: {failureHint}</div> : null}
       </div>
     </div>
   )

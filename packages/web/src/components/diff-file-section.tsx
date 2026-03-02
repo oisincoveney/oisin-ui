@@ -63,38 +63,38 @@ export function DiffFileSection({ file }: DiffFileSectionProps) {
           data-testid="diff-file-row"
           className="flex w-full items-start gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/35"
         >
-            <FileCode2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-            <div className="min-w-0 flex-1">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger data-testid="diff-file-path" className="truncate text-sm font-medium text-foreground">
-                    {displayPath}
-                  </TooltipTrigger>
-                  <TooltipContent side="left" className="max-w-xs break-all text-xs">
-                    {getDiffFileDisplayPath(file)}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <p className="text-xs text-muted-foreground">
-                <span data-testid="diff-file-additions" className="text-emerald-500">
-                  +{file.additions}
-                </span>
-                <span className="mx-2 text-border">/</span>
-                <span data-testid="diff-file-deletions" className="text-rose-500">
-                  -{file.deletions}
-                </span>
-                {statusLabel ? <span className="ml-2 uppercase tracking-wide">{statusLabel}</span> : null}
-                {file.isNew ? (
-                  <span className="ml-2 text-[10px] font-medium uppercase tracking-wide text-emerald-400">new</span>
-                ) : null}
-                {file.isDeleted ? (
-                  <span className="ml-2 text-[10px] font-medium uppercase tracking-wide text-rose-400">del</span>
-                ) : null}
-              </p>
-            </div>
-            <ChevronDown
-              className={cn('mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
-            />
+          <FileCode2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0 flex-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger data-testid="diff-file-path" className="truncate text-sm font-medium text-foreground">
+                  {displayPath}
+                </TooltipTrigger>
+                <TooltipContent side="left" className="max-w-xs break-all text-xs">
+                  {getDiffFileDisplayPath(file)}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <p className="text-xs text-muted-foreground">
+              <span data-testid="diff-file-additions" className="text-emerald-500">
+                +{file.additions}
+              </span>
+              <span className="mx-2 text-border">/</span>
+              <span data-testid="diff-file-deletions" className="text-rose-500">
+                -{file.deletions}
+              </span>
+              {statusLabel ? <span className="ml-2 uppercase tracking-wide">{statusLabel}</span> : null}
+              {file.isNew ? (
+                <span className="ml-2 text-[10px] font-medium uppercase tracking-wide text-emerald-400">new</span>
+              ) : null}
+              {file.isDeleted ? (
+                <span className="ml-2 text-[10px] font-medium uppercase tracking-wide text-rose-400">del</span>
+              ) : null}
+            </p>
+          </div>
+          <ChevronDown
+            className={cn('mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
+          />
         </CollapsibleTrigger>
 
         <CollapsibleContent data-testid="diff-file-content" className="border-t border-border/60 bg-card/40">

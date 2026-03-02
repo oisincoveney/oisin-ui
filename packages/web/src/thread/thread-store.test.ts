@@ -46,7 +46,7 @@ function getLastSentRequestByType<T extends { type: string }>(type: string): T {
 async function seedStoreWithThreads(
   store: ThreadStoreModule,
   activeThreadId: string,
-  threads: Array<{ threadId: string; title: string; terminalId: string }>
+  threads: Array<{ threadId: string; title: string; terminalId: string }>,
 ): Promise<void> {
   store.startThreadStore()
   wsMocks.connectionListener?.('connected')
@@ -110,7 +110,7 @@ beforeEach(() => {
           wsMocks.connectionListener = null
         }
       }
-    }
+    },
   )
 })
 

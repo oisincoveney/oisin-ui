@@ -121,7 +121,12 @@ export function ThreadCreateDialog({ open, onOpenChange, initialProjectId }: Thr
 
     setCopyState('idle')
     setDetailsOpen(Boolean(snapshot.create.error.details))
-  }, [snapshot.create.error, snapshot.create.error?.summary, snapshot.create.error?.details, snapshot.create.error?.requestId])
+  }, [
+    snapshot.create.error,
+    snapshot.create.error?.summary,
+    snapshot.create.error?.details,
+    snapshot.create.error?.requestId,
+  ])
 
   useEffect(() => {
     if (!open) {

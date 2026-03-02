@@ -98,20 +98,20 @@ export function AppSidebar() {
 
               <Tooltip>
                 <TooltipTrigger render={<span />}>
-                    <Button
-                      size="sm"
-                      className="h-8"
-                      aria-label="Create new thread"
-                      disabled={actionsLocked}
-                      onClick={() => {
-                        setCreateProjectId(snapshot.projects[0]?.projectId ?? null)
-                        setCreateDialogOpen(true)
-                      }}
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      New Thread
-                    </Button>
-                  </TooltipTrigger>
+                  <Button
+                    size="sm"
+                    className="h-8"
+                    aria-label="Create new thread"
+                    disabled={actionsLocked}
+                    onClick={() => {
+                      setCreateProjectId(snapshot.projects[0]?.projectId ?? null)
+                      setCreateDialogOpen(true)
+                    }}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    New Thread
+                  </Button>
+                </TooltipTrigger>
                 {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
               </Tooltip>
             </div>
@@ -145,20 +145,20 @@ export function AppSidebar() {
                             <div className="mb-1 pl-2">
                               <Tooltip>
                                 <TooltipTrigger render={<span />}>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-7 w-full justify-start text-xs"
-                                      disabled={actionsLocked}
-                                      onClick={() => {
-                                        setCreateProjectId(project.projectId)
-                                        setCreateDialogOpen(true)
-                                      }}
-                                    >
-                                      <Plus className="h-3.5 w-3.5" />
-                                      New Thread
-                                    </Button>
-                                  </TooltipTrigger>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 w-full justify-start text-xs"
+                                    disabled={actionsLocked}
+                                    onClick={() => {
+                                      setCreateProjectId(project.projectId)
+                                      setCreateDialogOpen(true)
+                                    }}
+                                  >
+                                    <Plus className="h-3.5 w-3.5" />
+                                    New Thread
+                                  </Button>
+                                </TooltipTrigger>
                                 {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
                               </Tooltip>
                             </div>
@@ -202,28 +202,26 @@ export function AppSidebar() {
 
                                       <Tooltip>
                                         <TooltipTrigger render={<span />}>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              disabled={actionsLocked}
-                                              className="mt-1 h-6 w-6 opacity-0 group-hover:opacity-100"
-                                              onClick={() => {
-                                                setDeleteDialogTarget({
-                                                  projectId: project.projectId,
-                                                  threadId: thread.threadId,
-                                                  title: thread.title,
-                                                })
-                                              }}
-                                              aria-label={`Delete ${thread.title}`}
-                                              title={
-                                                actionsLocked
-                                                  ? (actionLockReason ?? undefined)
-                                                  : `Delete ${thread.title}`
-                                              }
-                                            >
-                                              <span className="text-xs">x</span>
-                                            </Button>
-                                          </TooltipTrigger>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            disabled={actionsLocked}
+                                            className="mt-1 h-6 w-6 opacity-0 group-hover:opacity-100"
+                                            onClick={() => {
+                                              setDeleteDialogTarget({
+                                                projectId: project.projectId,
+                                                threadId: thread.threadId,
+                                                title: thread.title,
+                                              })
+                                            }}
+                                            aria-label={`Delete ${thread.title}`}
+                                            title={
+                                              actionsLocked ? (actionLockReason ?? undefined) : `Delete ${thread.title}`
+                                            }
+                                          >
+                                            <span className="text-xs">x</span>
+                                          </Button>
+                                        </TooltipTrigger>
                                         {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
                                       </Tooltip>
                                     </div>

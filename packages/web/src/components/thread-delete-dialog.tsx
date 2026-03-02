@@ -8,11 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  clearDeleteThreadError,
-  requestDeleteThread,
-  useThreadStoreSnapshot,
-} from '@/thread/thread-store'
+import { clearDeleteThreadError, requestDeleteThread, useThreadStoreSnapshot } from '@/thread/thread-store'
 
 type ThreadDeleteDialogProps = {
   open: boolean
@@ -26,13 +22,7 @@ function targetKey(projectId: string, threadId: string): string {
   return `${projectId}:${threadId}`
 }
 
-export function ThreadDeleteDialog({
-  open,
-  onOpenChange,
-  projectId,
-  threadId,
-  threadTitle,
-}: ThreadDeleteDialogProps) {
+export function ThreadDeleteDialog({ open, onOpenChange, projectId, threadId, threadTitle }: ThreadDeleteDialogProps) {
   const snapshot = useThreadStoreSnapshot()
   const [pendingForceConfirm, setPendingForceConfirm] = useState(false)
   const key = targetKey(projectId, threadId)
@@ -54,14 +44,7 @@ export function ThreadDeleteDialog({
       setPendingForceConfirm(false)
       clearDeleteThreadError()
     }
-  }, [
-    open,
-    snapshot.delete.pending,
-    requiresDirtyConfirm,
-    inlineError,
-    isTargetDelete,
-    onOpenChange,
-  ])
+  }, [open, snapshot.delete.pending, requiresDirtyConfirm, inlineError, isTargetDelete, onOpenChange])
 
   useEffect(() => {
     if (!requiresDirtyConfirm) {
