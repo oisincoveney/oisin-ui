@@ -8,7 +8,7 @@ v1.1 Hardening closes the remaining reliability and verification gaps from v1 so
 
 - ✅ **v1 MVP** — shipped 2026-02-25 (phases 01-05, 34 plans) → `.planning/milestones/v1-ROADMAP.md`
 - ✅ **v1.1 Hardening** — shipped 2026-02-28 (phases 06-08, 12 plans) → `.planning/milestones/v1.1-ROADMAP.md`
-- 🚧 **v2 Code Review** — in progress (phases 09-10) → DIFF-02, DIFF-03, DIFF-04
+- 🚧 **v2 Code Review** — in progress (phases 09-11) → DIFF-02, DIFF-03, DIFF-04
 
 ## Phases
 
@@ -16,7 +16,8 @@ v1.1 Hardening closes the remaining reliability and verification gaps from v1 so
 - [x] **Phase 07: Thread Metadata Contract Closure** - Active thread context remains consistent across ensure/reconnect/refresh. (Completed 2026-02-27)
 - [x] **Phase 08: Deterministic Verification Closure** - Browser/runtime hardening checks run deterministically in one repeatable path. (Completed 2026-02-28)
 - [ ] **Phase 09: Diff Panel Redesign** - Users see collapsible Staged/Unstaged sections with inline diff expansion and per-file stats. (UAT gap closure in progress)
-- [ ] **Phase 10: Hunk Staging & Commit** - Users can stage/unstage individual hunks and commit staged changes directly from the browser.
+- [ ] **Phase 10: SQLite Thread Registry** - ThreadRegistry backed by SQLite; provisioning status pattern; startup-only reconciliation; reaper deleted; worktree path validation.
+- [ ] **Phase 11: Hunk Staging & Commit** - Users can stage/unstage individual hunks and commit staged changes directly from the browser.
 
 ## Phase Details
 
@@ -101,7 +102,29 @@ Plans:
 - [ ] 09-10-PLAN.md — Thread-scoped diff cwd recovery; add projectId/threadId to subscribe contract (UAT gap 4 re-open)
 - [ ] 09-11-PLAN.md — Terminal stale-cwd validation on rehydrate; kill stale tmux sessions (UAT gap 5)
 
-### Phase 10: Hunk Staging & Commit
+### Phase 10: SQLite Thread Registry
+
+**Goal**: ThreadRegistry is backed by SQLite; worktree-deletion bugs from stale/null JSON state are eliminated.
+**Depends on**: Phase 09
+**Requirements**: INFRA-01
+**Success Criteria** (what must be TRUE):
+
+  1. Server starts with a fresh SQLite DB; no JSON registry file is read or written.
+  2. Thread creation writes status='provisioning' first; crash mid-create is detected and cleaned up on next startup.
+  3. Orphaned worktrees (on disk, not in DB) are deleted once at startup — no periodic polling.
+  4. Missing worktree path on terminal reattach surfaces as thread error state in the UI, not a silent hang.
+  5. sessionKey and agentId are never persisted to DB; they are runtime-only in-memory state.
+  6. ThreadSessionReaper is fully deleted (no file, no references).
+**Plans**: 5 plans
+Plans:
+
+- [ ] 10-01-PLAN.md — SQLite setup: db.ts with WAL mode, FK, projects + threads schema
+- [ ] 10-02-PLAN.md — Rewrite ThreadRegistry with SQLite backend (identical public interface)
+- [ ] 10-03-PLAN.md — startup-reconcile.ts: crash recovery + orphan worktree cleanup
+- [ ] 10-04-PLAN.md — Wire bootstrap.ts, delete session-reaper.ts, add worktree path validation
+- [ ] 10-05-PLAN.md — Rewrite thread-registry.test.ts, delete session-reaper.test.ts, add startup-reconcile.test.ts
+
+### Phase 11: Hunk Staging & Commit
 
 **Goal**: Users can stage individual diff hunks and commit staged changes without leaving the browser.
 **Depends on**: Phase 09
@@ -115,8 +138,8 @@ Plans:
 **Plans**: 2 plans
 Plans:
 
-- [ ] 10-01-PLAN.md — TBD
-- [ ] 10-02-PLAN.md — TBD
+- [ ] 11-01-PLAN.md — TBD
+- [ ] 11-02-PLAN.md — TBD
 
 ## Progress
 
@@ -126,7 +149,8 @@ Plans:
 | 07. Thread Metadata Contract Closure | v1.1 | THRD-01, THRD-02, THRD-03 | 2/2 | Complete | 2026-02-27 |
 | 08. Deterministic Verification Closure | v1.1 | VER-01, VER-02, VER-03 | 2/2 | Complete | 2026-02-28 |
 | 09. Diff Panel Redesign | v2 | DIFF-02 | 9/11 | In Progress | — |
-| 10. Hunk Staging & Commit | v2 | DIFF-03, DIFF-04 | 0/TBD | Pending | — |
+| 10. SQLite Thread Registry | v2 | INFRA-01 | 0/5 | Pending | — |
+| 11. Hunk Staging & Commit | v2 | DIFF-03, DIFF-04 | 0/TBD | Pending | — |
 
 ---
-_Roadmap updated: 2026-03-01 — Phase 09 complete; accordion/collapsible design (no two-column layout, no tabs, no right-pane viewer)._
+_Roadmap updated: 2026-03-01 — Phase 10 (SQLite Thread Registry) inserted; Hunk Staging & Commit becomes Phase 11._
