@@ -55,8 +55,9 @@ import {
   createConnectionOfferV2,
   encodeOfferToFragmentUrl,
 } from "./connection-offer.js";
+import { initDb } from "./thread/db.js";
 import { ThreadRegistry } from "./thread/thread-registry.js";
-import { ThreadSessionReaper } from "./thread/session-reaper.js";
+import { runStartupReconciliation } from "./thread/startup-reconcile.js";
 import { loadOrCreateDaemonKeyPair } from "./daemon-keypair.js";
 import { startRelayTransport, type RelayTransportController } from "./relay-transport.js";
 import { getOrCreateServerId } from "./server-id.js";
@@ -287,14 +288,9 @@ export async function createPaseoDaemon(
     defaultTerminalCwd: config.defaultTerminalCwd,
     tmuxSocketPath: config.tmuxSocketPath,
   });
-  const threadRegistry = new ThreadRegistry(config.paseoHome, logger);
-  const threadSessionReaper = new ThreadSessionReaper({
-    threadRegistry,
-    paseoHome: config.paseoHome,
-    agentManager,
-    logger,
-    tmuxSocketPath: config.tmuxSocketPath,
-  });
+  const dbPath = path.join(config.paseoHome, "thread-registry.db");
+  await initDb(dbPath);
+  new ThreadRegistry(config.paseoHome, logger);
 
   const detachAgentStoragePersistence = attachAgentStoragePersistence(
     logger,
@@ -525,8 +521,7 @@ export async function createPaseoDaemon(
   });
 
     const start = async () => {
-      await threadRegistry.load();
-      await threadSessionReaper.start();
+      await runStartupReconciliation({ paseoHome: config.paseoHome, logger });
 
       try {
         // Start main HTTP server
@@ -596,13 +591,11 @@ export async function createPaseoDaemon(
         }
         });
       } catch (error) {
-        await threadSessionReaper.stop();
         throw error;
       }
     };
 
     const stop = async () => {
-      await threadSessionReaper.stop();
       await closeAllAgents(logger, agentManager);
       await agentManager.flush().catch(() => undefined);
       detachAgentStoragePersistence();
