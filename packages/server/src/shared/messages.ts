@@ -746,6 +746,8 @@ export const SubscribeCheckoutDiffRequestSchema = z.object({
   cwd: z.string(),
   compare: CheckoutDiffCompareSchema,
   requestId: z.string(),
+  projectId: z.string().optional(),
+  threadId: z.string().optional(),
 })
 
 export const UnsubscribeCheckoutDiffRequestSchema = z.object({

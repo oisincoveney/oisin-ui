@@ -124,6 +124,8 @@ function subscribeToDiffTarget(target: ThreadDiffTarget): void {
       mode: 'uncommitted',
     },
     requestId,
+    projectId: target.projectId,
+    threadId: target.threadId,
   })
 }
 
