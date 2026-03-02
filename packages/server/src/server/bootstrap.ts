@@ -56,7 +56,6 @@ import {
   encodeOfferToFragmentUrl,
 } from "./connection-offer.js";
 import { initDb } from "./thread/db.js";
-import { ThreadRegistry } from "./thread/thread-registry.js";
 import { runStartupReconciliation } from "./thread/startup-reconcile.js";
 import { loadOrCreateDaemonKeyPair } from "./daemon-keypair.js";
 import { startRelayTransport, type RelayTransportController } from "./relay-transport.js";
@@ -290,7 +289,6 @@ export async function createPaseoDaemon(
   });
   const dbPath = path.join(config.paseoHome, "thread-registry.db");
   await initDb(dbPath);
-  new ThreadRegistry(config.paseoHome, logger);
 
   const detachAgentStoragePersistence = attachAgentStoragePersistence(
     logger,
