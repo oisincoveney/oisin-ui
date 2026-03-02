@@ -126,20 +126,20 @@ Plans:
 
 ### Phase 11: Hunk Staging & Commit
 
-**Goal**: Users can stage individual diff hunks and commit staged changes without leaving the browser.
+**Goal**: Users can stage individual files and commit staged changes without leaving the browser.
 **Depends on**: Phase 09
 **Requirements**: DIFF-03, DIFF-04
 **Success Criteria** (what must be TRUE):
 
-  1. User sees a "Stage hunk" button on each unstaged hunk; clicking it moves the hunk to the Staged tab and updates the file's +/- counts in the file list.
-  2. User sees an "Unstage hunk" button on each staged hunk; clicking it moves the hunk back to Unstaged.
-  3. User types a commit message in the commit bar and clicks Commit; staged changes are committed and the Staged tab clears.
-  4. User cannot submit an empty commit message; the Commit button is disabled until text is entered.
+  1. User sees a Stage button on each unstaged file; clicking stages the file and moves it to Staged section.
+  2. User sees an Unstage button on each staged file; clicking unstages the file and moves it back to Unstaged.
+  3. User types a commit message in the commit bar and clicks Commit; staged changes are committed and the Staged section clears.
+  4. User cannot submit an empty commit message; the Commit button is disabled until text is entered and files are staged.
 **Plans**: 2 plans
 Plans:
 
-- [ ] 11-01-PLAN.md — TBD
-- [ ] 11-02-PLAN.md — TBD
+- [ ] 11-01-PLAN.md — Backend: Add stage/unstage message types and session handlers
+- [ ] 11-02-PLAN.md — Frontend: Wire commit form, add Stage/Unstage buttons to file rows
 
 ## Progress
 
@@ -150,7 +150,7 @@ Plans:
 | 08. Deterministic Verification Closure | v1.1 | VER-01, VER-02, VER-03 | 2/2 | Complete | 2026-02-28 |
 | 09. Diff Panel Redesign | v2 | DIFF-02 | 11/11 | Complete | 2026-03-01 |
 | 10. SQLite Thread Registry | v2 | INFRA-01 | 5/5 | Complete | 2026-03-01 |
-| 11. Hunk Staging & Commit | v2 | DIFF-03, DIFF-04 | 0/TBD | Pending | — |
+| 11. Hunk Staging & Commit | v2 | DIFF-03, DIFF-04 | 0/2 | Planned | — |
 
 ---
-_Roadmap updated: 2026-03-01 — Phase 10 (SQLite Thread Registry) inserted; Hunk Staging & Commit becomes Phase 11._
+_Roadmap updated: 2026-03-02 — Phase 11 plans created (file-level staging, commit from browser)._
