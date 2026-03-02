@@ -1,4 +1,5 @@
 import { exec } from "node:child_process";
+import { access } from "node:fs/promises";
 import { promisify } from "node:util";
 import type { AgentManager } from "../agent/agent-manager.js";
 import type { AgentSessionConfig } from "../agent/agent-sdk-types.js";
@@ -273,6 +274,24 @@ export class ThreadLifecycleService {
     }
 
     if (this.terminalManager && thread.links.worktreePath) {
+      try {
+        await access(thread.links.worktreePath);
+      } catch {
+        this.logger?.warn(
+          {
+            projectId: thread.projectId,
+            threadId: thread.threadId,
+            worktreePath: thread.links.worktreePath,
+          },
+          "Worktree path missing on disk - marking thread as error"
+        );
+        await this.threadRegistry.updateThreadStatus({
+          projectId: thread.projectId,
+          threadId: thread.threadId,
+          status: "error",
+        });
+        throw new Error(`Worktree path no longer exists: ${thread.links.worktreePath}`);
+      }
       const ensured = await this.ensureThreadTerminalWithRetry({
         projectId: thread.projectId,
         threadId: thread.threadId,
