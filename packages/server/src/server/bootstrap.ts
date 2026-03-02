@@ -287,7 +287,7 @@ export async function createPaseoDaemon(
     defaultTerminalCwd: config.defaultTerminalCwd,
     tmuxSocketPath: config.tmuxSocketPath,
   });
-  const dbPath = path.join(config.paseoHome, "thread-registry.db");
+  const dbPath = path.join(config.paseoHome, "thread-registry.sqlite");
   await initDb(dbPath);
 
   const detachAgentStoragePersistence = attachAgentStoragePersistence(
