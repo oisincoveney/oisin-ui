@@ -11,12 +11,12 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 **Milestone:** v2 Code Review
 **Phase:** Phase 10 of 10 — sqlite-thread-registry
-**Plan:** 10-02 of 5 complete
+**Plan:** 10-04 of 5 complete
 **Status:** Phase 10 in progress
-**Last activity:** 2026-03-02 — Completed 10-02: SQLite-backed ThreadRegistry migration
+**Last activity:** 2026-03-02 — Completed 10-04: SQLite bootstrap wiring + reaper removal
 
 ```
-Plans: [███████████████████░] 97% (60/62)
+Plans: [███████████████████░] 98% (61/62)
 ```
 
 ## Accumulated Context
@@ -85,11 +85,14 @@ Plans: [███████████████████░] 97% (60/62
 - 10-03: Startup reconciliation is one-shot and orphan-only: delete worktrees on disk with no matching `threads` row.
 - 10-03: Reconciliation is DB read + filesystem cleanup only; it does not mutate `threads` rows.
 - 10-03: Per-worktree deletion failures are warning-only to keep reconciliation progressing across projects.
+- 10-04: Bootstrap startup order is now `initDb()` before ThreadRegistry wiring, then `runStartupReconciliation()` before server listen.
+- 10-04: Session reaper runtime path is fully removed; no `ThreadSessionReaper` references remain in `packages/server/src`.
+- 10-04: Thread switch validates `thread.links.worktreePath` with `fs.access()` before terminal ensure; missing path marks thread `error` and throws.
 
 ## Session Continuity
 
-**Last session:** 2026-03-02 04:14 UTC
-**Stopped at:** Completed 10-02-PLAN.md
+**Last session:** 2026-03-02 04:20 UTC
+**Stopped at:** Completed 10-04-PLAN.md
 **Resume file:** None
 
 ---
@@ -102,4 +105,4 @@ Plans: [███████████████████░] 97% (60/62
 
 ---
 
-_State updated: 2026-03-02 — Completed 10-02 with SQLite-backed ThreadRegistry migration and thread-status contract cleanup._
+_State updated: 2026-03-02 — Completed 10-04 with SQLite bootstrap wiring, startup reconciliation integration, and full reaper removal._
