@@ -1051,7 +1051,7 @@ export const ThreadSummarySchema = z.object({
   projectId: z.string().trim().min(1),
   threadId: z.string().trim().min(1),
   title: z.string().trim().min(1),
-  status: z.enum(['running', 'idle', 'error', 'closed', 'unknown']),
+  status: z.enum(['running', 'idle', 'error', 'closed']),
   unreadCount: z.number().int().nonnegative(),
   worktreePath: z.string().trim().min(1).optional().nullable(),
   terminalId: z.string().trim().min(1).optional().nullable(),

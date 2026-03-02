@@ -1,19 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 
 import { AgentProviderSchema } from "../agent/provider-manifest.js";
 import { ProviderCommandSchema } from "../agent/provider-launch-config.js";
+import { getDb, initDb, type DbHandle } from "./db.js";
 
-const THREAD_REGISTRY_FILENAME = "thread-registry.json";
-const THREAD_REGISTRY_VERSION = 1;
-const LEGACY_THREAD_ID = "active";
-const LEGACY_THREAD_SCOPE = "phase2-active-thread-placeholder";
-const COMPAT_PROJECT_ID = "project-default";
-const COMPAT_THREAD_ID = "thread-default";
+const THREAD_REGISTRY_DB_FILENAME = "thread-registry.sqlite";
 
-const ThreadStatusSchema = z.enum(["running", "idle", "error", "closed", "unknown"]);
+const ThreadStatusSchema = z.enum(["idle", "running", "error", "closed"]);
 
 const ThreadLaunchConfigSchema = z
   .object({
@@ -61,62 +56,59 @@ const ThreadRecordSchema = z
   })
   .strict();
 
-const ActiveThreadPointerSchema = z
-  .object({
-    projectId: z.string().trim().min(1).nullable(),
-    threadId: z.string().trim().min(1).nullable(),
-  })
-  .strict();
-
-const LegacyCompatibilitySchema = z
-  .object({
-    placeholderThreadId: z.literal(LEGACY_THREAD_ID),
-    placeholderThreadScope: z.literal(LEGACY_THREAD_SCOPE),
-    seededProjectId: z.string().trim().min(1),
-    seededThreadId: z.string().trim().min(1),
-    seededAt: z.string(),
-  })
-  .strict();
-
-const ThreadRegistryStateSchema = z
-  .object({
-    version: z.literal(THREAD_REGISTRY_VERSION),
-    projects: z.array(ProjectRecordSchema),
-    threads: z.array(ThreadRecordSchema),
-    active: ActiveThreadPointerSchema,
-    compatibility: LegacyCompatibilitySchema.optional(),
-    updatedAt: z.string(),
-  })
-  .strict();
-
-const LegacyPlaceholderStateSchema = z
-  .object({
-    threadId: z.literal(LEGACY_THREAD_ID).optional(),
-    threadScope: z.literal(LEGACY_THREAD_SCOPE).optional(),
-    sessionKey: z.string().nullable().optional(),
-    cwd: z.string().nullable().optional(),
-    terminalId: z.string().optional(),
-    terminal: z
-      .object({
-        id: z.string(),
-        cwd: z.string().optional(),
-      })
-      .nullable()
-      .optional(),
-  })
-  .passthrough();
-
 export type ThreadStatus = z.infer<typeof ThreadStatusSchema>;
 export type ThreadLaunchConfig = z.infer<typeof ThreadLaunchConfigSchema>;
 export type ThreadLinks = z.infer<typeof ThreadLinksSchema>;
 export type ProjectRecord = z.infer<typeof ProjectRecordSchema>;
 export type ThreadRecord = z.infer<typeof ThreadRecordSchema>;
-export type ThreadRegistryState = z.infer<typeof ThreadRegistryStateSchema>;
+export type ThreadRegistryState = {
+  version: number;
+  projects: ProjectRecord[];
+  threads: ThreadRecord[];
+  active: {
+    projectId: string | null;
+    threadId: string | null;
+  };
+  compatibility?: {
+    placeholderThreadId: string;
+    placeholderThreadScope: string;
+    seededProjectId: string;
+    seededThreadId: string;
+    seededAt: string;
+  };
+  updatedAt: string;
+};
 
 type ThreadRegistryLogger = {
   child(bindings: Record<string, unknown>): ThreadRegistryLogger;
   info(...args: any[]): void;
   warn(...args: any[]): void;
+};
+
+type ProjectRow = {
+  project_id: string;
+  display_name: string;
+  repo_root: string;
+  default_base_branch: string | null;
+  active_thread_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type ThreadRow = {
+  project_id: string;
+  thread_id: string;
+  title: string;
+  status: ThreadStatus;
+  unread_count: number;
+  worktree_path: string;
+  terminal_id: string | null;
+  launch_config: string;
+  created_at: string;
+  updated_at: string;
+  last_active_at: string | null;
+  last_output_at: string | null;
+  last_status_at: string | null;
 };
 
 const DEFAULT_LAUNCH_CONFIG: ThreadLaunchConfig = {
@@ -125,7 +117,7 @@ const DEFAULT_LAUNCH_CONFIG: ThreadLaunchConfig = {
 
 function getDefaultRegistryState(nowIso: string): ThreadRegistryState {
   return {
-    version: THREAD_REGISTRY_VERSION,
+    version: 1,
     projects: [],
     threads: [],
     active: {
@@ -150,160 +142,44 @@ function normalizeState(state: ThreadRegistryState): ThreadRegistryState {
   };
 }
 
-function toLegacyCompatibilitySeed(raw: z.infer<typeof LegacyPlaceholderStateSchema>): ThreadRegistryState {
-  const nowIso = new Date().toISOString();
-  const seedThreadId = COMPAT_THREAD_ID;
-  const seedProjectId = COMPAT_PROJECT_ID;
-  const fallbackRepoRoot = raw.cwd ?? raw.terminal?.cwd ?? process.cwd();
-  const terminalId = raw.terminal?.id ?? raw.terminalId ?? null;
-  return normalizeState({
-    version: THREAD_REGISTRY_VERSION,
-    projects: [
-      {
-        projectId: seedProjectId,
-        displayName: "Default Project",
-        repoRoot: path.resolve(fallbackRepoRoot),
-        activeThreadId: seedThreadId,
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      },
-    ],
-    threads: [
-      {
-        projectId: seedProjectId,
-        threadId: seedThreadId,
-        title: "Default Thread",
-        status: "idle",
-        unreadCount: 0,
-        launchConfig: DEFAULT_LAUNCH_CONFIG,
-        links: {
-          terminalId,
-          sessionKey: raw.sessionKey ?? null,
-          worktreePath: raw.cwd ?? raw.terminal?.cwd ?? null,
-          agentId: null,
-        },
-        createdAt: nowIso,
-        updatedAt: nowIso,
-        lastActiveAt: nowIso,
-        lastOutputAt: null,
-        lastStatusAt: nowIso,
-      },
-    ],
-    active: {
-      projectId: seedProjectId,
-      threadId: seedThreadId,
-    },
-    compatibility: {
-      placeholderThreadId: LEGACY_THREAD_ID,
-      placeholderThreadScope: LEGACY_THREAD_SCOPE,
-      seededProjectId: seedProjectId,
-      seededThreadId: seedThreadId,
-      seededAt: nowIso,
-    },
-    updatedAt: nowIso,
-  });
+function threadKey(projectId: string, threadId: string): string {
+  return `${projectId}\u0000${threadId}`;
 }
 
-function parseState(raw: unknown): ThreadRegistryState {
-  const parsed = ThreadRegistryStateSchema.safeParse(raw);
-  if (parsed.success) {
-    return normalizeState(parsed.data);
+function parseThreadKey(key: string): { projectId: string; threadId: string } | null {
+  const separatorIndex = key.indexOf("\u0000");
+  if (separatorIndex <= 0 || separatorIndex >= key.length - 1) {
+    return null;
   }
-
-  const legacy = LegacyPlaceholderStateSchema.safeParse(raw);
-  const hasLegacyIdentity =
-    legacy.success &&
-    (legacy.data.threadId === LEGACY_THREAD_ID || legacy.data.threadScope === LEGACY_THREAD_SCOPE);
-  if (hasLegacyIdentity) {
-    return toLegacyCompatibilitySeed(legacy.data);
-  }
-
-  const issues = parsed.error.issues.map((issue) => `  - ${issue.path.join(".")}: ${issue.message}`);
-  throw new Error(`Invalid thread registry state:\n${issues.join("\n")}`);
-}
-
-function createProjectRecord(input: {
-  projectId: string;
-  displayName: string;
-  repoRoot: string;
-  defaultBaseBranch?: string | null;
-  activeThreadId?: string | null;
-}): ProjectRecord {
-  const nowIso = new Date().toISOString();
   return {
-    projectId: input.projectId,
-    displayName: input.displayName,
-    repoRoot: path.resolve(input.repoRoot),
-    ...(input.defaultBaseBranch ? { defaultBaseBranch: input.defaultBaseBranch } : {}),
-    activeThreadId: input.activeThreadId ?? null,
-    createdAt: nowIso,
-    updatedAt: nowIso,
-  };
-}
-
-function createThreadRecord(input: {
-  projectId: string;
-  threadId?: string;
-  title: string;
-  launchConfig: ThreadLaunchConfig;
-  links?: ThreadLinks;
-  status?: ThreadStatus;
-}): ThreadRecord {
-  const nowIso = new Date().toISOString();
-  return {
-    projectId: input.projectId,
-    threadId: input.threadId ?? randomUUID(),
-    title: input.title,
-    status: input.status ?? "idle",
-    unreadCount: 0,
-    launchConfig: input.launchConfig,
-    links: input.links ?? {},
-    createdAt: nowIso,
-    updatedAt: nowIso,
-    lastActiveAt: null,
-    lastOutputAt: null,
-    lastStatusAt: nowIso,
+    projectId: key.slice(0, separatorIndex),
+    threadId: key.slice(separatorIndex + 1),
   };
 }
 
 export class ThreadRegistry {
-  private readonly filePath: string;
+  private readonly dbPath: string;
   private readonly logger?: ThreadRegistryLogger;
   private state: ThreadRegistryState;
   private loaded = false;
+  private db: DbHandle | null = null;
+  private readonly threadAgentIds = new Map<string, string>();
+  private readonly threadSessionKeys = new Map<string, string>();
 
   constructor(paseoHome: string, logger?: ThreadRegistryLogger) {
-    this.filePath = path.join(paseoHome, THREAD_REGISTRY_FILENAME);
+    this.dbPath = path.join(paseoHome, THREAD_REGISTRY_DB_FILENAME);
     this.logger = logger?.child({ module: "thread-registry" }) ?? undefined;
     this.state = getDefaultRegistryState(new Date().toISOString());
   }
 
   async load(): Promise<ThreadRegistryState> {
-    if (this.loaded) {
-      return this.getSnapshot();
-    }
-
-    await mkdir(path.dirname(this.filePath), { recursive: true });
-
-    try {
-      const raw = await readFile(this.filePath, "utf8");
-      const parsed = JSON.parse(raw) as unknown;
-      this.state = parseState(parsed);
+    if (!this.loaded) {
+      this.db = await initDb(this.dbPath);
       this.loaded = true;
-      this.logger?.info({ filePath: this.filePath }, "Loaded thread registry");
-      await this.flush();
-      return this.getSnapshot();
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (code !== "ENOENT") {
-        throw error;
-      }
+      this.logger?.info({ dbPath: this.dbPath }, "Initialized thread registry database");
     }
 
-    this.state = getDefaultRegistryState(new Date().toISOString());
-    this.loaded = true;
-    await this.flush();
-    this.logger?.info({ filePath: this.filePath }, "Initialized thread registry");
+    await this.refreshStateFromDb();
     return this.getSnapshot();
   }
 
@@ -337,49 +213,114 @@ export class ThreadRegistry {
 
   async getActiveThread(): Promise<ThreadRecord | null> {
     await this.load();
-    const { projectId, threadId } = this.state.active;
-    if (!projectId || !threadId) {
+    const activeProject = this.state.projects.find(
+      (project) => typeof project.activeThreadId === "string" && project.activeThreadId.length > 0
+    );
+    if (!activeProject?.activeThreadId) {
       return null;
     }
     return (
       this.state.threads.find(
-        (t) => t.projectId === projectId && t.threadId === threadId
+        (thread) =>
+          thread.projectId === activeProject.projectId && thread.threadId === activeProject.activeThreadId
       ) ?? null
     );
   }
 
   async findThreadByAgentId(agentId: string): Promise<ThreadRecord | null> {
     await this.load();
-    return this.state.threads.find((thread) => thread.links.agentId === agentId) ?? null;
+    for (const [key, mappedAgentId] of this.threadAgentIds.entries()) {
+      if (mappedAgentId !== agentId) {
+        continue;
+      }
+      const parsedKey = parseThreadKey(key);
+      if (!parsedKey) {
+        continue;
+      }
+      return await this.getThread(parsedKey.projectId, parsedKey.threadId);
+    }
+    return null;
   }
 
   async findThreadByTerminalId(terminalId: string): Promise<ThreadRecord | null> {
     await this.load();
-    return this.state.threads.find((thread) => thread.links.terminalId === terminalId) ?? null;
+    const row = await this.database().get<ThreadRow>(
+      `
+        SELECT
+          project_id,
+          thread_id,
+          title,
+          status,
+          unread_count,
+          worktree_path,
+          terminal_id,
+          launch_config,
+          created_at,
+          updated_at,
+          last_active_at,
+          last_output_at,
+          last_status_at
+        FROM threads
+        WHERE terminal_id = ?
+        LIMIT 1
+      `,
+      terminalId
+    );
+    if (!row) {
+      return null;
+    }
+    return this.toThreadRecord(row);
   }
 
   async setProjects(projects: Array<Omit<ProjectRecord, "createdAt" | "updatedAt">>): Promise<void> {
     await this.load();
+    const db = this.database();
     const nowIso = new Date().toISOString();
-    const currentById = new Map(this.state.projects.map((project) => [project.projectId, project]));
+    const existingRows = await db.all<ProjectRow[]>(
+      `
+        SELECT
+          project_id,
+          display_name,
+          repo_root,
+          default_base_branch,
+          active_thread_id,
+          created_at,
+          updated_at
+        FROM projects
+      `
+    );
+    const existingById = new Map(existingRows.map((row) => [row.project_id, row]));
 
-    this.state.projects = projects.map((project) => {
-      const existing = currentById.get(project.projectId);
+    for (const project of projects) {
+      const existing = existingById.get(project.projectId);
       const nextActiveThreadId =
         project.activeThreadId === undefined
-          ? existing?.activeThreadId ?? null
-          : project.activeThreadId;
-      return {
-        ...project,
-        repoRoot: path.resolve(project.repoRoot),
-        activeThreadId: nextActiveThreadId,
-        createdAt: existing?.createdAt ?? nowIso,
-        updatedAt: nowIso,
-      };
-    });
-    this.state.updatedAt = nowIso;
-    this.state = normalizeState(this.state);
-    await this.flush();
+          ? (existing?.active_thread_id ?? null)
+          : (project.activeThreadId ?? null);
+
+      await db.run(
+        `
+          INSERT OR REPLACE INTO projects (
+            project_id,
+            display_name,
+            repo_root,
+            default_base_branch,
+            active_thread_id,
+            created_at,
+            updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `,
+        project.projectId,
+        project.displayName,
+        path.resolve(project.repoRoot),
+        project.defaultBaseBranch ?? null,
+        nextActiveThreadId,
+        existing?.created_at ?? nowIso,
+        nowIso
+      );
+    }
+
+    await this.refreshStateFromDb();
   }
 
   async createThread(input: {
@@ -391,114 +332,228 @@ export class ThreadRegistry {
     status?: ThreadStatus;
   }): Promise<ThreadRecord> {
     await this.load();
-    const thread = createThreadRecord(input);
-    ThreadRecordSchema.parse(thread);
+    const db = this.database();
+    const threadId = input.threadId ?? randomUUID();
+    const nowIso = new Date().toISOString();
+    const worktreePath = input.links?.worktreePath?.trim();
+    if (!worktreePath) {
+      throw new Error("worktreePath is required");
+    }
 
-    const hasProject = this.state.projects.some((project) => project.projectId === input.projectId);
-    if (!hasProject) {
-      this.state.projects.push(
-        createProjectRecord({
-          projectId: input.projectId,
-          displayName: input.projectId,
-          repoRoot: process.cwd(),
-          activeThreadId: thread.threadId,
-        })
+    const existingProject = await db.get<ProjectRow>(
+      `
+        SELECT
+          project_id,
+          display_name,
+          repo_root,
+          default_base_branch,
+          active_thread_id,
+          created_at,
+          updated_at
+        FROM projects
+        WHERE project_id = ?
+      `,
+      input.projectId
+    );
+
+    if (!existingProject) {
+      await db.run(
+        `
+          INSERT OR REPLACE INTO projects (
+            project_id,
+            display_name,
+            repo_root,
+            default_base_branch,
+            active_thread_id,
+            created_at,
+            updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `,
+        input.projectId,
+        input.projectId,
+        process.cwd(),
+        null,
+        threadId,
+        nowIso,
+        nowIso
       );
     }
 
-    this.state.threads = this.state.threads.filter(
-      (existing) => !(existing.projectId === thread.projectId && existing.threadId === thread.threadId)
+    await db.run(
+      `
+        INSERT OR REPLACE INTO threads (
+          project_id,
+          thread_id,
+          title,
+          status,
+          unread_count,
+          worktree_path,
+          terminal_id,
+          launch_config,
+          created_at,
+          updated_at,
+          last_active_at,
+          last_output_at,
+          last_status_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      input.projectId,
+      threadId,
+      input.title,
+      "idle",
+      0,
+      worktreePath,
+      input.links?.terminalId ?? null,
+      JSON.stringify(input.launchConfig),
+      nowIso,
+      nowIso,
+      null,
+      null,
+      nowIso
     );
-    this.state.threads.push(thread);
-    this.state.active = {
-      projectId: thread.projectId,
-      threadId: thread.threadId,
-    };
-    this.state.projects = this.state.projects.map((project) =>
-      project.projectId === thread.projectId
-        ? {
-            ...project,
-            activeThreadId: thread.threadId,
-            updatedAt: new Date().toISOString(),
-          }
-        : project
+
+    await db.run(`UPDATE projects SET active_thread_id = NULL WHERE active_thread_id IS NOT NULL`);
+    await db.run(
+      `
+        UPDATE projects
+        SET active_thread_id = ?, updated_at = ?
+        WHERE project_id = ?
+      `,
+      threadId,
+      nowIso,
+      input.projectId
     );
-    this.state.updatedAt = new Date().toISOString();
-    this.state = normalizeState(this.state);
-    await this.flush();
-    return thread;
+
+    const key = threadKey(input.projectId, threadId);
+    if (input.links?.agentId) {
+      this.threadAgentIds.set(key, input.links.agentId);
+    } else {
+      this.threadAgentIds.delete(key);
+    }
+    if (input.links?.sessionKey) {
+      this.threadSessionKeys.set(key, input.links.sessionKey);
+    } else {
+      this.threadSessionKeys.delete(key);
+    }
+
+    await this.refreshStateFromDb();
+    const created = this.state.threads.find(
+      (thread) => thread.projectId === input.projectId && thread.threadId === threadId
+    );
+    if (!created) {
+      throw new Error(`Thread not found after create: ${input.projectId}/${threadId}`);
+    }
+    ThreadRecordSchema.parse(created);
+    return created;
   }
 
   async deleteThread(projectId: string, threadId: string): Promise<void> {
     await this.load();
-    const before = this.state.threads.length;
-    this.state.threads = this.state.threads.filter(
-      (thread) => !(thread.projectId === projectId && thread.threadId === threadId)
-    );
-    if (this.state.threads.length === before) {
+    const db = this.database();
+    const nowIso = new Date().toISOString();
+
+    const existingThread = await this.getThread(projectId, threadId);
+    if (!existingThread) {
       return;
     }
 
-    const nextProjectThread = this.state.threads.find((thread) => thread.projectId === projectId) ?? null;
-    this.state.projects = this.state.projects.map((project) => {
-      if (project.projectId !== projectId) {
-        return project;
-      }
-      return {
-        ...project,
-        activeThreadId: nextProjectThread?.threadId ?? null,
-        updatedAt: new Date().toISOString(),
-      };
-    });
+    await db.run(
+      `
+        DELETE FROM threads
+        WHERE project_id = ? AND thread_id = ?
+      `,
+      projectId,
+      threadId
+    );
 
-    if (this.state.active.projectId === projectId && this.state.active.threadId === threadId) {
-      this.state.active = {
-        projectId: nextProjectThread?.projectId ?? null,
-        threadId: nextProjectThread?.threadId ?? null,
-      };
+    this.threadAgentIds.delete(threadKey(projectId, threadId));
+    this.threadSessionKeys.delete(threadKey(projectId, threadId));
+
+    const activeProject = await db.get<ProjectRow>(
+      `
+        SELECT
+          project_id,
+          display_name,
+          repo_root,
+          default_base_branch,
+          active_thread_id,
+          created_at,
+          updated_at
+        FROM projects
+        WHERE active_thread_id = ? AND project_id = ?
+      `,
+      threadId,
+      projectId
+    );
+
+    if (activeProject) {
+      const nextProjectThread = await db.get<{ thread_id: string }>(
+        `
+          SELECT thread_id
+          FROM threads
+          WHERE project_id = ?
+          ORDER BY updated_at DESC, thread_id DESC
+          LIMIT 1
+        `,
+        projectId
+      );
+      await db.run(
+        `
+          UPDATE projects
+          SET active_thread_id = ?, updated_at = ?
+          WHERE project_id = ?
+        `,
+        nextProjectThread?.thread_id ?? null,
+        nowIso,
+        projectId
+      );
     }
 
-    this.state.updatedAt = new Date().toISOString();
-    this.state = normalizeState(this.state);
-    await this.flush();
+    await this.refreshStateFromDb();
   }
 
   async switchThread(projectId: string, threadId: string): Promise<void> {
     await this.load();
-    const thread = this.state.threads.find(
-      (candidate) => candidate.projectId === projectId && candidate.threadId === threadId
+    const db = this.database();
+    const nowIso = new Date().toISOString();
+
+    const existing = await db.get<{ thread_id: string }>(
+      `
+        SELECT thread_id
+        FROM threads
+        WHERE project_id = ? AND thread_id = ?
+      `,
+      projectId,
+      threadId
     );
-    if (!thread) {
+    if (!existing) {
       throw new Error(`Thread not found: ${projectId}/${threadId}`);
     }
 
-    const nowIso = new Date().toISOString();
-    this.state.active = {
-      projectId,
+    await db.run(`UPDATE projects SET active_thread_id = NULL WHERE active_thread_id IS NOT NULL`);
+    await db.run(
+      `
+        UPDATE projects
+        SET active_thread_id = ?, updated_at = ?
+        WHERE project_id = ?
+      `,
       threadId,
-    };
-    this.state.projects = this.state.projects.map((project) =>
-      project.projectId === projectId
-        ? {
-            ...project,
-            activeThreadId: threadId,
-            updatedAt: nowIso,
-          }
-        : project
+      nowIso,
+      projectId
     );
-    this.state.threads = this.state.threads.map((existing) =>
-      existing.projectId === projectId && existing.threadId === threadId
-        ? {
-            ...existing,
-            unreadCount: 0,
-            lastActiveAt: nowIso,
-            updatedAt: nowIso,
-          }
-        : existing
+    await db.run(
+      `
+        UPDATE threads
+        SET unread_count = 0, last_active_at = ?, updated_at = ?
+        WHERE project_id = ? AND thread_id = ?
+      `,
+      nowIso,
+      nowIso,
+      projectId,
+      threadId
     );
-    this.state.updatedAt = nowIso;
-    this.state = normalizeState(this.state);
-    await this.flush();
+
+    await this.refreshStateFromDb();
   }
 
   async updateThreadStatus(input: {
@@ -509,28 +564,42 @@ export class ThreadRegistry {
     incrementUnread?: boolean;
   }): Promise<void> {
     await this.load();
+    const db = this.database();
     const nowIso = new Date().toISOString();
+
+    const thread = await this.getThread(input.projectId, input.threadId);
+    if (!thread) {
+      throw new Error(`Thread not found: ${input.projectId}/${input.threadId}`);
+    }
+
+    const activeThread = await this.getActiveThread();
     const isActive =
-      this.state.active.projectId === input.projectId && this.state.active.threadId === input.threadId;
+      activeThread?.projectId === input.projectId && activeThread.threadId === input.threadId;
+    const nextUnreadCount =
+      input.incrementUnread === true && !isActive ? thread.unreadCount + 1 : thread.unreadCount;
+    const nextLastOutputAt = input.outputAt ?? thread.lastOutputAt ?? null;
 
-    this.state.threads = this.state.threads.map((thread) => {
-      if (thread.projectId !== input.projectId || thread.threadId !== input.threadId) {
-        return thread;
-      }
-      return {
-        ...thread,
-        status: input.status,
-        unreadCount:
-          input.incrementUnread === true && !isActive ? thread.unreadCount + 1 : thread.unreadCount,
-        lastStatusAt: nowIso,
-        lastOutputAt: input.outputAt ?? thread.lastOutputAt ?? null,
-        updatedAt: nowIso,
-      };
-    });
+    await db.run(
+      `
+        UPDATE threads
+        SET
+          status = ?,
+          unread_count = ?,
+          updated_at = ?,
+          last_status_at = ?,
+          last_output_at = ?
+        WHERE project_id = ? AND thread_id = ?
+      `,
+      input.status,
+      nextUnreadCount,
+      nowIso,
+      nowIso,
+      nextLastOutputAt,
+      input.projectId,
+      input.threadId
+    );
 
-    this.state.updatedAt = nowIso;
-    this.state = normalizeState(this.state);
-    await this.flush();
+    await this.refreshStateFromDb();
   }
 
   async updateThread(input: {
@@ -540,45 +609,188 @@ export class ThreadRegistry {
     links?: Partial<ThreadLinks>;
   }): Promise<ThreadRecord> {
     await this.load();
+    const db = this.database();
     const nowIso = new Date().toISOString();
-    let updated: ThreadRecord | null = null;
 
-    this.state.threads = this.state.threads.map((thread) => {
-      if (thread.projectId !== input.projectId || thread.threadId !== input.threadId) {
-        return thread;
-      }
-
-      const nextThread: ThreadRecord = {
-        ...thread,
-        status: input.status ?? thread.status,
-        links: input.links
-          ? {
-              ...thread.links,
-              ...input.links,
-            }
-          : thread.links,
-        lastStatusAt: input.status ? nowIso : thread.lastStatusAt,
-        updatedAt: nowIso,
-      };
-
-      updated = nextThread;
-      return nextThread;
-    });
-
-    if (!updated) {
+    const current = await this.getThread(input.projectId, input.threadId);
+    if (!current) {
       throw new Error(`Thread not found: ${input.projectId}/${input.threadId}`);
     }
 
-    this.state.updatedAt = nowIso;
-    this.state = normalizeState(this.state);
-    await this.flush();
+    const nextStatus = input.status ?? current.status;
+    const nextTerminalId =
+      input.links && Object.prototype.hasOwnProperty.call(input.links, "terminalId")
+        ? (input.links.terminalId ?? null)
+        : (current.links.terminalId ?? null);
+    const nextWorktreePath =
+      input.links && Object.prototype.hasOwnProperty.call(input.links, "worktreePath")
+        ? input.links.worktreePath
+        : current.links.worktreePath;
+
+    if (!nextWorktreePath || nextWorktreePath.trim().length === 0) {
+      throw new Error("worktreePath is required");
+    }
+
+    const key = threadKey(input.projectId, input.threadId);
+    if (input.links && Object.prototype.hasOwnProperty.call(input.links, "agentId")) {
+      if (input.links.agentId) {
+        this.threadAgentIds.set(key, input.links.agentId);
+      } else {
+        this.threadAgentIds.delete(key);
+      }
+    }
+    if (input.links && Object.prototype.hasOwnProperty.call(input.links, "sessionKey")) {
+      if (input.links.sessionKey) {
+        this.threadSessionKeys.set(key, input.links.sessionKey);
+      } else {
+        this.threadSessionKeys.delete(key);
+      }
+    }
+
+    await db.run(
+      `
+        UPDATE threads
+        SET
+          status = ?,
+          terminal_id = ?,
+          worktree_path = ?,
+          updated_at = ?,
+          last_status_at = ?
+        WHERE project_id = ? AND thread_id = ?
+      `,
+      nextStatus,
+      nextTerminalId,
+      nextWorktreePath,
+      nowIso,
+      input.status ? nowIso : (current.lastStatusAt ?? null),
+      input.projectId,
+      input.threadId
+    );
+
+    await this.refreshStateFromDb();
+    const updated = this.state.threads.find(
+      (thread) => thread.projectId === input.projectId && thread.threadId === input.threadId
+    );
+    if (!updated) {
+      throw new Error(`Thread not found after update: ${input.projectId}/${input.threadId}`);
+    }
     return updated;
   }
 
   async flush(): Promise<void> {
-    const validated = ThreadRegistryStateSchema.parse(normalizeState(this.state));
-    const tempPath = `${this.filePath}.tmp-${process.pid}-${Date.now()}-${randomUUID()}`;
-    await writeFile(tempPath, JSON.stringify(validated, null, 2) + "\n", "utf8");
-    await rename(tempPath, this.filePath);
+    await this.load();
+  }
+
+  private database(): DbHandle {
+    if (this.db) {
+      return this.db;
+    }
+    this.db = getDb();
+    return this.db;
+  }
+
+  private async refreshStateFromDb(): Promise<void> {
+    const db = this.database();
+    const [projectRows, threadRows] = await Promise.all([
+      db.all<ProjectRow[]>(
+        `
+          SELECT
+            project_id,
+            display_name,
+            repo_root,
+            default_base_branch,
+            active_thread_id,
+            created_at,
+            updated_at
+          FROM projects
+        `
+      ),
+      db.all<ThreadRow[]>(
+        `
+          SELECT
+            project_id,
+            thread_id,
+            title,
+            status,
+            unread_count,
+            worktree_path,
+            terminal_id,
+            launch_config,
+            created_at,
+            updated_at,
+            last_active_at,
+            last_output_at,
+            last_status_at
+          FROM threads
+        `
+      ),
+    ]);
+
+    const projects = projectRows.map((row) =>
+      ProjectRecordSchema.parse({
+        projectId: row.project_id,
+        displayName: row.display_name,
+        repoRoot: row.repo_root,
+        defaultBaseBranch: row.default_base_branch,
+        activeThreadId: row.active_thread_id,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      })
+    );
+    const threads = threadRows.map((row) => this.toThreadRecord(row));
+
+    const activeProject = projects.find(
+      (project) => typeof project.activeThreadId === "string" && project.activeThreadId.length > 0
+    );
+
+    const updatedAt =
+      [...projects.map((project) => project.updatedAt), ...threads.map((thread) => thread.updatedAt)]
+        .sort()
+        .at(-1) ?? new Date().toISOString();
+
+    this.state = normalizeState({
+      version: 1,
+      projects,
+      threads,
+      active: {
+        projectId: activeProject?.projectId ?? null,
+        threadId: activeProject?.activeThreadId ?? null,
+      },
+      updatedAt,
+    });
+  }
+
+  private toThreadRecord(row: ThreadRow): ThreadRecord {
+    const key = threadKey(row.project_id, row.thread_id);
+    const launchConfig = this.parseLaunchConfig(row.launch_config);
+
+    return ThreadRecordSchema.parse({
+      projectId: row.project_id,
+      threadId: row.thread_id,
+      title: row.title,
+      status: row.status,
+      unreadCount: row.unread_count,
+      launchConfig,
+      links: {
+        worktreePath: row.worktree_path,
+        terminalId: row.terminal_id ?? null,
+        agentId: this.threadAgentIds.get(key) ?? null,
+        sessionKey: this.threadSessionKeys.get(key) ?? null,
+      },
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      lastActiveAt: row.last_active_at,
+      lastOutputAt: row.last_output_at,
+      lastStatusAt: row.last_status_at,
+    });
+  }
+
+  private parseLaunchConfig(raw: string): ThreadLaunchConfig {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return ThreadLaunchConfigSchema.parse(parsed);
+    } catch {
+      return DEFAULT_LAUNCH_CONFIG;
+    }
   }
 }

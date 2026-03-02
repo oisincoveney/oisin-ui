@@ -776,7 +776,7 @@ export class Session {
     projectId: string
     threadId: string
     title: string
-    status: 'running' | 'idle' | 'error' | 'closed' | 'unknown'
+    status: 'running' | 'idle' | 'error' | 'closed'
     unreadCount: number
     worktreePath: string | null
     terminalId: string | null
@@ -813,7 +813,7 @@ export class Session {
     if (status === 'closed') {
       return 'closed'
     }
-    return 'unknown'
+    return 'error'
   }
 
   private emitThreadStatusUpdated(thread: ThreadRecord): void {
