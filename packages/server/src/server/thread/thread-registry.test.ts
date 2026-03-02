@@ -120,6 +120,28 @@ describe("ThreadRegistry (SQLite)", () => {
     expect(thread?.threadId).toBe("thread-1");
   });
 
+  it("sessionKey is in-memory only (not persisted to DB)", async () => {
+    await registry.createThread(makeThreadInput());
+    await registry.updateThread({
+      projectId: "proj-1",
+      threadId: "thread-1",
+      links: { sessionKey: "session-abc" },
+    });
+
+    const thread = await registry.getThread("proj-1", "thread-1");
+    expect(thread?.links.sessionKey).toBe("session-abc");
+
+    const schemaColumns = await getDb().all<{ name: string }[]>("PRAGMA table_info(threads)");
+    expect(schemaColumns.some((column) => column.name === "session_key")).toBe(false);
+
+    const row = await getDb().get<Record<string, unknown>>(
+      "SELECT * FROM threads WHERE project_id = ? AND thread_id = ?",
+      "proj-1",
+      "thread-1"
+    );
+    expect(row?.session_key).toBeUndefined();
+  });
+
   it("deleteThread clears agentId map", async () => {
     await registry.createThread(makeThreadInput());
     await registry.updateThread({
