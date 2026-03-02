@@ -133,6 +133,8 @@ import {
   MergeConflictError,
   MergeFromBaseConflictError,
   commitChanges,
+  stageFile,
+  unstageFile,
   mergeToBase,
   mergeFromBase,
   pushCurrentBranch,
@@ -1573,6 +1575,14 @@ export class Session {
 
         case 'checkout_commit_request':
           await this.handleCheckoutCommitRequest(msg)
+          break
+
+        case 'checkout_stage_request':
+          await this.handleCheckoutStageRequest(msg)
+          break
+
+        case 'checkout_unstage_request':
+          await this.handleCheckoutUnstageRequest(msg)
           break
 
         case 'checkout_merge_request':
@@ -4404,6 +4414,72 @@ export class Session {
         type: 'checkout_commit_response',
         payload: {
           cwd,
+          success: false,
+          error: this.toCheckoutError(error),
+          requestId,
+        },
+      })
+    }
+  }
+
+  private async handleCheckoutStageRequest(
+    msg: Extract<SessionInboundMessage, { type: 'checkout_stage_request' }>
+  ): Promise<void> {
+    const { cwd, path, requestId } = msg
+
+    try {
+      await stageFile(cwd, path)
+      this.scheduleCheckoutDiffRefreshForCwd(cwd)
+
+      this.emit({
+        type: 'checkout_stage_response',
+        payload: {
+          cwd,
+          path,
+          success: true,
+          error: null,
+          requestId,
+        },
+      })
+    } catch (error) {
+      this.emit({
+        type: 'checkout_stage_response',
+        payload: {
+          cwd,
+          path,
+          success: false,
+          error: this.toCheckoutError(error),
+          requestId,
+        },
+      })
+    }
+  }
+
+  private async handleCheckoutUnstageRequest(
+    msg: Extract<SessionInboundMessage, { type: 'checkout_unstage_request' }>
+  ): Promise<void> {
+    const { cwd, path, requestId } = msg
+
+    try {
+      await unstageFile(cwd, path)
+      this.scheduleCheckoutDiffRefreshForCwd(cwd)
+
+      this.emit({
+        type: 'checkout_unstage_response',
+        payload: {
+          cwd,
+          path,
+          success: true,
+          error: null,
+          requestId,
+        },
+      })
+    } catch (error) {
+      this.emit({
+        type: 'checkout_unstage_response',
+        payload: {
+          cwd,
+          path,
           success: false,
           error: this.toCheckoutError(error),
           requestId,
