@@ -2,7 +2,13 @@ import { ChevronDown, RefreshCw, X } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import type { ParsedDiffFile } from '@/diff/diff-types'
-import { sendCommitRequest, sendStageRequest, sendUnstageRequest, subscribeCommitResponses } from '@/diff/diff-store'
+import {
+  sendCommitRequest,
+  sendStageRequest,
+  sendUnstageRequest,
+  subscribeCommitResponses,
+  subscribeStageResponses,
+} from '@/diff/diff-store'
 import { DiffFileSection } from '@/components/diff-file-section'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -75,6 +81,22 @@ export function DiffPanel({
       toast.error(payload.error?.message ?? 'Commit failed')
     })
   }, [pendingCommitCwd])
+
+  useEffect(() => {
+    return subscribeStageResponses((payload) => {
+      if (!cwd || payload.cwd !== cwd) {
+        return
+      }
+
+      if (payload.success) {
+        const actionLabel = payload.action === 'stage' ? 'staged' : 'unstaged'
+        toast.success(`${payload.path} ${actionLabel}`)
+        return
+      }
+
+      toast.error(payload.error?.message ?? 'Stage/unstage failed')
+    })
+  }, [cwd])
 
   const sortedStaged = [...stagedFiles].sort((a, b) => a.path.localeCompare(b.path))
   const sortedUnstaged = [...unstagedFiles].sort((a, b) => a.path.localeCompare(b.path))

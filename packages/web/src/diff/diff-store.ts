@@ -25,6 +25,16 @@ const commitResponseListeners = new Set<
     requestId: string
   }) => void
 >()
+const stageResponseListeners = new Set<
+  (payload: {
+    cwd: string
+    path: string
+    action: 'stage' | 'unstage'
+    success: boolean
+    error: { code: string; message: string } | null
+    requestId: string
+  }) => void
+>()
 
 const initialState: DiffStoreState = {
   connectionStatus: getConnectionStatus(),
@@ -115,6 +125,44 @@ function parseCheckoutCommitResponsePayload(payload: unknown): {
 
   return {
     cwd,
+    success,
+    error:
+      isRecord(error) && typeof error.message === 'string' && typeof error.code === 'string'
+        ? { code: error.code, message: error.message }
+        : null,
+    requestId,
+  }
+}
+
+function parseCheckoutStageResponsePayload(payload: unknown): {
+  cwd: string
+  path: string
+  success: boolean
+  error: { code: string; message: string } | null
+  requestId: string
+} | null {
+  if (!isRecord(payload)) {
+    return null
+  }
+
+  const cwd = payload.cwd
+  const path = payload.path
+  const success = payload.success
+  const error = payload.error
+  const requestId = payload.requestId
+
+  if (
+    typeof cwd !== 'string' ||
+    typeof path !== 'string' ||
+    typeof success !== 'boolean' ||
+    typeof requestId !== 'string'
+  ) {
+    return null
+  }
+
+  return {
+    cwd,
+    path,
     success,
     error:
       isRecord(error) && typeof error.message === 'string' && typeof error.code === 'string'
@@ -237,8 +285,20 @@ function handleDiffSessionMessage(rawMessage: unknown): void {
       return
     }
     case 'checkout_stage_response':
-    case 'checkout_unstage_response':
+    case 'checkout_unstage_response': {
+      const payload = parseCheckoutStageResponsePayload(message.payload)
+      if (!payload) {
+        return
+      }
+      const action = message.type === 'checkout_stage_response' ? 'stage' : 'unstage'
+      for (const listener of stageResponseListeners) {
+        listener({
+          ...payload,
+          action,
+        })
+      }
       return
+    }
     default:
       return
   }
@@ -407,5 +467,21 @@ export function subscribeCommitResponses(
   commitResponseListeners.add(listener)
   return () => {
     commitResponseListeners.delete(listener)
+  }
+}
+
+export function subscribeStageResponses(
+  listener: (payload: {
+    cwd: string
+    path: string
+    action: 'stage' | 'unstage'
+    success: boolean
+    error: { code: string; message: string } | null
+    requestId: string
+  }) => void,
+): () => void {
+  stageResponseListeners.add(listener)
+  return () => {
+    stageResponseListeners.delete(listener)
   }
 }
