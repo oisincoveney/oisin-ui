@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { PanelRightOpen, RefreshCw } from 'lucide-react'
 import type { PanelSize } from 'react-resizable-panels'
@@ -206,10 +206,7 @@ function App() {
   const diffSnapshot = useDiffStoreSnapshot()
   const isMobile = useIsMobile()
   const activeThread = getActiveThread(threadSnapshot)
-  const activeThreadTerminalId =
-    activeThread && activeThread.status !== 'closed' && activeThread.status !== 'error'
-      ? (activeThread.terminalId ?? null)
-      : null
+  const activeThreadTerminalId = activeThread?.terminalId ?? null
   const activeDiffEntry = getActiveDiffEntry(diffSnapshot)
   const diffStagedFiles = activeDiffEntry?.stagedFiles ?? []
   const diffUnstagedFiles = activeDiffEntry?.unstagedFiles ?? []
@@ -553,9 +550,12 @@ function App() {
 
     if (!activeThreadTerminalId) {
       const activeThreadCleared = threadSnapshot.activeThreadKey === null
-      if (activeThreadCleared) {
-        attachCycleRef.current += 1
+      if (!activeThreadCleared) {
+        ensureDefaultTerminal()
+        return
       }
+
+      attachCycleRef.current += 1
       markRuntimeWarmupAttachSettled()
       resetAttachRecovery()
       pendingEnsureRef.current = null
@@ -777,12 +777,12 @@ function App() {
     }
   }, [])
 
-  const handleTerminalDispose = () => {
+  const handleTerminalDispose = useCallback(() => {
     clearPendingScroll()
     terminalRef.current = null
-  }
+  }, [])
 
-  const handleTerminalReady = (term: Terminal) => {
+  const handleTerminalReady = useCallback((term: Terminal) => {
     terminalRef.current = term
     adapterRef.current = new TerminalStreamAdapter(term, 0, sendWsBinary, {
       onChunkApplied: (chunk) => {
@@ -791,20 +791,20 @@ function App() {
         }
       },
     })
-    adapterRef.current.setTransportConnected(status === 'connected')
+    adapterRef.current.setTransportConnected(statusRef.current === 'connected')
 
     term.onData((data) => {
       adapterRef.current?.sendInput(data)
     })
 
-    if (status === 'connected') {
-      if (activeThreadTerminalId) {
-        terminalIdRef.current = activeThreadTerminalId
-        setTerminalId(activeThreadTerminalId)
-        sendAttachRequest(activeThreadTerminalId, false)
+    if (statusRef.current === 'connected') {
+      if (activeThreadTerminalIdRef.current) {
+        terminalIdRef.current = activeThreadTerminalIdRef.current
+        setTerminalId(activeThreadTerminalIdRef.current)
+        sendAttachRequest(activeThreadTerminalIdRef.current, false)
       }
     }
-  }
+  }, [])
 
   const handleResize = (cols: number, rows: number) => {
     const terminalId = terminalIdRef.current
@@ -826,7 +826,7 @@ function App() {
   const attachRecoveryRemainingMs = getAttachRecoveryRemainingMs(attachRecovery, attachRecoveryNow)
 
   return (
-    <main className="relative flex h-full w-full flex-col overflow-hidden bg-background">
+    <main className="relative flex h-dvh w-full flex-col overflow-hidden bg-background">
       <header className="flex h-11 items-center justify-between border-b border-border/60 px-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-foreground">{activeThread?.title ?? 'Terminal'}</p>
@@ -870,17 +870,23 @@ function App() {
       </header>
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
-          <ResizablePanel minSize={40} className="overflow-hidden">
-            <TerminalView onTerminalReady={handleTerminalReady} onDispose={handleTerminalDispose} onResize={handleResize} className="h-full w-full" />
+        <ResizablePanelGroup orientation="horizontal" className="h-full min-h-0 w-full">
+          <ResizablePanel minSize="40%" className="min-h-0 overflow-hidden">
+            <TerminalView
+              onTerminalReady={handleTerminalReady}
+              onDispose={handleTerminalDispose}
+              onResize={handleResize}
+              className="h-full w-full"
+            />
           </ResizablePanel>
           {!isMobile && diffPanelOpen && (
             <>
               <ResizableHandle withHandle />
               <ResizablePanel
-                defaultSize={diffPanelWidth}
-                minSize={30}
-                maxSize={60}
+                className="min-h-0 overflow-hidden"
+                defaultSize={`${diffPanelWidth}%`}
+                minSize="30%"
+                maxSize="60%"
                 onResize={(size: PanelSize) => {
                   setDiffPanelWidthPercent(size.asPercentage)
                 }}

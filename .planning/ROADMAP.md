@@ -15,7 +15,7 @@ v1.1 Hardening closes the remaining reliability and verification gaps from v1 so
 - [x] **Phase 06: Runtime Reliability Hardening** - Restart/reconnect/create/delete flows remain bounded and recoverable. (Completed 2026-02-26)
 - [x] **Phase 07: Thread Metadata Contract Closure** - Active thread context remains consistent across ensure/reconnect/refresh. (Completed 2026-02-27)
 - [x] **Phase 08: Deterministic Verification Closure** - Browser/runtime hardening checks run deterministically in one repeatable path. (Completed 2026-02-28)
-- [x] **Phase 09: Diff Panel Redesign** - Users see collapsible Staged/Unstaged sections with inline diff expansion and per-file stats. (Completed 2026-03-01)
+- [ ] **Phase 09: Diff Panel Redesign** - Users see collapsible Staged/Unstaged sections with inline diff expansion and per-file stats. (UAT gap closure in progress)
 - [ ] **Phase 10: Hunk Staging & Commit** - Users can stage/unstage individual hunks and commit staged changes directly from the browser.
 
 ## Phase Details
@@ -86,7 +86,7 @@ Plans:
   2. User expands a section and clicks a file to see its diff rendered inline within the same panel (no separate right-pane viewer).
   3. Staged and unstaged files are sourced from separate daemon diff calls and displayed in their respective sections.
   4. Renamed files (R status) appear correctly in the file list without broken display.
-**Plans**: 9 plans
+**Plans**: 11 plans
 Plans:
 
 - [x] 09-01-PLAN.md — Add commit bar + Changes section to DiffPanel; tooltip path + new/del badges in DiffFileSection
@@ -94,10 +94,12 @@ Plans:
 - [x] 09-03-PLAN.md — Split daemon diff into stagedFiles/unstagedFiles; propagate through schema, session, web types
 - [x] 09-04-PLAN.md — Replace single Changes section with Staged/Unstaged collapsibles in DiffPanel
 - [x] 09-05-PLAN.md — Add section header assertions to e2e spec
-- [ ] 09-06-PLAN.md — Fix terminal thrash on diff panel open/close (UAT gap 1)
-- [ ] 09-07-PLAN.md — Wire updatedAt to DiffPanel; guard stale scroll-to-bottom (UAT gap 2)
-- [ ] 09-08-PLAN.md — Server-side stale worktree cwd recovery in diff subscription (UAT gap 3)
-- [ ] 09-09-PLAN.md — Re-verify and fix renamed file display after gaps 1-3 closed (UAT gap 4)
+- [x] 09-06-PLAN.md — Fix terminal thrash on diff panel open/close (UAT gap 1)
+- [x] 09-07-PLAN.md — Wire updatedAt to DiffPanel; guard stale scroll-to-bottom (UAT gap 2)
+- [x] 09-08-PLAN.md — Server-side stale worktree cwd recovery in diff subscription (UAT gap 3)
+- [x] 09-09-PLAN.md — Re-verify and fix renamed file display after gaps 1-3 closed (UAT gap 4)
+- [ ] 09-10-PLAN.md — Thread-scoped diff cwd recovery; add projectId/threadId to subscribe contract (UAT gap 4 re-open)
+- [ ] 09-11-PLAN.md — Terminal stale-cwd validation on rehydrate; kill stale tmux sessions (UAT gap 5)
 
 ### Phase 10: Hunk Staging & Commit
 
@@ -123,7 +125,7 @@ Plans:
 | 06. Runtime Reliability Hardening | v1.1 | RUN-01, RUN-02, RUN-03, RUN-04 | 8/8 | Complete | 2026-02-26 |
 | 07. Thread Metadata Contract Closure | v1.1 | THRD-01, THRD-02, THRD-03 | 2/2 | Complete | 2026-02-27 |
 | 08. Deterministic Verification Closure | v1.1 | VER-01, VER-02, VER-03 | 2/2 | Complete | 2026-02-28 |
-| 09. Diff Panel Redesign | v2 | DIFF-02 | 5/5 | Complete | 2026-03-01 |
+| 09. Diff Panel Redesign | v2 | DIFF-02 | 9/11 | In Progress | — |
 | 10. Hunk Staging & Commit | v2 | DIFF-03, DIFF-04 | 0/TBD | Pending | — |
 
 ---

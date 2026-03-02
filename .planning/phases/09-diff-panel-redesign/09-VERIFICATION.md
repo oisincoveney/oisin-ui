@@ -96,5 +96,25 @@ Phase 09 delivered the accordion/expand-in-place diff panel design as documented
 
 ---
 
-*Verified: 2026-03-01T05:04:13Z*
-*Verifier: Claude Code (gsd-verifier)*
+## Post-Gap Regression Verification (2026-03-01)
+
+After executing 09-06..09-09 gap closure fixes, an additional live browser regression pass confirmed the full happy path remains intact with the final code:
+
+- Terminal remains visible while toggling diff panel (`baselineHtml: 720`, `postCloseHtml: 720`)
+- Diff panel timestamp renders (`"Updated just now"`)
+- Inline diff expansion works (`aria-expanded=true` after keyboard Enter on file row)
+- Thread switching works (`Meta+ArrowDown/Up` changes active thread and returns)
+- Rename label renders in real staged rename flow:
+  - `tracked_old_1772412032409.txt -> tracked_new_1772412032409.txt`
+
+Verification commands run in final pass:
+
+- `bun run --cwd packages/web tsc --noEmit` ✅
+- `bun test packages/web/src/App.test.tsx packages/web/src/terminal/terminal-stream.test.ts` ✅ (`9 pass`, `0 fail`)
+- `bun run test` ⚠️ repository-wide pre-existing failures outside this phase:
+  - `src/server/voice-mcp-bridge.test.ts`
+  - `src/terminal/terminal-manager.test.ts` (2 tests)
+  - `src/server/daemon-e2e/thread-management.e2e.test.ts`
+
+*Verified: 2026-03-01T16:45:00Z*
+*Verifier: OpenCode*

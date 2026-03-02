@@ -40,13 +40,22 @@ function formatUpdatedAt(updatedAt: string | null | undefined): string {
   return `Updated ${Math.floor(deltaSeconds / 60)}m ago`
 }
 
-export function DiffPanel({ stagedFiles, unstagedFiles, loading, error, updatedAt, onClose, onRefresh, refreshAction }: DiffPanelProps) {
+export function DiffPanel({
+  stagedFiles,
+  unstagedFiles,
+  loading,
+  error,
+  updatedAt,
+  onClose,
+  onRefresh,
+  refreshAction,
+}: DiffPanelProps) {
   const sortedStaged = [...stagedFiles].sort((a, b) => a.path.localeCompare(b.path))
   const sortedUnstaged = [...unstagedFiles].sort((a, b) => a.path.localeCompare(b.path))
   const hasNoChanges = stagedFiles.length === 0 && unstagedFiles.length === 0
 
   return (
-    <section data-testid="diff-panel" className="flex h-full min-w-0 flex-col bg-card">
+    <section data-testid="diff-panel" className="flex h-full min-h-0 min-w-0 w-full flex-col bg-card">
       <header className="flex items-center justify-between gap-2 px-3 py-2">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Code Diff</p>
@@ -94,14 +103,12 @@ export function DiffPanel({ stagedFiles, unstagedFiles, loading, error, updatedA
 
       <Separator />
 
-      <ScrollArea className="h-full">
+      <ScrollArea className="min-h-0 flex-1">
         <div className="p-3">
           {loading ? <p className="text-sm text-muted-foreground">Refreshing changes from active thread...</p> : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-          {hasNoChanges && !loading ? (
-            <p className="text-sm text-muted-foreground">No changes</p>
-          ) : null}
+          {hasNoChanges && !loading ? <p className="text-sm text-muted-foreground">No changes</p> : null}
 
           {sortedStaged.length > 0 ? (
             <Collapsible defaultOpen>
