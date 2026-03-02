@@ -62,6 +62,7 @@
     "ws": "^8.19.0"
   },
   "trustedDependencies": [
-    "onnxruntime-node"
+    "onnxruntime-node",
+    "sqlite3"
   ]
 }
