@@ -1,4 +1,4 @@
-import { ChevronDown, Circle, Plus } from 'lucide-react'
+import { ChevronDown, Circle, Plus, X } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,6 +9,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
@@ -128,12 +129,7 @@ export function AppSidebar() {
                     return (
                       <SidebarMenuItem key={project.projectId}>
                         <Collapsible defaultOpen>
-                          <CollapsibleTrigger
-                            className={cn(
-                              'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm font-medium',
-                              'text-foreground/90 hover:bg-accent/60 hover:text-accent-foreground',
-                            )}
-                          >
+                          <CollapsibleTrigger render={<SidebarMenuButton />}>
                             <span className="truncate">{project.displayName}</span>
                             <span className="flex items-center gap-1 text-xs text-muted-foreground">
                               <span>{threads.length}</span>
@@ -170,8 +166,7 @@ export function AppSidebar() {
 
                                 return (
                                   <SidebarMenuItem key={thread.threadId}>
-                                    <div className="group flex items-start gap-1">
-                                      <SidebarMenuButton
+                                    <SidebarMenuButton
                                         isActive={isActive}
                                         disabled={actionsLocked}
                                         title={actionsLocked ? (actionLockReason ?? undefined) : undefined}
@@ -200,13 +195,12 @@ export function AppSidebar() {
                                         </div>
                                       </SidebarMenuButton>
 
-                                      <Tooltip>
-                                        <TooltipTrigger render={<span />}>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
+                                    <Tooltip>
+                                      <TooltipTrigger
+                                        render={
+                                          <SidebarMenuAction
+                                            showOnHover
                                             disabled={actionsLocked}
-                                            className="mt-1 h-6 w-6 opacity-0 group-hover:opacity-100"
                                             onClick={() => {
                                               setDeleteDialogTarget({
                                                 projectId: project.projectId,
@@ -215,16 +209,17 @@ export function AppSidebar() {
                                               })
                                             }}
                                             aria-label={`Delete ${thread.title}`}
-                                            title={
-                                              actionsLocked ? (actionLockReason ?? undefined) : `Delete ${thread.title}`
-                                            }
-                                          >
-                                            <span className="text-xs">x</span>
-                                          </Button>
-                                        </TooltipTrigger>
-                                        {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
-                                      </Tooltip>
-                                    </div>
+                                          />
+                                        }
+                                      >
+                                        <X />
+                                      </TooltipTrigger>
+                                      {actionsLocked ? (
+                                        <TooltipContent>{actionLockReason}</TooltipContent>
+                                      ) : (
+                                        <TooltipContent>Delete {thread.title}</TooltipContent>
+                                      )}
+                                    </Tooltip>
                                   </SidebarMenuItem>
                                 )
                               })}
