@@ -17,6 +17,14 @@ const jotaiStore = getDefaultStore()
 let started = false
 let unsubscribeTextMessages: (() => void) | null = null
 let unsubscribeConnectionStatus: (() => void) | null = null
+const commitResponseListeners = new Set<
+  (payload: {
+    cwd: string
+    success: boolean
+    error: { code: string; message: string } | null
+    requestId: string
+  }) => void
+>()
 
 const initialState: DiffStoreState = {
   connectionStatus: getConnectionStatus(),
@@ -83,6 +91,36 @@ function parseCheckoutDiffPayload(payload: unknown): CheckoutDiffPayload | null 
       isRecord(error) && typeof error.message === 'string' && typeof error.code === 'string'
         ? { code: error.code, message: error.message }
         : null,
+  }
+}
+
+function parseCheckoutCommitResponsePayload(payload: unknown): {
+  cwd: string
+  success: boolean
+  error: { code: string; message: string } | null
+  requestId: string
+} | null {
+  if (!isRecord(payload)) {
+    return null
+  }
+
+  const cwd = payload.cwd
+  const success = payload.success
+  const error = payload.error
+  const requestId = payload.requestId
+
+  if (typeof cwd !== 'string' || typeof success !== 'boolean' || typeof requestId !== 'string') {
+    return null
+  }
+
+  return {
+    cwd,
+    success,
+    error:
+      isRecord(error) && typeof error.message === 'string' && typeof error.code === 'string'
+        ? { code: error.code, message: error.message }
+        : null,
+    requestId,
   }
 }
 
@@ -188,6 +226,19 @@ function handleDiffSessionMessage(rawMessage: unknown): void {
       applyDiffPayload(payload)
       return
     }
+    case 'checkout_commit_response': {
+      const payload = parseCheckoutCommitResponsePayload(message.payload)
+      if (!payload) {
+        return
+      }
+      for (const listener of commitResponseListeners) {
+        listener(payload)
+      }
+      return
+    }
+    case 'checkout_stage_response':
+    case 'checkout_unstage_response':
+      return
     default:
       return
   }
@@ -312,4 +363,49 @@ export function refreshActiveDiffSnapshot(): void {
     return
   }
   subscribeToDiffTarget(state.activeTarget)
+}
+
+export function sendStageRequest(cwd: string, filePath: string): void {
+  const requestId = randomId('stage')
+  sendWsMessage({
+    type: 'checkout_stage_request',
+    cwd,
+    path: filePath,
+    requestId,
+  })
+}
+
+export function sendUnstageRequest(cwd: string, filePath: string): void {
+  const requestId = randomId('unstage')
+  sendWsMessage({
+    type: 'checkout_unstage_request',
+    cwd,
+    path: filePath,
+    requestId,
+  })
+}
+
+export function sendCommitRequest(cwd: string, message: string): void {
+  const requestId = randomId('commit')
+  sendWsMessage({
+    type: 'checkout_commit_request',
+    cwd,
+    message,
+    addAll: false,
+    requestId,
+  })
+}
+
+export function subscribeCommitResponses(
+  listener: (payload: {
+    cwd: string
+    success: boolean
+    error: { code: string; message: string } | null
+    requestId: string
+  }) => void,
+): () => void {
+  commitResponseListeners.add(listener)
+  return () => {
+    commitResponseListeners.delete(listener)
+  }
 }

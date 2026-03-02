@@ -55,6 +55,35 @@ export type DiffSessionMessage =
       type: 'checkout_diff_update'
       payload: CheckoutDiffPayload
     }
+  | {
+      type: 'checkout_stage_response'
+      payload: {
+        cwd: string
+        path: string
+        success: boolean
+        error: CheckoutError | null
+        requestId: string
+      }
+    }
+  | {
+      type: 'checkout_unstage_response'
+      payload: {
+        cwd: string
+        path: string
+        success: boolean
+        error: CheckoutError | null
+        requestId: string
+      }
+    }
+  | {
+      type: 'checkout_commit_response'
+      payload: {
+        cwd: string
+        success: boolean
+        error: CheckoutError | null
+        requestId: string
+      }
+    }
 
 export type ThreadDiffTarget = {
   projectId: string
