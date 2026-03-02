@@ -1,6 +1,8 @@
 import { ChevronDown, RefreshCw, X } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import type { ParsedDiffFile } from '@/diff/diff-types'
+import { sendCommitRequest, subscribeCommitResponses } from '@/diff/diff-store'
 import { DiffFileSection } from '@/components/diff-file-section'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -11,6 +13,7 @@ import { Separator } from '@/components/ui/separator'
 type DiffPanelProps = {
   stagedFiles: ParsedDiffFile[]
   unstagedFiles: ParsedDiffFile[]
+  cwd: string | null
   loading: boolean
   error: string | null
   updatedAt?: string | null
@@ -43,6 +46,7 @@ function formatUpdatedAt(updatedAt: string | null | undefined): string {
 export function DiffPanel({
   stagedFiles,
   unstagedFiles,
+  cwd,
   loading,
   error,
   updatedAt,
@@ -50,6 +54,28 @@ export function DiffPanel({
   onRefresh,
   refreshAction,
 }: DiffPanelProps) {
+  const [commitMessage, setCommitMessage] = useState('')
+  const [isCommitting, setIsCommitting] = useState(false)
+  const [pendingCommitCwd, setPendingCommitCwd] = useState<string | null>(null)
+
+  useEffect(() => {
+    return subscribeCommitResponses((payload) => {
+      if (!pendingCommitCwd || payload.cwd !== pendingCommitCwd) {
+        return
+      }
+
+      setIsCommitting(false)
+      setPendingCommitCwd(null)
+
+      if (payload.success) {
+        setCommitMessage('')
+        return
+      }
+
+      toast.error(payload.error?.message ?? 'Commit failed')
+    })
+  }, [pendingCommitCwd])
+
   const sortedStaged = [...stagedFiles].sort((a, b) => a.path.localeCompare(b.path))
   const sortedUnstaged = [...unstagedFiles].sort((a, b) => a.path.localeCompare(b.path))
   const hasNoChanges = stagedFiles.length === 0 && unstagedFiles.length === 0
@@ -94,9 +120,35 @@ export function DiffPanel({
 
       <Separator />
 
-      <form className="flex gap-2 px-3 py-2">
-        <Input placeholder="Commit message" disabled className="h-8 flex-1 text-sm" aria-label="Commit message" />
-        <Button type="submit" size="sm" disabled>
+      <form
+        className="flex gap-2 px-3 py-2"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const message = commitMessage.trim()
+          if (!cwd || !message || stagedFiles.length === 0) {
+            return
+          }
+
+          setIsCommitting(true)
+          setPendingCommitCwd(cwd)
+          sendCommitRequest(cwd, message)
+        }}
+      >
+        <Input
+          placeholder="Commit message"
+          value={commitMessage}
+          onChange={(event) => {
+            setCommitMessage(event.target.value)
+          }}
+          disabled={isCommitting || !cwd}
+          className="h-8 flex-1 text-sm"
+          aria-label="Commit message"
+        />
+        <Button
+          type="submit"
+          size="sm"
+          disabled={!commitMessage.trim() || stagedFiles.length === 0 || isCommitting || !cwd}
+        >
           Commit
         </Button>
       </form>

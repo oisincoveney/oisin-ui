@@ -894,6 +894,7 @@ function App() {
                 <DiffPanel
                   stagedFiles={diffStagedFiles}
                   unstagedFiles={diffUnstagedFiles}
+                  cwd={activeDiffEntry?.cwd ?? diffSnapshot.activeTarget?.cwd ?? null}
                   updatedAt={activeDiffEntry?.updatedAt ?? null}
                   loading={diffSnapshot.loading}
                   error={diffSnapshot.error}
