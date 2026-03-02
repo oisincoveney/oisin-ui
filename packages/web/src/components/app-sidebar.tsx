@@ -1,6 +1,8 @@
 import { ChevronDown, Circle, Plus, X } from 'lucide-react'
 import { useState } from 'react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import {
   Sidebar,
   SidebarContent,
@@ -10,8 +12,11 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuAction,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { switchToThread, useThreadStoreSnapshot, getThreadActionLockReason } from '@/thread/thread-store'
@@ -69,7 +74,7 @@ export function AppSidebar() {
   const actionLockReason = getThreadActionLockReason(snapshot)
   const actionsLocked = Boolean(actionLockReason)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [createProjectId, setCreateProjectId] = useState<string | null>(null)
+  const [createProjectId, setCreateProjectId] = useState< string | null >(null)
   const [deleteDialogTarget, setDeleteDialogTarget] = useState<{
     projectId: string
     threadId: string
@@ -81,41 +86,44 @@ export function AppSidebar() {
       <TooltipProvider delay={100}>
         <Sidebar>
           <SidebarHeader>
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Threads</p>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-foreground">Projects</p>
+            <SidebarGroupLabel className="h-auto justify-between items-start">
+              <SidebarGroup>
+                <Label className="text-xs uppercase tracking-wide">Threads</Label>
+                <SidebarGroupLabel className="h-auto gap-2">
+                  <Label className="text-sm font-semibold">Projects</Label>
                   {actionsLocked ? (
-                    <span
-                      className="inline-flex items-center rounded-full border border-amber-500/35 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-300"
+                    <Badge
+                      variant="outline"
+                      className="border-amber-500/35 bg-amber-500/10 text-[11px] font-medium text-amber-300"
                       aria-label="Warm-up in progress"
                     >
                       Warm-up
-                    </span>
+                    </Badge>
                   ) : null}
-                </div>
-              </div>
+                </SidebarGroupLabel>
+              </SidebarGroup>
 
               <Tooltip>
-                <TooltipTrigger render={<span />}>
-                  <Button
-                    size="sm"
-                    className="h-8"
-                    aria-label="Create new thread"
-                    disabled={actionsLocked}
-                    onClick={() => {
-                      setCreateProjectId(snapshot.projects[0]?.projectId ?? null)
-                      setCreateDialogOpen(true)
-                    }}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    New Thread
-                  </Button>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      size="sm"
+                      className="h-8 shrink-0"
+                      aria-label="Create new thread"
+                      disabled={actionsLocked}
+                      onClick={() => {
+                        setCreateProjectId(snapshot.projects[0]?.projectId ?? null)
+                        setCreateDialogOpen(true)
+                      }}
+                    />
+                  }
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  New Thread
                 </TooltipTrigger>
                 {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
               </Tooltip>
-            </div>
+            </SidebarGroupLabel>
           </SidebarHeader>
 
           <SidebarContent>
@@ -130,34 +138,38 @@ export function AppSidebar() {
                       <SidebarMenuItem key={project.projectId}>
                         <Collapsible defaultOpen>
                           <CollapsibleTrigger render={<SidebarMenuButton />}>
-                            <span className="truncate">{project.displayName}</span>
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <span>{threads.length}</span>
+                            <Label className="truncate">{project.displayName}</Label>
+                            <SidebarMenuBadge className="static flex items-center gap-1">
+                              <Label>{threads.length}</Label>
                               <ChevronDown className="h-3.5 w-3.5" />
-                            </span>
+                            </SidebarMenuBadge>
                           </CollapsibleTrigger>
 
                           <CollapsibleContent className="pt-1">
-                            <div className="mb-1 pl-2">
-                              <Tooltip>
-                                <TooltipTrigger render={<span />}>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 w-full justify-start text-xs"
-                                    disabled={actionsLocked}
-                                    onClick={() => {
-                                      setCreateProjectId(project.projectId)
-                                      setCreateDialogOpen(true)
-                                    }}
+                            <SidebarMenuSub className="mb-1">
+                              <SidebarMenuSubItem>
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    render={
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-full justify-start text-xs"
+                                        disabled={actionsLocked}
+                                        onClick={() => {
+                                          setCreateProjectId(project.projectId)
+                                          setCreateDialogOpen(true)
+                                        }}
+                                      />
+                                    }
                                   >
                                     <Plus className="h-3.5 w-3.5" />
                                     New Thread
-                                  </Button>
-                                </TooltipTrigger>
-                                {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
-                              </Tooltip>
-                            </div>
+                                  </TooltipTrigger>
+                                  {actionsLocked ? <TooltipContent>{actionLockReason}</TooltipContent> : null}
+                                </Tooltip>
+                              </SidebarMenuSubItem>
+                            </SidebarMenuSub>
 
                             <SidebarMenu className="space-y-1 pl-2">
                               {threads.map((thread) => {
@@ -167,33 +179,33 @@ export function AppSidebar() {
                                 return (
                                   <SidebarMenuItem key={thread.threadId}>
                                     <SidebarMenuButton
-                                        isActive={isActive}
-                                        disabled={actionsLocked}
-                                        title={actionsLocked ? (actionLockReason ?? undefined) : undefined}
-                                        onClick={() => {
-                                          switchToThread(project.projectId, thread.threadId)
-                                        }}
-                                        className="items-start"
-                                      >
-                                        <div className="flex min-w-0 flex-1 flex-col">
-                                          <div className="flex items-center gap-2">
-                                            <span className="truncate">{thread.title}</span>
-                                            {thread.unreadCount > 0 ? (
-                                              <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-primary" />
-                                            ) : null}
-                                          </div>
-                                          <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                                            <Circle
-                                              className={cn(
-                                                'h-2.5 w-2.5 fill-current stroke-current',
-                                                statusTone(thread.status),
-                                              )}
-                                            />
-                                            <span>{thread.status}</span>
-                                            <span>{formatRelativeTime(thread.lastOutputAt ?? thread.updatedAt)}</span>
-                                          </div>
-                                        </div>
-                                      </SidebarMenuButton>
+                                      isActive={isActive}
+                                      disabled={actionsLocked}
+                                      title={actionsLocked ? (actionLockReason ?? undefined) : undefined}
+                                      onClick={() => {
+                                        switchToThread(project.projectId, thread.threadId)
+                                      }}
+                                      className="items-start h-auto"
+                                    >
+                                      <SidebarGroup className="min-w-0 flex-1">
+                                        <SidebarGroupLabel className="h-auto gap-2 items-center">
+                                          <Label className="truncate">{thread.title}</Label>
+                                          {thread.unreadCount > 0 ? (
+                                            <Badge className="h-2 w-2 shrink-0 rounded-full bg-primary" />
+                                          ) : null}
+                                        </SidebarGroupLabel>
+                                        <SidebarGroupContent className="mt-0.5 flex items-center gap-2 text-xs">
+                                          <Circle
+                                            className={cn(
+                                              'h-2.5 w-2.5 fill-current stroke-current shrink-0',
+                                              statusTone(thread.status),
+                                            )}
+                                          />
+                                          <Label>{thread.status}</Label>
+                                          <Label>{formatRelativeTime(thread.lastOutputAt ?? thread.updatedAt)}</Label>
+                                        </SidebarGroupContent>
+                                      </SidebarGroup>
+                                    </SidebarMenuButton>
 
                                     <Tooltip>
                                       <TooltipTrigger
