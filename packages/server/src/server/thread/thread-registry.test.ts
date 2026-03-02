@@ -1,234 +1,145 @@
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { _resetDbForTesting, getDb, initDb, type DbHandle } from "./db.js";
 import { ThreadRegistry } from "./thread-registry.js";
 
-describe("ThreadRegistry", () => {
-  let paseoHome: string;
+const PROJECT = {
+  projectId: "proj-1",
+  displayName: "Test Project",
+  repoRoot: "/tmp/repo",
+  defaultBaseBranch: "main",
+};
+
+function makeThreadInput(
+  overrides: Partial<{
+    projectId: string;
+    threadId: string;
+    title: string;
+    launchConfig: { provider: "opencode" | "codex" | "claude-code"; modeId?: string | null };
+    links: {
+      worktreePath?: string | null;
+      terminalId?: string | null;
+      agentId?: string | null;
+      sessionKey?: string | null;
+    };
+  }> = {}
+) {
+  return {
+    projectId: "proj-1",
+    threadId: "thread-1",
+    title: "Test Thread",
+    launchConfig: { provider: "opencode" as const },
+    links: { worktreePath: "/tmp/repo/worktrees/thread-1" },
+    ...overrides,
+  };
+}
+
+function makeMemoryRegistry(): ThreadRegistry {
+  const registry = new ThreadRegistry("/unused");
+  (registry as unknown as { loaded: boolean; db: DbHandle }).loaded = true;
+  (registry as unknown as { loaded: boolean; db: DbHandle }).db = getDb();
+  return registry;
+}
+
+describe("ThreadRegistry (SQLite)", () => {
+  let registry: ThreadRegistry;
 
   beforeEach(async () => {
-    paseoHome = await mkdtemp(path.join(tmpdir(), "thread-registry-"));
+    _resetDbForTesting();
+    await initDb(":memory:");
+    registry = makeMemoryRegistry();
+    await registry.setProjects([PROJECT]);
   });
 
-  afterEach(async () => {
-    await rm(paseoHome, { recursive: true, force: true });
+  afterEach(() => {
+    _resetDbForTesting();
   });
 
-  it("initializes empty deterministic registry state", async () => {
-    const registry = new ThreadRegistry(paseoHome);
-    const state = await registry.load();
-
-    expect(state.version).toBe(1);
-    expect(state.projects).toEqual([]);
-    expect(state.threads).toEqual([]);
-    expect(state.active).toEqual({ projectId: null, threadId: null });
+  it("createThread writes idle status directly", async () => {
+    await registry.createThread(makeThreadInput());
+    const thread = await registry.getThread("proj-1", "thread-1");
+    expect(thread?.status).toBe("idle");
+    expect(thread?.links.worktreePath).toBe("/tmp/repo/worktrees/thread-1");
   });
 
-  it("persists projects and threads across restart", async () => {
-    const registry = new ThreadRegistry(paseoHome);
-    await registry.load();
+  it("createThread throws if worktreePath missing", async () => {
+    await expect(
+      registry.createThread(makeThreadInput({ links: {} }))
+    ).rejects.toThrow("worktreePath is required");
+  });
 
-    await registry.setProjects([
-      {
-        projectId: "proj-1",
-        displayName: "Repo One",
-        repoRoot: path.join(paseoHome, "repo-one"),
-        defaultBaseBranch: "main",
-        activeThreadId: null,
-      },
-    ]);
+  it("deleteThread removes the thread", async () => {
+    await registry.createThread(makeThreadInput());
+    await registry.deleteThread("proj-1", "thread-1");
+    const thread = await registry.getThread("proj-1", "thread-1");
+    expect(thread).toBeNull();
+  });
 
-    const thread = await registry.createThread({
+  it("switchThread sets active thread", async () => {
+    await registry.createThread(makeThreadInput({ threadId: "thread-1" }));
+    await registry.createThread(makeThreadInput({ threadId: "thread-2" }));
+
+    await registry.switchThread("proj-1", "thread-1");
+    const active = await registry.getActiveThread();
+    expect(active?.threadId).toBe("thread-1");
+  });
+
+  it("getActiveThread returns null initially", async () => {
+    const emptyRegistry = makeMemoryRegistry();
+    await emptyRegistry.setProjects([PROJECT]);
+    const active = await emptyRegistry.getActiveThread();
+    expect(active).toBeNull();
+  });
+
+  it("findThreadByAgentId uses in-memory map", async () => {
+    await registry.createThread(makeThreadInput());
+    await registry.updateThread({
       projectId: "proj-1",
       threadId: "thread-1",
-      title: "Initial thread",
-      launchConfig: {
-        provider: "opencode",
-      },
-      links: {
-        terminalId: "terminal-1",
-        sessionKey: "session-key-1",
-      },
+      links: { agentId: "agent-abc" },
     });
-    await registry.switchThread("proj-1", thread.threadId);
+    const thread = await registry.findThreadByAgentId("agent-abc");
+    expect(thread?.threadId).toBe("thread-1");
 
-    const reloaded = new ThreadRegistry(paseoHome);
-    const nextState = await reloaded.load();
-
-    expect(nextState.projects).toHaveLength(1);
-    expect(nextState.threads).toHaveLength(1);
-    expect(nextState.active).toEqual({ projectId: "proj-1", threadId: "thread-1" });
-    expect(nextState.threads[0]?.links.terminalId).toBe("terminal-1");
-  });
-
-  it("writes atomically using temp file + rename", async () => {
-    const registry = new ThreadRegistry(paseoHome);
-    await registry.load();
-    await registry.setProjects([
-      {
-        projectId: "proj-atomic",
-        displayName: "Atomic Repo",
-        repoRoot: path.join(paseoHome, "repo-atomic"),
-        activeThreadId: null,
-      },
-    ]);
-
-    const entries = await readdir(paseoHome);
-    expect(entries.some((entry) => entry.includes(".tmp-"))).toBe(false);
-    expect(entries).toContain("thread-registry.json");
-  });
-
-  it("preserves existing project activeThreadId when syncing configured projects", async () => {
-    const registry = new ThreadRegistry(paseoHome);
-    await registry.load();
-    await registry.setProjects([
-      {
-        projectId: "proj-sync",
-        displayName: "Sync Repo",
-        repoRoot: path.join(paseoHome, "repo-sync"),
-        defaultBaseBranch: "main",
-        activeThreadId: null,
-      },
-    ]);
-
-    const thread = await registry.createThread({
-      projectId: "proj-sync",
-      threadId: "thread-active",
-      title: "Active Thread",
-      launchConfig: { provider: "opencode" },
-    });
-    await registry.switchThread("proj-sync", thread.threadId);
-
-    await registry.setProjects([
-      {
-        projectId: "proj-sync",
-        displayName: "Sync Repo",
-        repoRoot: path.join(paseoHome, "repo-sync"),
-        defaultBaseBranch: "main",
-      },
-    ]);
-
-    const project = await registry.getProject("proj-sync");
-    expect(project?.activeThreadId).toBe("thread-active");
-  });
-
-  it("migrates legacy placeholder-only state to compatibility seed record", async () => {
-    const legacyPath = path.join(paseoHome, "thread-registry.json");
-    await writeFile(
-      legacyPath,
-      JSON.stringify(
-        {
-          threadId: "active",
-          threadScope: "phase2-active-thread-placeholder",
-          terminal: {
-            id: "terminal-legacy",
-            cwd: path.join(paseoHome, "legacy-repo"),
-          },
-          sessionKey: "legacy-session",
-        },
-        null,
-        2
-      ),
-      "utf8"
+    const row = await getDb().get<{ terminal_id: string | null }>(
+      "SELECT terminal_id FROM threads WHERE project_id = ? AND thread_id = ?",
+      "proj-1",
+      "thread-1"
     );
-
-    const registry = new ThreadRegistry(paseoHome);
-    const state = await registry.load();
-
-    expect(state.projects).toHaveLength(1);
-    expect(state.threads).toHaveLength(1);
-    expect(state.compatibility?.placeholderThreadId).toBe("active");
-    expect(state.compatibility?.placeholderThreadScope).toBe("phase2-active-thread-placeholder");
-    expect(state.active.projectId).toBe(state.compatibility?.seededProjectId ?? null);
-    expect(state.active.threadId).toBe(state.compatibility?.seededThreadId ?? null);
-    expect(state.threads[0]?.links.terminalId).toBe("terminal-legacy");
-
-    const persisted = JSON.parse(await readFile(legacyPath, "utf8")) as {
-      version: number;
-      projects: unknown[];
-      threads: unknown[];
-    };
-    expect(persisted.version).toBe(1);
-    expect(persisted.projects.length).toBe(1);
-    expect(persisted.threads.length).toBe(1);
+    expect(row).toEqual({ terminal_id: null });
   });
 
-  describe("getActiveThread", () => {
-    it("returns null when no threads exist", async () => {
-      const registry = new ThreadRegistry(paseoHome);
-      await registry.load();
-
-      const active = await registry.getActiveThread();
-      expect(active).toBeNull();
+  it("findThreadByTerminalId uses DB", async () => {
+    await registry.createThread(makeThreadInput());
+    await registry.updateThread({
+      projectId: "proj-1",
+      threadId: "thread-1",
+      links: { terminalId: "term-xyz" },
     });
+    const thread = await registry.findThreadByTerminalId("term-xyz");
+    expect(thread?.threadId).toBe("thread-1");
+  });
 
-    it("returns null when active pointer is cleared", async () => {
-      const registry = new ThreadRegistry(paseoHome);
-      await registry.load();
-
-      const thread = await registry.createThread({
-        projectId: "proj-clear",
-        threadId: "thread-clear",
-        title: "Thread to clear",
-        launchConfig: { provider: "opencode" },
-      });
-
-      // Delete the thread — active pointer should clear
-      await registry.deleteThread("proj-clear", thread.threadId);
-
-      const active = await registry.getActiveThread();
-      expect(active).toBeNull();
+  it("deleteThread clears agentId map", async () => {
+    await registry.createThread(makeThreadInput());
+    await registry.updateThread({
+      projectId: "proj-1",
+      threadId: "thread-1",
+      links: { agentId: "agent-abc" },
     });
+    await registry.deleteThread("proj-1", "thread-1");
+    const found = await registry.findThreadByAgentId("agent-abc");
+    expect(found).toBeNull();
+  });
 
-    it("returns the active thread after createThread", async () => {
-      const registry = new ThreadRegistry(paseoHome);
-      await registry.load();
-
-      const thread = await registry.createThread({
-        projectId: "proj-active",
-        threadId: "thread-active-1",
-        title: "Active Thread",
-        launchConfig: { provider: "opencode" },
-      });
-
-      const active = await registry.getActiveThread();
-      expect(active).not.toBeNull();
-      expect(active!.projectId).toBe("proj-active");
-      expect(active!.threadId).toBe(thread.threadId);
-      expect(active!.title).toBe("Active Thread");
-    });
-
-    it("returns the switched-to thread after switchThread", async () => {
-      const registry = new ThreadRegistry(paseoHome);
-      await registry.load();
-
-      const threadA = await registry.createThread({
-        projectId: "proj-switch",
-        threadId: "thread-switch-a",
-        title: "Thread A",
-        launchConfig: { provider: "opencode" },
-      });
-
-      const threadB = await registry.createThread({
-        projectId: "proj-switch",
-        threadId: "thread-switch-b",
-        title: "Thread B",
-        launchConfig: { provider: "opencode" },
-      });
-
-      // After creating B, B is active. Switch back to A.
-      await registry.switchThread("proj-switch", threadA.threadId);
-      let active = await registry.getActiveThread();
-      expect(active).not.toBeNull();
-      expect(active!.threadId).toBe(threadA.threadId);
-
-      // Switch to B
-      await registry.switchThread("proj-switch", threadB.threadId);
-      active = await registry.getActiveThread();
-      expect(active).not.toBeNull();
-      expect(active!.threadId).toBe(threadB.threadId);
-    });
+  it("listThreads returns all threads for project", async () => {
+    await registry.createThread(
+      makeThreadInput({ threadId: "t1", links: { worktreePath: "/tmp/repo/worktrees/t1" } })
+    );
+    await registry.createThread(
+      makeThreadInput({ threadId: "t2", links: { worktreePath: "/tmp/repo/worktrees/t2" } })
+    );
+    const threads = await registry.listThreads("proj-1");
+    expect(threads).toHaveLength(2);
   });
 });

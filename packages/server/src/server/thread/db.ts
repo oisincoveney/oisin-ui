@@ -47,3 +47,8 @@ export function getDb(): Database {
   }
   return _db;
 }
+
+/** @internal Test-only: resets the module-level db singleton. */
+export function _resetDbForTesting(): void {
+  _db = null;
+}
