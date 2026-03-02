@@ -10,15 +10,13 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 ## Current Position
 
 **Milestone:** v2 Code Review
-**Phase:** Phase 09 — diff-panel-redesign (complete)
-**Plan:** 09-05 complete
-**Status:** Phase 09 complete; Phase 10 pending
-**Last activity:** 2026-03-01 — Phase 09 complete: accordion/collapsible Staged/Unstaged design shipped
+**Phase:** Phase 09 of 10 — diff-panel-redesign
+**Plan:** 09-10 of 11 complete
+**Status:** In progress
+**Last activity:** 2026-03-01 — Completed 09-10: thread-scoped diff stale-cwd recovery + subscribe identity hints
 
 ```
-v1:   [████████████████████] 100% (5/5 phases) — shipped 2026-02-25
-v1.1: [████████████████████] 100% (3/3 phases) — shipped 2026-02-28
-v2:   [██████████░░░░░░░░░░]  ~50% — Phase 09 complete (5/5 plans)
+Plans: [██████████████████░░] 90% (56/62)
 ```
 
 ## Accumulated Context
@@ -72,11 +70,13 @@ v2:   [██████████░░░░░░░░░░]  ~50% — P
 - 09-03: `getNumstatByPath` replaces `getTrackedNumstatByPath` with variadic args to support `--cached`, no-ref, and ref-based numstat.
 - 09-04: DiffMobileSheet kept with `files[]` (combined array) — out of scope; CollapsibleTrigger `asChild` removed (base-ui has no asChild).
 - 09-05: Regex matchers `/^Staged \(\d+\)/` used in e2e assertions — count-agnostic, matches any N.
+- 09-10: `subscribe_checkout_diff_request` now carries optional `projectId`/`threadId`; older clients remain compatible.
+- 09-10: `resolveValidDiffCwd` now performs hinted project-scoped fallback before global project iteration to preserve per-thread diff isolation.
 
 ## Session Continuity
 
-**Last session:** 2026-03-01
-**Stopped at:** Phase 09 complete (all 5 plans shipped)
+**Last session:** 2026-03-01 17:35 PST
+**Stopped at:** Completed 09-10-PLAN.md
 **Resume file:** None
 
 ---
@@ -89,4 +89,4 @@ v2:   [██████████░░░░░░░░░░]  ~50% — P
 
 ---
 
-_State updated: 2026-03-01 — Phase 09 complete. Accordion/collapsible design shipped: Staged(N)/Unstaged(N) sections with inline diff expansion, no two-column layout, no tabs, no right-pane viewer._
+_State updated: 2026-03-01 — Completed 09-10 with thread-scoped diff stale-cwd recovery and project/thread identity propagation in subscribe requests._
