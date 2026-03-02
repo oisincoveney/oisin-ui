@@ -104,7 +104,8 @@ Plans: [████████████████████] 100% (62/6
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 001 | Add oxlint/oxfmt/shadcn-enforcer/AGENTS.md to web package | 2026-02-28 | 4726a8d | [001-add-oxlint-oxfmt-shadcn-enforcer-plugin](./quick/001-add-oxlint-oxfmt-shadcn-enforcer-plugin/) |
+| 002 | Refactor app sidebar to use pure ShadCN structure | 2026-03-02 | 73362d7 | [002-refactor-app-sidebar-to-use-pure-shadcn-stru](./quick/002-refactor-app-sidebar-to-use-pure-shadcn-stru/) |
 
 ---
 
-_State updated: 2026-03-02 — Completed 10-05 with SQLite-backed thread registry test rewrite and startup reconciliation coverage._
+_State updated: 2026-03-02 — Completed quick-002: Refactored app sidebar to use pure ShadCN structure with CSS peering._
