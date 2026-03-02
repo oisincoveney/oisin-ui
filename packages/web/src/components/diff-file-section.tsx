@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronDown, FileCode2 } from 'lucide-react'
+import { ChevronDown, FileCode2, Minus, Plus } from 'lucide-react'
 import type { ParsedDiffFile } from '@/diff/diff-types'
 import { DEFAULT_VISIBLE_HUNK_COUNT, getDiffFileDisplayPath, toDiff2Html } from '@/diff/diff2html-adapter'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,9 @@ import { cn } from '@/lib/utils'
 
 type DiffFileSectionProps = {
   file: ParsedDiffFile
+  isStaged?: boolean
+  onStage?: (path: string) => void
+  onUnstage?: (path: string) => void
 }
 
 function formatFileStatus(file: ParsedDiffFile): string | null {
@@ -25,7 +28,7 @@ function isSummaryOnly(file: ParsedDiffFile): boolean {
   return file.status === 'binary' || file.status === 'too_large'
 }
 
-export function DiffFileSection({ file }: DiffFileSectionProps) {
+export function DiffFileSection({ file, isStaged, onStage, onUnstage }: DiffFileSectionProps) {
   const [open, setOpen] = useState(false)
   const [showAllHunks, setShowAllHunks] = useState(false)
   const [html, setHtml] = useState<string | null>(null)
@@ -35,6 +38,7 @@ export function DiffFileSection({ file }: DiffFileSectionProps) {
   const visibleHunkCount = showAllHunks ? file.hunks.length : Math.min(file.hunks.length, DEFAULT_VISIBLE_HUNK_COUNT)
   const hiddenHunkCount = Math.max(0, file.hunks.length - visibleHunkCount)
   const displayPath = useMemo(() => getDiffFileDisplayPath(file), [file])
+  const showStageButton = Boolean(onStage && onUnstage)
 
   useEffect(() => {
     if (!open || summaryOnly) {
@@ -92,6 +96,27 @@ export function DiffFileSection({ file }: DiffFileSectionProps) {
               ) : null}
             </p>
           </div>
+          {showStageButton ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                if (isStaged) {
+                  onUnstage?.(file.path)
+                  return
+                }
+                onStage?.(file.path)
+              }}
+              title={isStaged ? 'Unstage file' : 'Stage file'}
+              aria-label={isStaged ? 'Unstage file' : 'Stage file'}
+            >
+              {isStaged ? <Minus className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+            </Button>
+          ) : null}
           <ChevronDown
             className={cn('mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
           />

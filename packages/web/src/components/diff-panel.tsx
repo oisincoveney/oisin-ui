@@ -2,7 +2,7 @@ import { ChevronDown, RefreshCw, X } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import type { ParsedDiffFile } from '@/diff/diff-types'
-import { sendCommitRequest, subscribeCommitResponses } from '@/diff/diff-store'
+import { sendCommitRequest, sendStageRequest, sendUnstageRequest, subscribeCommitResponses } from '@/diff/diff-store'
 import { DiffFileSection } from '@/components/diff-file-section'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -171,7 +171,20 @@ export function DiffPanel({
               <CollapsibleContent>
                 <div className="space-y-2 px-3 pb-3">
                   {sortedStaged.map((file) => (
-                    <DiffFileSection key={file.path} file={file} />
+                    <DiffFileSection
+                      key={file.path}
+                      file={file}
+                      isStaged
+                      onStage={() => {
+                        return
+                      }}
+                      onUnstage={(path) => {
+                        if (!cwd) {
+                          return
+                        }
+                        sendUnstageRequest(cwd, path)
+                      }}
+                    />
                   ))}
                 </div>
               </CollapsibleContent>
@@ -187,7 +200,20 @@ export function DiffPanel({
               <CollapsibleContent>
                 <div className="space-y-2 px-3 pb-3">
                   {sortedUnstaged.map((file) => (
-                    <DiffFileSection key={file.path} file={file} />
+                    <DiffFileSection
+                      key={file.path}
+                      file={file}
+                      isStaged={false}
+                      onStage={(path) => {
+                        if (!cwd) {
+                          return
+                        }
+                        sendStageRequest(cwd, path)
+                      }}
+                      onUnstage={() => {
+                        return
+                      }}
+                    />
                   ))}
                 </div>
               </CollapsibleContent>
