@@ -11,12 +11,12 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 **Milestone:** v2 Code Review
 **Phase:** Phase 10 of 10 — sqlite-thread-registry
-**Plan:** 10-03 of 5 complete
+**Plan:** 10-02 of 5 complete
 **Status:** Phase 10 in progress
-**Last activity:** 2026-03-02 — Completed 10-03: one-shot startup orphan worktree reconciliation
+**Last activity:** 2026-03-02 — Completed 10-02: SQLite-backed ThreadRegistry migration
 
 ```
-Plans: [███████████████████░] 95% (59/62)
+Plans: [███████████████████░] 97% (60/62)
 ```
 
 ## Accumulated Context
@@ -79,14 +79,17 @@ Plans: [███████████████████░] 95% (59/62
 - 10-01: Database init enforces `PRAGMA journal_mode=WAL` and `PRAGMA foreign_keys=ON` on startup.
 - 10-01: `threads.status` constrained to `idle|running|error|closed`, `worktree_path` is NOT NULL, and `project_id` FK cascades delete from `projects`.
 - 10-01: `sessionKey` and `agentId` remain runtime-only (not persisted in DB schema).
+- 10-02: ThreadRegistry persistence is now SQLite-backed with existing public interface and caller compatibility preserved.
+- 10-02: Thread creation persists directly as `idle`; `unknown` status removed and lifecycle fallback maps to `error`.
+- 10-02: Runtime-only `agentId`/`sessionKey` linkage is maintained in memory maps over DB-backed thread rows.
 - 10-03: Startup reconciliation is one-shot and orphan-only: delete worktrees on disk with no matching `threads` row.
 - 10-03: Reconciliation is DB read + filesystem cleanup only; it does not mutate `threads` rows.
 - 10-03: Per-worktree deletion failures are warning-only to keep reconciliation progressing across projects.
 
 ## Session Continuity
 
-**Last session:** 2026-03-02 04:12 UTC
-**Stopped at:** Completed 10-03-PLAN.md
+**Last session:** 2026-03-02 04:14 UTC
+**Stopped at:** Completed 10-02-PLAN.md
 **Resume file:** None
 
 ---
@@ -99,4 +102,4 @@ Plans: [███████████████████░] 95% (59/62
 
 ---
 
-_State updated: 2026-03-02 — Completed 10-03 with one-shot startup orphan worktree reconciliation._
+_State updated: 2026-03-02 — Completed 10-02 with SQLite-backed ThreadRegistry migration and thread-status contract cleanup._
