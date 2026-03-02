@@ -16,7 +16,7 @@ v1.1 Hardening closes the remaining reliability and verification gaps from v1 so
 - [x] **Phase 07: Thread Metadata Contract Closure** - Active thread context remains consistent across ensure/reconnect/refresh. (Completed 2026-02-27)
 - [x] **Phase 08: Deterministic Verification Closure** - Browser/runtime hardening checks run deterministically in one repeatable path. (Completed 2026-02-28)
 - [x] **Phase 09: Diff Panel Redesign** - Users see collapsible Staged/Unstaged sections with inline diff expansion and per-file stats. (Completed 2026-03-01)
-- [ ] **Phase 10: SQLite Thread Registry** - ThreadRegistry backed by SQLite; provisioning status pattern; startup-only reconciliation; reaper deleted; worktree path validation.
+- [ ] **Phase 10: SQLite Thread Registry** - ThreadRegistry backed by SQLite; startup-only orphan reconciliation; reaper deleted; worktree path validation.
 - [ ] **Phase 11: Hunk Staging & Commit** - Users can stage/unstage individual hunks and commit staged changes directly from the browser.
 
 ## Phase Details
@@ -110,7 +110,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
 
   1. Server starts with a fresh SQLite DB; no JSON registry file is read or written.
-  2. Thread creation writes status='provisioning' first; crash mid-create is detected and cleaned up on next startup.
+  2. If server crashes mid-create (after worktree exists, before DB write), the orphan worktree is detected and deleted by startup reconciliation. No provisioning status is used.
   3. Orphaned worktrees (on disk, not in DB) are deleted once at startup — no periodic polling.
   4. Missing worktree path on terminal reattach surfaces as thread error state in the UI, not a silent hang.
   5. sessionKey and agentId are never persisted to DB; they are runtime-only in-memory state.
