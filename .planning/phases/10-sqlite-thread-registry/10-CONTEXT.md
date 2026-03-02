@@ -14,9 +14,9 @@ Replace JSON-based ThreadRegistry with SQLite. Add provisioning status to detect
 ## Implementation Decisions
 
 ### Thread creation atomicity
-- Thread creation is all-or-nothing: `status='provisioning'` written first, updated to `'active'` only after worktree is fully created on disk
-- If the server crashes between those two steps, the incomplete thread is cleaned up on next startup — worktree (if partially created) and DB row both deleted
-- Completed threads (`status='active'`) are never touched by reconciliation
+- Thread creation is worktree-first, DB-last: worktree created on disk first, DB row written as `status='idle'` only after worktree and terminal exist
+- If the server crashes before the DB write, the worktree is an orphan on disk with no DB row — caught by startup orphan cleanup
+- No provisioning status needed; DB rows are either complete (`idle`) or don't exist
 
 ### Missing worktree behavior
 - Copy Conductor (conductor.build) for all missing-worktree behavior
@@ -27,10 +27,8 @@ Replace JSON-based ThreadRegistry with SQLite. Add provisioning status to detect
 
 ### Startup reconciliation
 - Runs once at boot, synchronously, before any clients connect
-- Handles three cases:
-  1. `status='provisioning'` threads → incomplete creates → delete DB row + partial worktree
-  2. Worktree directory on disk with no DB row → orphan → delete from disk
-  3. DB thread whose worktree path is missing from disk → mark as broken/error state
+- Handles one case: worktree directory on disk with no DB row → orphan → delete from disk
+- DB threads whose worktree is missing from disk are detected lazily (at attach time), not at startup
 - Nothing runs periodically after startup — no polling
 
 ### Session reaper removal
