@@ -11,12 +11,12 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 **Milestone:** v2 Code Review
 **Phase:** Phase 10 of 10 — sqlite-thread-registry
-**Plan:** 10-01 of 5 complete
+**Plan:** 10-03 of 5 complete
 **Status:** Phase 10 in progress
-**Last activity:** 2026-03-02 — Completed 10-01: SQLite DB bootstrap, WAL/FK pragmas, projects/threads schema
+**Last activity:** 2026-03-02 — Completed 10-03: one-shot startup orphan worktree reconciliation
 
 ```
-Plans: [███████████████████░] 94% (58/62)
+Plans: [███████████████████░] 95% (59/62)
 ```
 
 ## Accumulated Context
@@ -79,11 +79,14 @@ Plans: [███████████████████░] 94% (58/62
 - 10-01: Database init enforces `PRAGMA journal_mode=WAL` and `PRAGMA foreign_keys=ON` on startup.
 - 10-01: `threads.status` constrained to `idle|running|error|closed`, `worktree_path` is NOT NULL, and `project_id` FK cascades delete from `projects`.
 - 10-01: `sessionKey` and `agentId` remain runtime-only (not persisted in DB schema).
+- 10-03: Startup reconciliation is one-shot and orphan-only: delete worktrees on disk with no matching `threads` row.
+- 10-03: Reconciliation is DB read + filesystem cleanup only; it does not mutate `threads` rows.
+- 10-03: Per-worktree deletion failures are warning-only to keep reconciliation progressing across projects.
 
 ## Session Continuity
 
-**Last session:** 2026-03-02 04:08 UTC
-**Stopped at:** Completed 10-01-PLAN.md
+**Last session:** 2026-03-02 04:12 UTC
+**Stopped at:** Completed 10-03-PLAN.md
 **Resume file:** None
 
 ---
@@ -96,4 +99,4 @@ Plans: [███████████████████░] 94% (58/62
 
 ---
 
-_State updated: 2026-03-02 — Completed 10-01 with SQLite DB bootstrap, WAL/FK pragmas, and projects/threads schema creation._
+_State updated: 2026-03-02 — Completed 10-03 with one-shot startup orphan worktree reconciliation._
