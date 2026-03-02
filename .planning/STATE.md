@@ -11,12 +11,12 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 **Milestone:** v2 Code Review
 **Phase:** Phase 09 of 10 — diff-panel-redesign
-**Plan:** 09-10 of 11 complete
+**Plan:** 09-11 of 11 complete
 **Status:** In progress
-**Last activity:** 2026-03-01 — Completed 09-10: thread-scoped diff stale-cwd recovery + subscribe identity hints
+**Last activity:** 2026-03-02 — Completed 09-11: terminal rehydrate cwd recovery + stale tmux invalidation
 
 ```
-Plans: [██████████████████░░] 90% (56/62)
+Plans: [██████████████████░░] 92% (57/62)
 ```
 
 ## Accumulated Context
@@ -72,11 +72,14 @@ Plans: [██████████████████░░] 90% (56/62
 - 09-05: Regex matchers `/^Staged \(\d+\)/` used in e2e assertions — count-agnostic, matches any N.
 - 09-10: `subscribe_checkout_diff_request` now carries optional `projectId`/`threadId`; older clients remain compatible.
 - 09-10: `resolveValidDiffCwd` now performs hinted project-scoped fallback before global project iteration to preserve per-thread diff isolation.
+- 09-11: terminal rehydrate validates `thread.links.worktreePath` before `ensureThreadTerminal`, falling back to project `repoRoot` when missing.
+- 09-11: recovered fallback cwd is persisted to `thread.links.worktreePath` to prevent repeated stale-path rehydrate loops.
+- 09-11: tmux session bootstrap kills stale thread session when requested cwd is missing before `has-session` short-circuit.
 
 ## Session Continuity
 
-**Last session:** 2026-03-01 17:35 PST
-**Stopped at:** Completed 09-10-PLAN.md
+**Last session:** 2026-03-02 01:34 UTC
+**Stopped at:** Completed 09-11-PLAN.md
 **Resume file:** None
 
 ---
@@ -89,4 +92,4 @@ Plans: [██████████████████░░] 90% (56/62
 
 ---
 
-_State updated: 2026-03-01 — Completed 09-10 with thread-scoped diff stale-cwd recovery and project/thread identity propagation in subscribe requests._
+_State updated: 2026-03-02 — Completed 09-11 with terminal rehydrate cwd validation, repoRoot fallback, and stale tmux session invalidation._
