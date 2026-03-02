@@ -11,12 +11,12 @@ See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 **Milestone:** v2 Code Review
 **Phase:** Phase 10 of 10 — sqlite-thread-registry
-**Plan:** 10-04 of 5 complete
-**Status:** Phase 10 in progress
-**Last activity:** 2026-03-02 — Completed 10-04: SQLite bootstrap wiring + reaper removal
+**Plan:** 10-05 of 5 complete
+**Status:** Phase 10 complete
+**Last activity:** 2026-03-02 — Completed 10-05: SQLite registry and startup reconciliation test rewrite
 
 ```
-Plans: [███████████████████░] 98% (61/62)
+Plans: [████████████████████] 100% (62/62)
 ```
 
 ## Accumulated Context
@@ -88,11 +88,13 @@ Plans: [███████████████████░] 98% (61/62
 - 10-04: Bootstrap startup order is now `initDb()` before ThreadRegistry wiring, then `runStartupReconciliation()` before server listen.
 - 10-04: Session reaper runtime path is fully removed; no `ThreadSessionReaper` references remain in `packages/server/src`.
 - 10-04: Thread switch validates `thread.links.worktreePath` with `fs.access()` before terminal ensure; missing path marks thread `error` and throws.
+- 10-05: ThreadRegistry tests now exercise SQLite-backed create/delete/switch/active/lookup paths using `:memory:` DB isolation.
+- 10-05: Startup reconciliation tests validate orphan cleanup and non-crashing behavior via real git worktree fixtures under `bun test`.
 
 ## Session Continuity
 
-**Last session:** 2026-03-02 04:20 UTC
-**Stopped at:** Completed 10-04-PLAN.md
+**Last session:** 2026-03-02 04:26 UTC
+**Stopped at:** Completed 10-05-PLAN.md
 **Resume file:** None
 
 ---
@@ -105,4 +107,4 @@ Plans: [███████████████████░] 98% (61/62
 
 ---
 
-_State updated: 2026-03-02 — Completed 10-04 with SQLite bootstrap wiring, startup reconciliation integration, and full reaper removal._
+_State updated: 2026-03-02 — Completed 10-05 with SQLite-backed thread registry test rewrite and startup reconciliation coverage._
