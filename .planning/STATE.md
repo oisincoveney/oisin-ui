@@ -5,18 +5,18 @@
 See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 **Core value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current focus:** Phase 11 File Staging & Commit — backend stage/unstage message and handler foundation.
+**Current focus:** Phase 11 File Staging & Commit — frontend staging/unstaging and commit UX wiring complete.
 
 ## Current Position
 
 **Milestone:** v2 Code Review
 **Phase:** Phase 11 of 11 — hunk-staging-commit
-**Plan:** 11-01 of 2 complete
-**Status:** In progress
-**Last activity:** 2026-03-02 — Completed 11-01: Backend stage/unstage message contracts and handlers
+**Plan:** 11-02 of 2 complete
+**Status:** Phase complete
+**Last activity:** 2026-03-02 — Completed 11-02: Frontend stage/unstage + commit workflow wiring
 
 ```
-Plans: [███████████████████░] 98% (63/64)
+Plans: [████████████████████] 100% (64/64)
 ```
 
 ## Accumulated Context
@@ -92,11 +92,13 @@ Plans: [███████████████████░] 98% (63/64
 - 10-05: Startup reconciliation tests validate orphan cleanup and non-crashing behavior via real git worktree fixtures under `bun test`.
 - 11-01: checkout stage/unstage now use dedicated request/response schemas in session inbound/outbound unions.
 - 11-01: Unstage operation uses `git reset HEAD -- <path>` to support newly staged files not present in `HEAD`.
+- 11-02: commit form now resolves from `checkout_commit_response` so failures preserve message and surface toast feedback.
+- 11-02: DiffFileSection stage controls are callback-gated/optional so desktop diff panel gets stage actions without broad mobile sheet API changes.
 
 ## Session Continuity
 
-**Last session:** 2026-03-02 22:15 UTC
-**Stopped at:** Completed 11-01-PLAN.md
+**Last session:** 2026-03-02 22:23 UTC
+**Stopped at:** Completed 11-02-PLAN.md
 **Resume file:** None
 
 ---
@@ -111,4 +113,4 @@ Plans: [███████████████████░] 98% (63/64
 
 ---
 
-_State updated: 2026-03-02 — Completed quick-003: Replace raw HTML with ShadCN structure in sidebar._
+_State updated: 2026-03-02 — Completed 11-02-PLAN.md (phase 11 complete)._
