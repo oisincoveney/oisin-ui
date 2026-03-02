@@ -112,7 +112,12 @@ Cross-phase integration is solid:
 2. Missing sessionKey in-memory test
 3. No toast feedback for stage/unstage operations
 
+**Tech debt closed (quick task 004):**
+- sessionKey runtime-only test added
+- Stage/unstage toast feedback wired
+
 ---
 
 _Audited: 2026-03-02T23:30:00Z_
 _Auditor: Claude Code (gsd-audit-milestone)_
+_Archived: 2026-03-02 as part of v2 milestone completion_

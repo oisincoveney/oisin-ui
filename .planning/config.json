@@ -8,25 +8,37 @@
     "active_profile": "balanced",
     "presets": {
       "quality": {
-        "planning": "google/gemini-3.1-pro-preview",
-        "execution": "google/gemini-3.1-pro-preview",
-        "verification": "google/gemini-3.1-pro-preview"
+        "planning": "opencode/glm-4.7-free",
+        "execution": "opencode/glm-4.7-free",
+        "verification": "opencode/glm-4.7-free"
       },
       "balanced": {
-        "planning": "google/gemini-3.1-pro-preview",
-        "execution": "anthropic/claude-opus-4-5",
-        "verification": "google/gemini-3.1-pro-preview"
+        "planning": "anthropic/claude-opus-4-5",
+        "execution": "openai/gpt-5.3-codex",
+        "verification": "anthropic/claude-opus-4-5"
       },
       "budget": {
-        "planning": "opencode/glm-5-free",
-        "execution": "opencode/minimax-m2.5-free",
-        "verification": "opencode/glm-5-free"
+        "planning": "opencode/minimax-m2.1-free",
+        "execution": "opencode/grok-code",
+        "verification": "opencode/minimax-m2.1-free"
+      },
+      "custom": {
+        "planning": "anthropic/claude-opus-4-5",
+        "execution": "openai/gpt-5.3-codex",
+        "verification": "anthropic/claude-sonnet-4-6"
       }
     },
     "custom_overrides": {
       "quality": {},
       "balanced": {},
-      "budget": {}
+      "budget": {},
+      "custom": {
+        "gsd-phase-researcher": "modal/zai-org/GLM-5-FP8",
+        "gsd-research-synthesizer": "modal/zai-org/GLM-5-FP8",
+        "gsd-debugger": "anthropic/claude-opus-4-5",
+        "gsd-settings": "anthropic/claude-haiku-4-5",
+        "gsd-set-model": "anthropic/claude-haiku-4-5"
+      }
     }
   },
   "workflow": {
