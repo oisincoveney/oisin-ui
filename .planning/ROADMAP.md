@@ -17,7 +17,7 @@ v1.1 Hardening closes the remaining reliability and verification gaps from v1 so
 - [x] **Phase 08: Deterministic Verification Closure** - Browser/runtime hardening checks run deterministically in one repeatable path. (Completed 2026-02-28)
 - [x] **Phase 09: Diff Panel Redesign** - Users see collapsible Staged/Unstaged sections with inline diff expansion and per-file stats. (Completed 2026-03-01)
 - [x] **Phase 10: SQLite Thread Registry** - ThreadRegistry backed by SQLite; startup-only orphan reconciliation; reaper deleted; worktree path validation. (Completed 2026-03-01)
-- [ ] **Phase 11: Hunk Staging & Commit** - Users can stage/unstage individual hunks and commit staged changes directly from the browser.
+- [ ] **Phase 11: File Staging & Commit** - Users can stage/unstage individual files and commit staged changes directly from the browser.
 
 ## Phase Details
 
