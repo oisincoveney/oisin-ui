@@ -5,18 +5,18 @@
 See: `.planning/PROJECT.md` (updated 2026-02-28)
 
 **Core value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current focus:** v2 Code Review — hunk-level staging/unstaging and commit from browser.
+**Current focus:** Phase 10 SQLite Thread Registry — SQLite persistence foundation and migration.
 
 ## Current Position
 
 **Milestone:** v2 Code Review
-**Phase:** Phase 09 of 10 — diff-panel-redesign
-**Plan:** 09-11 of 11 complete
-**Status:** Phase 09 complete; Phase 10 pending
-**Last activity:** 2026-03-02 — Completed 09-11: terminal rehydrate cwd recovery + stale tmux invalidation
+**Phase:** Phase 10 of 10 — sqlite-thread-registry
+**Plan:** 10-01 of 5 complete
+**Status:** Phase 10 in progress
+**Last activity:** 2026-03-02 — Completed 10-01: SQLite DB bootstrap, WAL/FK pragmas, projects/threads schema
 
 ```
-Plans: [██████████████████░░] 92% (57/62)
+Plans: [███████████████████░] 94% (58/62)
 ```
 
 ## Accumulated Context
@@ -75,11 +75,15 @@ Plans: [██████████████████░░] 92% (57/62
 - 09-11: terminal rehydrate validates `thread.links.worktreePath` before `ensureThreadTerminal`, falling back to project `repoRoot` when missing.
 - 09-11: recovered fallback cwd is persisted to `thread.links.worktreePath` to prevent repeated stale-path rehydrate loops.
 - 09-11: tmux session bootstrap kills stale thread session when requested cwd is missing before `has-session` short-circuit.
+- 10-01: Thread registry persistence foundation uses SQLite (`sqlite` + `sqlite3`) with `initDb`/`getDb` typed accessor in `db.ts`.
+- 10-01: Database init enforces `PRAGMA journal_mode=WAL` and `PRAGMA foreign_keys=ON` on startup.
+- 10-01: `threads.status` constrained to `idle|running|error|closed`, `worktree_path` is NOT NULL, and `project_id` FK cascades delete from `projects`.
+- 10-01: `sessionKey` and `agentId` remain runtime-only (not persisted in DB schema).
 
 ## Session Continuity
 
-**Last session:** 2026-03-02 01:36 UTC
-**Stopped at:** Completed 09-11-PLAN.md
+**Last session:** 2026-03-02 04:08 UTC
+**Stopped at:** Completed 10-01-PLAN.md
 **Resume file:** None
 
 ---
@@ -92,4 +96,4 @@ Plans: [██████████████████░░] 92% (57/62
 
 ---
 
-_State updated: 2026-03-02 — Completed 09-11 with terminal rehydrate cwd validation, repoRoot fallback, and stale tmux session invalidation._
+_State updated: 2026-03-02 — Completed 10-01 with SQLite DB bootstrap, WAL/FK pragmas, and projects/threads schema creation._
