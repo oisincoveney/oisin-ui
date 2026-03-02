@@ -1550,6 +1550,16 @@ export async function commitChanges(
   });
 }
 
+export async function stageFile(cwd: string, filePath: string): Promise<void> {
+  await requireGitRepo(cwd);
+  await execFileAsync("git", ["add", "--", filePath], { cwd });
+}
+
+export async function unstageFile(cwd: string, filePath: string): Promise<void> {
+  await requireGitRepo(cwd);
+  await execFileAsync("git", ["reset", "HEAD", "--", filePath], { cwd });
+}
+
 export async function commitAll(cwd: string, message: string): Promise<void> {
   await commitChanges(cwd, { message, addAll: true });
 }
