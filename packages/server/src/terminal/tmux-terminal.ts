@@ -118,6 +118,15 @@ function ensureTmuxSession(options: {
 }): void {
   const envArgs = Object.entries(options.env).flatMap(([key, value]) => ["-e", `${key}=${value}`]);
 
+  const cwdExists = existsSync(options.cwd);
+  if (!cwdExists) {
+    try {
+      runTmux(["kill-session", "-t", options.sessionName], options.socketPath);
+    } catch {
+      // no-op
+    }
+  }
+
   try {
     runTmux(["has-session", "-t", options.sessionName], options.socketPath);
   } catch {
