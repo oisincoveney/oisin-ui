@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
-import { watch, type FSWatcher } from 'node:fs'
+import { existsSync, watch, type FSWatcher } from 'node:fs'
 import { stat } from 'fs/promises'
 import { exec } from 'child_process'
 import { promisify } from 'util'
@@ -4301,6 +4301,27 @@ export class Session {
     return requestedCwd
   }
 
+  private async resolveValidTerminalCwd(
+    requestedCwd: string,
+    hint: { projectId: string; threadId: string }
+  ): Promise<string> {
+    if (existsSync(requestedCwd)) {
+      return requestedCwd
+    }
+
+    this.sessionLogger.warn(
+      { requestedCwd, ...hint },
+      'Thread worktreePath does not exist; recovering terminal cwd to project repoRoot'
+    )
+
+    const project = await this.threadRegistry.getProject(hint.projectId)
+    if (project?.repoRoot && existsSync(project.repoRoot)) {
+      return project.repoRoot
+    }
+
+    return requestedCwd
+  }
+
   private async handleSubscribeCheckoutDiffRequest(
     msg: SubscribeCheckoutDiffRequest
   ): Promise<void> {
@@ -7017,12 +7038,26 @@ export class Session {
         if (!worktreePath) {
           // Thread exists but has no worktree — fall through to ensureDefaultTerminal
         } else {
+          const validCwd = await this.resolveValidTerminalCwd(worktreePath, {
+            projectId: thread.projectId,
+            threadId: thread.threadId,
+          })
           const ensured = await this.terminalManager.ensureThreadTerminal({
             projectId: thread.projectId,
             threadId: thread.threadId,
-            cwd: worktreePath,
+            cwd: validCwd,
           })
           this.ensureTerminalExitSubscription(ensured.terminal)
+
+          if (validCwd !== worktreePath) {
+            await this.threadRegistry.updateThread({
+              projectId: thread.projectId,
+              threadId: thread.threadId,
+              links: {
+                worktreePath: validCwd,
+              },
+            })
+          }
 
           if (ensured.terminal.id !== terminalId) {
             await this.threadRegistry.updateThread({
