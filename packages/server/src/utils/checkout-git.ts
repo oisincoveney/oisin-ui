@@ -556,6 +556,7 @@ export type CheckoutStatusGitNonPaseo = {
   aheadOfOrigin: number | null;
   behindOfOrigin: number | null;
   hasRemote: boolean;
+  hasUpstream: boolean;
   remoteUrl: string | null;
   isPaseoOwnedWorktree: false;
 };
@@ -571,6 +572,7 @@ export type CheckoutStatusGitPaseo = {
   aheadOfOrigin: number | null;
   behindOfOrigin: number | null;
   hasRemote: boolean;
+  hasUpstream: boolean;
   remoteUrl: string | null;
   isPaseoOwnedWorktree: true;
 };
@@ -971,6 +973,21 @@ async function getBehindOfOrigin(cwd: string, currentBranch: string): Promise<nu
   }
 }
 
+async function hasUpstreamBranch(cwd: string, currentBranch: string): Promise<boolean> {
+  if (!currentBranch) {
+    return false;
+  }
+  try {
+    await execAsync("git rev-parse --abbrev-ref --symbolic-full-name @{u}", {
+      cwd,
+      env: READ_ONLY_GIT_ENV,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 type CheckoutInspectionContext = {
   worktreeRoot: string;
   currentBranch: string | null;
@@ -1130,10 +1147,11 @@ export async function getCheckoutStatus(
   const isDirty = await isWorkingTreeDirty(cwd);
   const hasRemote = remoteUrl !== null;
   const baseRef = configured.baseRef ?? (await resolveBaseRef(cwd));
-  const [aheadBehind, aheadOfOrigin, behindOfOrigin] = await Promise.all([
+  const [aheadBehind, aheadOfOrigin, behindOfOrigin, hasUpstream] = await Promise.all([
     baseRef && currentBranch ? getAheadBehind(cwd, baseRef, currentBranch) : Promise.resolve(null),
     hasRemote && currentBranch ? getAheadOfOrigin(cwd, currentBranch) : Promise.resolve(null),
     hasRemote && currentBranch ? getBehindOfOrigin(cwd, currentBranch) : Promise.resolve(null),
+    hasRemote && currentBranch ? hasUpstreamBranch(cwd, currentBranch) : Promise.resolve(false),
   ]);
 
   if (configured.isPaseoOwnedWorktree) {
@@ -1149,6 +1167,7 @@ export async function getCheckoutStatus(
       aheadOfOrigin,
       behindOfOrigin,
       hasRemote,
+      hasUpstream,
       remoteUrl,
       isPaseoOwnedWorktree: true,
     };
@@ -1164,6 +1183,7 @@ export async function getCheckoutStatus(
     aheadOfOrigin,
     behindOfOrigin,
     hasRemote,
+    hasUpstream,
     remoteUrl,
     isPaseoOwnedWorktree: false,
   };

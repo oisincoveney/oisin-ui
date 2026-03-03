@@ -3752,6 +3752,7 @@ export class Session {
             aheadOfOrigin: null,
             behindOfOrigin: null,
             hasRemote: false,
+            hasUpstream: false,
             remoteUrl: null,
             isPaseoOwnedWorktree: false,
             error: null,
@@ -3776,6 +3777,7 @@ export class Session {
             aheadOfOrigin: status.aheadOfOrigin ?? null,
             behindOfOrigin: status.behindOfOrigin ?? null,
             hasRemote: status.hasRemote,
+            hasUpstream: status.hasUpstream,
             remoteUrl: status.remoteUrl,
             isPaseoOwnedWorktree: true,
             error: null,
@@ -3798,6 +3800,7 @@ export class Session {
           aheadOfOrigin: status.aheadOfOrigin ?? null,
           behindOfOrigin: status.behindOfOrigin ?? null,
           hasRemote: status.hasRemote,
+          hasUpstream: status.hasUpstream,
           remoteUrl: status.remoteUrl,
           isPaseoOwnedWorktree: false,
           error: null,
@@ -3818,6 +3821,7 @@ export class Session {
           aheadOfOrigin: null,
           behindOfOrigin: null,
           hasRemote: false,
+          hasUpstream: false,
           remoteUrl: null,
           isPaseoOwnedWorktree: false,
           error: this.toCheckoutError(error),
@@ -4294,7 +4298,7 @@ export class Session {
     const projects = await this.threadRegistry.listProjects()
     for (const project of projects) {
       const repoRoot = project.repoRoot
-      if (!repoRoot) continue
+      if (!repoRoot) {continue}
       try {
         await execAsync('git rev-parse --git-dir', { cwd: repoRoot, env: READ_ONLY_GIT_ENV })
         this.sessionLogger.warn(
@@ -4646,8 +4650,8 @@ export class Session {
 
       if (!title || !body) {
         const generated = await this.generatePullRequestText(cwd, msg.baseRef)
-        if (!title) title = generated.title
-        if (!body) body = generated.body
+        if (!title) {title = generated.title}
+        if (!body) {body = generated.body}
       }
 
       const result = await createPullRequest(cwd, {
