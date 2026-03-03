@@ -70,6 +70,7 @@ export function DiffPanel({
   const [isPushing, setIsPushing] = useState(false)
   const [pendingPushCwd, setPendingPushCwd] = useState<string | null>(null)
   const [aheadOfOrigin, setAheadOfOrigin] = useState<number | null>(null)
+  const [hasRemote, setHasRemote] = useState(false)
 
   useEffect(() => {
     return subscribeCommitResponses((payload) => {
@@ -107,7 +108,7 @@ export function DiffPanel({
 
       const errorMessage = payload.error?.message ?? 'Push failed'
       if (payload.error?.code === 'NOT_ALLOWED') {
-        toast.error(`${errorMessage}. Check auth/permissions in terminal.`)
+        toast.error(`${errorMessage}. Check git auth/permissions in terminal and retry.`)
         return
       }
       toast.error(errorMessage)
@@ -120,12 +121,14 @@ export function DiffPanel({
         return
       }
       setAheadOfOrigin(payload.checkoutStatus.aheadOfOrigin)
+      setHasRemote(payload.checkoutStatus.hasRemote)
     })
   }, [cwd])
 
   useEffect(() => {
     if (!cwd) {
       setAheadOfOrigin(null)
+      setHasRemote(false)
       return
     }
     fetchCheckoutStatus(cwd)
@@ -226,9 +229,9 @@ export function DiffPanel({
           type="button"
           size="sm"
           variant="outline"
-          disabled={isPushing || !cwd || aheadOfOrigin === 0 || aheadOfOrigin === null}
+          disabled={isPushing || !cwd || !hasRemote || aheadOfOrigin === 0 || aheadOfOrigin === null}
           onClick={() => {
-            if (!cwd) {
+            if (!cwd || !hasRemote) {
               return
             }
             setIsPushing(true)
