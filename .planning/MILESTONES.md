@@ -54,6 +54,27 @@
 
 **Git range:** `862e516` -> `dc12878`
 
-**What's next:** v2 — multi-terminal panes, code review UI (stage/unstage hunks, commit), remote relay access.
+**What's next:** v2 Code Review
+
+---
+
+## v2 Code Review (Shipped: 2026-03-02)
+
+**Delivered:** Improved code review UI with file list, per-file stats, file-level staging/unstaging, and commit from browser.
+
+**Phases completed:** 09-11 (18 plans total)
+
+**Key accomplishments:**
+
+- Redesigned diff panel with collapsible Staged/Unstaged sections and per-file +/- stats.
+- Inline diff expansion within accordion (no separate right-pane viewer).
+- File-level stage/unstage via +/- buttons in diff panel.
+- Commit message input + Commit button to commit staged changes from browser.
+- SQLite-backed thread registry with startup orphan cleanup.
+- Thread-scoped diff isolation via projectId/threadId in subscribe contract.
+
+**Git range:** `dc12878` -> `e91ab49`
+
+**What's next:** v3 TABS COOLERS — multi-tab terminals, AI chat overlay, voice input, git push.
 
 ---
