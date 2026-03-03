@@ -3,58 +3,50 @@ status: passed
 phase: 12-git-push
 source: 12-01-SUMMARY.md, 12-02-SUMMARY.md
 started: 2026-03-03T02:50:00Z
-completed: 2026-03-03T21:00:00Z
+completed: 2026-03-03T21:30:00Z
 ---
 
 ## Summary
 
-All tests passed. Fixed SSH config for Linux compatibility and added real-time status update after UI push.
+All tests passed with real-time updates working correctly.
 
 ## Tests
 
 ### 1. Push button visible
-expected: Push button appears in diff panel header, next to Commit button
 result: pass
 
-### 2. Push button disabled when no remote configured
-expected: Push button disabled when hasRemote=false
+### 2. Push button disabled when no remote
 result: pass
 
-### 3. Commit workflow works
-expected: User can stage, commit, see success
+### 3. Commit workflow (stage, commit via panel)
 result: pass
 
-### 4. Push button disabled when nothing to push
-expected: Push button disabled when synced with remote
+### 4. Push disabled when synced
 result: pass
 
-### 5. Push button enabled for first push
-expected: Push button enabled when no upstream (first push scenario)
+### 5. Push enabled for first push (no upstream)
 result: pass
 
-### 6. Ahead indicator (↑N)
-expected: Push button shows ↑N when commits ahead
+### 6. Ahead indicator (↑N) updates in real-time after commit
 result: pass
+notes: Committed via panel, button immediately changed from "Push" [disabled] to "Push ↑1" [enabled]
 
 ### 7. Behind indicator (↓N)
-expected: Push button shows ↓N when behind (disabled)
 result: pass
 
-### 8. Push progress indicator
-expected: Spinner during push
+### 8. Push spinner during push
 result: pass
 
-### 9. Push success - real-time update
-expected: Button state updates immediately after push completes
+### 9. Push button updates in real-time after push
 result: pass
-notes: Server now sends checkout_status_response after successful push
+notes: After push, button immediately changed to "Push" [disabled]
 
-### 10. Push error handling
-expected: Error toast with message on failure
+### 10. Push error toast
 result: pass
 
 ## Fixes Applied
 
-1. **SSH config** - Added `IgnoreUnknown UseKeychain` to ~/.ssh/config for Linux compatibility
-2. **Real-time update** - Server sends checkout status after successful push
-3. **Removed "(first push)" text** - Unnecessary UI clutter
+1. **SSH config** - Added `IgnoreUnknown UseKeychain` for Linux compatibility
+2. **Real-time after push** - Server sends checkout_status_response after successful push
+3. **Real-time after commit** - Server sends checkout_status_response after successful commit
+4. **Removed "(first push)" text** - Unnecessary clutter
