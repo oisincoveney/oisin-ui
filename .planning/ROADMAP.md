@@ -27,7 +27,10 @@ Oisin UI is a shipped, Docker-first web app for managing coding-agent terminal w
   3. User clicks Push, sees progress indicator, then success toast on completion.
   4. User sees actionable error message if push fails (auth failure, rejected, no remote).
 
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 12-01-PLAN.md — Push button with sync badge, progress, error handling
 
 ### Phase 13: Multi-Tab Terminals
 
@@ -111,7 +114,7 @@ Oisin UI is a shipped, Docker-first web app for managing coding-agent terminal w
 <details open>
 <summary>🚧 v3 TABS COOLERS (Phases 12-16) — IN PROGRESS</summary>
 
-- [ ] Phase 12: Git Push (0/? plans) — pending
+- [ ] Phase 12: Git Push (0/1 plans) — planned
 - [ ] Phase 13: Multi-Tab Terminals (0/? plans) — pending
 - [ ] Phase 14: Background Agents (0/? plans) — pending
 - [ ] Phase 15: AI Chat Overlay (0/? plans) — pending
@@ -129,7 +132,7 @@ Oisin UI is a shipped, Docker-first web app for managing coding-agent terminal w
 | 09. Diff Panel Redesign | v2 | DIFF-02 | 11/11 | Complete | 2026-03-01 |
 | 10. SQLite Thread Registry | v2 | INFRA-01 | 5/5 | Complete | 2026-03-01 |
 | 11. File Staging & Commit | v2 | DIFF-03, DIFF-04 | 2/2 | Complete | 2026-03-02 |
-| 12. Git Push | v3 | PUSH-01..03 | 0/? | Pending | - |
+| 12. Git Push | v3 | PUSH-01..03 | 0/1 | Planned | - |
 | 13. Multi-Tab Terminals | v3 | TABS-01..06 | 0/? | Pending | - |
 | 14. Background Agents | v3 | AGENT-01..03 | 0/? | Pending | - |
 | 15. AI Chat Overlay | v3 | CHAT-01..07 | 0/? | Pending | - |
