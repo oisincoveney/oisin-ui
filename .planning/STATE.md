@@ -5,19 +5,29 @@
 See: `.planning/PROJECT.md` (updated 2026-03-02)
 
 **Core value:** Work on your code from anywhere with your OpenCode instance and settings, reliably.
-**Current focus:** v2 Code Review shipped. Planning next milestone.
+**Current focus:** v3 TABS COOLERS — multi-tab terminals, chat overlay, voice input, git push.
 
 ## Current Position
 
 **Milestone:** v3 TABS COOLERS
-**Phase:** Not started (defining requirements)
-**Status:** Defining requirements
-**Last activity:** 2026-03-02 — Milestone v3 started
+**Phase:** 12 - Git Push (pending)
+**Plan:** None (roadmap just created)
+**Status:** Ready for phase planning
+**Last activity:** 2026-03-02 — Roadmap created
 
 ```
-v3 Plans: [░░░░░░░░░░░░░░░░░░░░] 0%
-Total Plans: 64 across v1, v1.1, v2
+v3 Progress: [░░░░░░░░░░░░░░░░░░░░] 0%
+Phase 12:    [░░░░░░░░░░░░░░░░░░░░] 0% (0/? plans)
 ```
+
+## Performance Metrics
+
+| Milestone | Phases | Plans | Days | Commits |
+|-----------|--------|-------|------|---------|
+| v1 MVP | 5 | 34 | 4 | ~85 |
+| v1.1 Hardening | 3 | 12 | 3 | 72 |
+| v2 Code Review | 3 | 18 | 2 | ~45 |
+| v3 TABS COOLERS | 5 | TBD | TBD | TBD |
 
 ## Accumulated Context
 
@@ -27,25 +37,52 @@ Total Plans: 64 across v1, v1.1, v2
 - v1.1 Hardening (phases 06-08) shipped 2026-02-28 — 12 plans
 - v2 Code Review (phases 09-11) shipped 2026-03-02 — 18 plans
 
-### v2 Summary
+### v3 Phase Structure
 
-**What shipped:**
-- Redesigned diff panel with collapsible Staged/Unstaged sections
-- Per-file +/- stats in file list
-- File-level stage/unstage via inline buttons
-- Commit from browser with message input and validation
-- SQLite-backed thread registry with startup orphan cleanup
-- Thread-scoped diff isolation via projectId/threadId
+| Phase | Goal | Requirements | Dependencies |
+|-------|------|--------------|--------------|
+| 12. Git Push | Push to remote from browser | PUSH-01..03 | Phase 11 |
+| 13. Multi-Tab | N terminal tabs per thread | TABS-01..06 | Phase 12 |
+| 14. Background Agents | Monitor agents across projects | AGENT-01..03 | Phase 13 |
+| 15. AI Chat Overlay | Chat UI over terminal output | CHAT-01..07 | Phase 13 |
+| 16. Voice Input | Push-to-talk transcription | VOICE-01..03 | Phase 15 |
 
-**Tech debt closed:**
-- sessionKey runtime-only test added (quick task 004)
-- Stage/unstage toast feedback wired (quick task 004)
+### Research Findings (Summary)
+
+- Git push backend already exists — `checkout_push_request` handler in session.ts
+- Multi-tab uses existing binary mux with multiple streamIds
+- Chat overlay parses existing `AgentTimelineItem` from `agent_stream`
+- Voice uses existing `DictationStreamManager` + `SpeechToTextProvider`
+- Critical: xterm.js memory leaks on tab close — must dispose addons first
+
+### Decisions Made
+
+| Decision | Rationale |
+|----------|-----------|
+| Git Push first | Backend exists, quick win, 1-2 days |
+| Multi-Tab before Chat | Foundation needed for AI tabs |
+| Voice last | Independent, can defer if needed |
+
+### Open Questions
+
+1. Tab limit per thread? (Research suggests 5)
+2. Chat persistence strategy? (Regenerate from terminal vs persist)
+3. Force push policy? (Block on protected, confirm otherwise)
 
 ## Session Continuity
 
 **Last session:** 2026-03-02
-**Stopped at:** v2 milestone complete
+**Stopped at:** Roadmap created, ready for `/gsd-plan-phase 12`
 **Resume file:** None
+
+## Todos
+
+- [ ] `/gsd-plan-phase 12` — plan Git Push phase
+- [ ] Capture OpenCode output samples for chat parser development
+
+## Blockers
+
+None.
 
 ---
 
@@ -60,4 +97,4 @@ Total Plans: 64 across v1, v1.1, v2
 
 ---
 
-_State updated: 2026-03-02 — v3 TABS COOLERS milestone started._
+_State updated: 2026-03-02 — v3 TABS COOLERS roadmap created._

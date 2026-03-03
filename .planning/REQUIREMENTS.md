@@ -65,33 +65,33 @@ Explicitly deferred to future milestones.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TABS-01 | TBD | Pending |
-| TABS-02 | TBD | Pending |
-| TABS-03 | TBD | Pending |
-| TABS-04 | TBD | Pending |
-| TABS-05 | TBD | Pending |
-| TABS-06 | TBD | Pending |
-| AGENT-01 | TBD | Pending |
-| AGENT-02 | TBD | Pending |
-| AGENT-03 | TBD | Pending |
-| CHAT-01 | TBD | Pending |
-| CHAT-02 | TBD | Pending |
-| CHAT-03 | TBD | Pending |
-| CHAT-04 | TBD | Pending |
-| CHAT-05 | TBD | Pending |
-| CHAT-06 | TBD | Pending |
-| CHAT-07 | TBD | Pending |
-| VOICE-01 | TBD | Pending |
-| VOICE-02 | TBD | Pending |
-| VOICE-03 | TBD | Pending |
-| PUSH-01 | TBD | Pending |
-| PUSH-02 | TBD | Pending |
-| PUSH-03 | TBD | Pending |
+| PUSH-01 | Phase 12 | Pending |
+| PUSH-02 | Phase 12 | Pending |
+| PUSH-03 | Phase 12 | Pending |
+| TABS-01 | Phase 13 | Pending |
+| TABS-02 | Phase 13 | Pending |
+| TABS-03 | Phase 13 | Pending |
+| TABS-04 | Phase 13 | Pending |
+| TABS-05 | Phase 13 | Pending |
+| TABS-06 | Phase 13 | Pending |
+| AGENT-01 | Phase 14 | Pending |
+| AGENT-02 | Phase 14 | Pending |
+| AGENT-03 | Phase 14 | Pending |
+| CHAT-01 | Phase 15 | Pending |
+| CHAT-02 | Phase 15 | Pending |
+| CHAT-03 | Phase 15 | Pending |
+| CHAT-04 | Phase 15 | Pending |
+| CHAT-05 | Phase 15 | Pending |
+| CHAT-06 | Phase 15 | Pending |
+| CHAT-07 | Phase 15 | Pending |
+| VOICE-01 | Phase 16 | Pending |
+| VOICE-02 | Phase 16 | Pending |
+| VOICE-03 | Phase 16 | Pending |
 
 **Coverage:**
 - v3 requirements: 22 total
-- Mapped to phases: 0
-- Unmapped: 22 ⚠️
+- Mapped to phases: 22 ✓
+- Unmapped: 0
 
 ---
 
@@ -111,4 +111,4 @@ All v1 requirements closed 2026-02-25. See: `.planning/milestones/v1-REQUIREMENT
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-02 — v3 TABS COOLERS requirements defined*
+*Last updated: 2026-03-02 — Phases 12-16 mapped*
