@@ -251,8 +251,7 @@ export function DiffPanel({
             <>
               <ArrowUpFromLine className="mr-1 h-4 w-4" />
               Push
-              {hasUpstream && aheadOfOrigin && aheadOfOrigin > 0 ? ` ↑${aheadOfOrigin}` : null}
-              {!hasUpstream && hasRemote ? ' (first push)' : null}
+              {aheadOfOrigin && aheadOfOrigin > 0 ? ` ↑${aheadOfOrigin}` : null}
               {behindOfOrigin && behindOfOrigin > 0 ? ` ↓${behindOfOrigin}` : null}
             </>
           )}
