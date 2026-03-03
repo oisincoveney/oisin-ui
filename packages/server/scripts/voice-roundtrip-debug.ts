@@ -66,7 +66,7 @@ async function main(): Promise<void> {
     }
 
     const offTranscript = client.on("transcription_result", (msg) => {
-      if (msg.type !== "transcription_result") return;
+      if (msg.type !== "transcription_result") {return;}
       console.log("transcription_result", {
         text: msg.payload.text,
         isLowConfidence: msg.payload.isLowConfidence,
@@ -74,7 +74,7 @@ async function main(): Promise<void> {
     });
 
     const offActivity = client.on("activity_log", (msg) => {
-      if (msg.type !== "activity_log") return;
+      if (msg.type !== "activity_log") {return;}
       if (msg.payload.type === "transcript" || msg.payload.type === "error" || msg.payload.type === "assistant") {
         console.log("activity_log", {
           type: msg.payload.type,
@@ -84,10 +84,10 @@ async function main(): Promise<void> {
     });
 
     const offStream = client.on("agent_stream", (msg) => {
-      if (msg.type !== "agent_stream") return;
-      if (msg.payload.event.type !== "timeline") return;
+      if (msg.type !== "agent_stream") {return;}
+      if (msg.payload.event.type !== "timeline") {return;}
       const item = msg.payload.event.item;
-      if (item.type !== "tool_call") return;
+      if (item.type !== "tool_call") {return;}
       console.log("agent_stream:tool_call", {
         agentId: msg.payload.agentId,
         name: item.name,
@@ -98,7 +98,7 @@ async function main(): Promise<void> {
     let audioChunkCount = 0;
     const firstAudio = new Promise<void>((resolve) => {
       const offAudio = client.on("audio_output", (msg) => {
-        if (msg.type !== "audio_output") return;
+        if (msg.type !== "audio_output") {return;}
         audioChunkCount += 1;
         console.log("audio_output", {
           id: msg.payload.id,
@@ -115,7 +115,7 @@ async function main(): Promise<void> {
     });
     const lastAudio = new Promise<void>((resolve) => {
       const offAudio = client.on("audio_output", (msg) => {
-        if (msg.type !== "audio_output") return;
+        if (msg.type !== "audio_output") {return;}
         if (msg.payload.isLastChunk) {
           offAudio();
           resolve();

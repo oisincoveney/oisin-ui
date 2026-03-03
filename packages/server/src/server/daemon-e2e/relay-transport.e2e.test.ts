@@ -40,7 +40,7 @@ function createCapturingLogger() {
 
 function parseOfferUrlFromLogs(lines: string[]): string {
   for (const line of lines) {
-    if (!line.includes("pairing_offer")) continue;
+    if (!line.includes("pairing_offer")) {continue;}
     try {
       const obj = JSON.parse(line) as { msg?: string; url?: string };
       if (obj.msg === "pairing_offer" && typeof obj.url === "string") {
@@ -65,9 +65,9 @@ function decodeOfferFromFragmentUrl(url: string): {
   const encoded = url.slice(idx + marker.length);
   const json = Buffer.from(encoded, "base64url").toString("utf8");
   const offer = JSON.parse(json) as { v?: unknown; serverId?: string; daemonPublicKeyB64?: string };
-  if (offer.v !== 2) throw new Error("expected offer.v=2");
-  if (!offer.serverId) throw new Error("offer.serverId missing");
-  if (!offer.daemonPublicKeyB64) throw new Error("offer.daemonPublicKeyB64 missing");
+  if (offer.v !== 2) {throw new Error("expected offer.v=2");}
+  if (!offer.serverId) {throw new Error("offer.serverId missing");}
+  if (!offer.daemonPublicKeyB64) {throw new Error("offer.daemonPublicKeyB64 missing");}
   return { serverId: offer.serverId, daemonPublicKeyB64: offer.daemonPublicKeyB64 };
 }
 
@@ -185,7 +185,7 @@ async function waitForRelayWebSocketReady(port: number, timeout = 60000): Promis
   };
 
   const stopRelay = async () => {
-    if (!relayProcess) return;
+    if (!relayProcess) {return;}
     relayProcess.kill("SIGTERM");
     relayProcess = null;
   };

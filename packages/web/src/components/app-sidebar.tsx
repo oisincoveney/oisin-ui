@@ -74,7 +74,7 @@ export function AppSidebar() {
   const actionLockReason = getThreadActionLockReason(snapshot)
   const actionsLocked = Boolean(actionLockReason)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [createProjectId, setCreateProjectId] = useState< string | null >(null)
+  const [createProjectId, setCreateProjectId] = useState<string | null>(null)
   const [deleteDialogTarget, setDeleteDialogTarget] = useState<{
     projectId: string
     threadId: string

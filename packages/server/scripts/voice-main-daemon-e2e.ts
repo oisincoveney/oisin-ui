@@ -70,7 +70,7 @@ async function runVoiceRoundTrip(params: {
 
   const done = new Promise<void>((resolve) => {
     const offAudio = client.on("audio_output", (msg) => {
-      if (msg.type !== "audio_output") return;
+      if (msg.type !== "audio_output") {return;}
       audioChunks += 1;
       if (msg.payload.isLastChunk) {
         sawLastAudio = true;
@@ -81,11 +81,11 @@ async function runVoiceRoundTrip(params: {
   });
 
   const offStream = client.on("agent_stream", (msg) => {
-    if (msg.type !== "agent_stream") return;
-    if (msg.payload.agentId !== activeVoiceAgentId) return;
-    if (msg.payload.event.type !== "timeline") return;
+    if (msg.type !== "agent_stream") {return;}
+    if (msg.payload.agentId !== activeVoiceAgentId) {return;}
+    if (msg.payload.event.type !== "timeline") {return;}
     const item = msg.payload.event.item;
-    if (item.type !== "tool_call") return;
+    if (item.type !== "tool_call") {return;}
     if (typeof item.name === "string" && item.name.toLowerCase().includes("speak")) {
       speakToolCalls += 1;
     }

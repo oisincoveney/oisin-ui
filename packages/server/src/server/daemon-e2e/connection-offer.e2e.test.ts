@@ -208,7 +208,7 @@ describe("ConnectionOfferV2 (daemon E2E)", () => {
             const text = data.toString("utf8");
             stdoutLines.push(text);
             for (const line of text.split("\n")) {
-              if (!line.trim()) continue;
+              if (!line.trim()) {continue;}
               if (line.includes("pairing_offer")) {
                 clearTimeout(timeout);
                 reject(new Error("unexpected pairing_offer log when --no-relay is set"));
@@ -217,7 +217,7 @@ describe("ConnectionOfferV2 (daemon E2E)", () => {
 
               try {
                 const parsed = JSON.parse(line) as { msg?: string };
-                if (parsed.msg !== `Server listening on http://0.0.0.0:${port}`) continue;
+                if (parsed.msg !== `Server listening on http://0.0.0.0:${port}`) {continue;}
                 clearTimeout(timeout);
                 resolve(true);
                 return;

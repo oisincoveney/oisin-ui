@@ -17,9 +17,9 @@ function normalizeFormat(raw: unknown): OutputOptions['format'] {
   const value = typeof raw === 'string' ? raw.trim().toLowerCase() : ''
 
   // Common user expectation: "cli" means "table/human"
-  if (value === 'cli') return 'table'
+  if (value === 'cli') {return 'table'}
 
-  if (value === 'table' || value === 'json' || value === 'yaml') return value
+  if (value === 'table' || value === 'json' || value === 'yaml') {return value}
 
   const error: CommandError = {
     code: 'INVALID_FORMAT',

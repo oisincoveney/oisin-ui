@@ -8,9 +8,9 @@ export interface TerminalKeyInput {
 
 function modifierParam(input: TerminalKeyInput): number {
   let value = 1;
-  if (input.shift) value += 1;
-  if (input.alt || input.meta) value += 2;
-  if (input.ctrl) value += 4;
+  if (input.shift) {value += 1;}
+  if (input.alt || input.meta) {value += 2;}
+  if (input.ctrl) {value += 4;}
   return value;
 }
 

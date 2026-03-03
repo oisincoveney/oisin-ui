@@ -67,7 +67,7 @@ interface ImageDimensions {
 
 function getPngDimensions(buffer: Buffer): ImageDimensions | null {
   // PNG header: 89 50 4E 47 0D 0A 1A 0A
-  if (buffer.length < 24) return null;
+  if (buffer.length < 24) {return null;}
   if (buffer[0] !== 0x89 || buffer[1] !== 0x50 || buffer[2] !== 0x4e || buffer[3] !== 0x47) {
     return null;
   }
@@ -79,8 +79,8 @@ function getPngDimensions(buffer: Buffer): ImageDimensions | null {
 
 function getJpegDimensions(buffer: Buffer): ImageDimensions | null {
   // JPEG starts with FF D8 FF
-  if (buffer.length < 4) return null;
-  if (buffer[0] !== 0xff || buffer[1] !== 0xd8) return null;
+  if (buffer.length < 4) {return null;}
+  if (buffer[0] !== 0xff || buffer[1] !== 0xd8) {return null;}
 
   let offset = 2;
   while (offset < buffer.length - 8) {
@@ -106,8 +106,8 @@ function getJpegDimensions(buffer: Buffer): ImageDimensions | null {
 
 function getGifDimensions(buffer: Buffer): ImageDimensions | null {
   // GIF header: GIF87a or GIF89a
-  if (buffer.length < 10) return null;
-  if (buffer[0] !== 0x47 || buffer[1] !== 0x49 || buffer[2] !== 0x46) return null;
+  if (buffer.length < 10) {return null;}
+  if (buffer[0] !== 0x47 || buffer[1] !== 0x49 || buffer[2] !== 0x46) {return null;}
   // Width and height at bytes 6-7 and 8-9 (little endian)
   const width = buffer.readUInt16LE(6);
   const height = buffer.readUInt16LE(8);
@@ -116,9 +116,9 @@ function getGifDimensions(buffer: Buffer): ImageDimensions | null {
 
 function getWebpDimensions(buffer: Buffer): ImageDimensions | null {
   // WEBP: RIFF....WEBP
-  if (buffer.length < 30) return null;
-  if (buffer.toString("ascii", 0, 4) !== "RIFF") return null;
-  if (buffer.toString("ascii", 8, 12) !== "WEBP") return null;
+  if (buffer.length < 30) {return null;}
+  if (buffer.toString("ascii", 0, 4) !== "RIFF") {return null;}
+  if (buffer.toString("ascii", 8, 12) !== "WEBP") {return null;}
 
   const chunkType = buffer.toString("ascii", 12, 16);
   if (chunkType === "VP8 ") {
@@ -159,7 +159,7 @@ function getImageDimensions(buffer: Buffer, mimeType: string): ImageDimensions |
 
 function isSquareImage(buffer: Buffer, mimeType: string): boolean {
   const dimensions = getImageDimensions(buffer, mimeType);
-  if (!dimensions) return false;
+  if (!dimensions) {return false;}
   return dimensions.width === dimensions.height;
 }
 
@@ -328,7 +328,7 @@ export async function findProjectIcon(
       const packagePath = join(monoPath, packageName);
       try {
         const packageStats = await stat(packagePath);
-        if (!packageStats.isDirectory()) continue;
+        if (!packageStats.isDirectory()) {continue;}
       } catch {
         continue;
       }

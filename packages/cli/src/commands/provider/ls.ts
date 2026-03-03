@@ -35,8 +35,8 @@ export const providerLsSchema: OutputSchema<ProviderListItem> = {
       field: 'status',
       width: 12,
       color: (value) => {
-        if (value === 'available') return 'green'
-        if (value === 'unavailable') return 'red'
+        if (value === 'available') {return 'green'}
+        if (value === 'unavailable') {return 'red'}
         return undefined
       },
     },

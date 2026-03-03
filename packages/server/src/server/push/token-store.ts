@@ -20,8 +20,8 @@ export class PushTokenStore {
 
   addToken(token: string): void {
     const normalized = token.trim();
-    if (!normalized) return;
-    if (this.tokens.has(normalized)) return;
+    if (!normalized) {return;}
+    if (this.tokens.has(normalized)) {return;}
     this.tokens.add(normalized);
     this.persist();
     this.logger.debug({ total: this.tokens.size }, "Added token");
@@ -29,7 +29,7 @@ export class PushTokenStore {
 
   removeToken(token: string): void {
     const normalized = token.trim();
-    if (!normalized) return;
+    if (!normalized) {return;}
     const deleted = this.tokens.delete(normalized);
     if (deleted) {
       this.persist();

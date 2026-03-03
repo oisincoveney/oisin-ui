@@ -74,8 +74,8 @@ async function extractTarArchive(archivePath: string, destDir: string): Promise<
     const child = spawn("tar", ["xf", archivePath, "-C", destDir], { stdio: "inherit" });
     child.on("error", reject);
     child.on("exit", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`tar exited with code ${code}`));
+      if (code === 0) {resolve();}
+      else {reject(new Error(`tar exited with code ${code}`));}
     });
   });
 }

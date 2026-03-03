@@ -147,8 +147,8 @@ export async function runAttachCommand(
     // Subscribe to new events
     const unsubscribe = client.on('agent_stream', (msg: unknown) => {
       const message = msg as AgentStreamMessage
-      if (message.type !== 'agent_stream') return
-      if (message.payload.agentId !== resolvedId) return
+      if (message.type !== 'agent_stream') {return}
+      if (message.payload.agentId !== resolvedId) {return}
 
       printStreamEvent(message.payload.event)
     })
@@ -156,7 +156,7 @@ export async function runAttachCommand(
     // Handle Ctrl+C to detach gracefully
     let detached = false
     const detach = () => {
-      if (detached) return
+      if (detached) {return}
       detached = true
 
       console.log('\n\nDetaching from agent...')

@@ -55,7 +55,7 @@ export async function waitForDaemon(port: number, timeout = 30000): Promise<void
   while (Date.now() - start < timeout) {
     try {
       const result = await $`PASEO_HOST=localhost:${port} paseo agent ls`.nothrow()
-      if (result.exitCode === 0) return
+      if (result.exitCode === 0) {return}
     } catch {
       // Connection failed, keep trying
     }

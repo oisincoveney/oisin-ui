@@ -102,12 +102,12 @@ export function normalizeTranscript(text: string): string {
 function levenshteinDistanceWords(a: string[], b: string[]): number {
   const m = a.length;
   const n = b.length;
-  if (m === 0) return n;
-  if (n === 0) return m;
+  if (m === 0) {return n;}
+  if (n === 0) {return m;}
 
   const prev = new Array<number>(n + 1);
   const cur = new Array<number>(n + 1);
-  for (let j = 0; j <= n; j += 1) prev[j] = j;
+  for (let j = 0; j <= n; j += 1) {prev[j] = j;}
 
   for (let i = 1; i <= m; i += 1) {
     cur[0] = i;
@@ -115,7 +115,7 @@ function levenshteinDistanceWords(a: string[], b: string[]): number {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
       cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
     }
-    for (let j = 0; j <= n; j += 1) prev[j] = cur[j]!;
+    for (let j = 0; j <= n; j += 1) {prev[j] = cur[j]!;}
   }
   return prev[n]!;
 }
@@ -124,7 +124,7 @@ export function wordSimilarity(aText: string, bText: string): number {
   const a = normalizeTranscript(aText).split(" ").filter(Boolean);
   const b = normalizeTranscript(bText).split(" ").filter(Boolean);
   const maxLen = Math.max(a.length, b.length);
-  if (maxLen === 0) return 1;
+  if (maxLen === 0) {return 1;}
   const dist = levenshteinDistanceWords(a, b);
   return 1 - dist / maxLen;
 }

@@ -15,8 +15,8 @@ function generateId(): string {
 
 function sortByPriorityThenCreated(a: Task, b: Task): number {
   // Tasks with priority come before tasks without
-  if (a.priority !== undefined && b.priority === undefined) return -1;
-  if (a.priority === undefined && b.priority !== undefined) return 1;
+  if (a.priority !== undefined && b.priority === undefined) {return -1;}
+  if (a.priority === undefined && b.priority !== undefined) {return 1;}
 
   // If both have priority, lower number = higher priority
   if (a.priority !== undefined && b.priority !== undefined) {
@@ -225,11 +225,11 @@ export class FileTaskStore implements TaskStore {
     const result: Task[] = [];
 
     const traverse = async (taskId: string): Promise<void> => {
-      if (visited.has(taskId)) return;
+      if (visited.has(taskId)) {return;}
       visited.add(taskId);
 
       const task = await this.get(taskId);
-      if (!task) return;
+      if (!task) {return;}
 
       for (const depId of task.deps) {
         if (!visited.has(depId)) {
@@ -257,7 +257,7 @@ export class FileTaskStore implements TaskStore {
 
     while (currentId) {
       const parent = await this.get(currentId);
-      if (!parent) break;
+      if (!parent) {break;}
       ancestors.push(parent);
       currentId = parent.parentId;
     }
@@ -310,13 +310,13 @@ export class FileTaskStore implements TaskStore {
     }
 
     const isReady = (task: Task): boolean => {
-      if (task.status !== "open") return false;
+      if (task.status !== "open") {return false;}
       // All deps must be done
       const depsReady = task.deps.every((depId) => {
         const dep = taskMap.get(depId);
         return dep?.status === "done";
       });
-      if (!depsReady) return false;
+      if (!depsReady) {return false;}
       // All children must be done (if any exist)
       const children = childrenMap.get(task.id) ?? [];
       return children.every((c) => c.status === "done");
@@ -340,8 +340,8 @@ export class FileTaskStore implements TaskStore {
     }
 
     const isBlocked = (task: Task): boolean => {
-      if (task.status === "draft" || task.status === "done") return false;
-      if (task.deps.length === 0) return false;
+      if (task.status === "draft" || task.status === "done") {return false;}
+      if (task.deps.length === 0) {return false;}
       return task.deps.some((depId) => {
         const dep = taskMap.get(depId);
         return dep?.status !== "done";
@@ -477,7 +477,7 @@ export class FileTaskStore implements TaskStore {
 
     while (currentId) {
       const task = await this.get(currentId);
-      if (!task) break;
+      if (!task) {break;}
       ancestors.push(task);
       currentId = task.parentId;
     }

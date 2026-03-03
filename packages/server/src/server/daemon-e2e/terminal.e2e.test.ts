@@ -46,7 +46,7 @@ async function waitForCondition(
 }
 
 function percentile(values: number[], p: number): number {
-  if (values.length === 0) return 0;
+  if (values.length === 0) {return 0;}
   const sorted = [...values].sort((a, b) => a - b);
   const index = Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1);
   return sorted[index];
@@ -470,9 +470,9 @@ const shouldRun = !process.env.CI;
                   break;
                 }
               }
-              if (foundColoredCell) break;
+              if (foundColoredCell) {break;}
             }
-            if (foundColoredCell) break;
+            if (foundColoredCell) {break;}
           }
         } catch {
           // Timeout waiting for output, try again

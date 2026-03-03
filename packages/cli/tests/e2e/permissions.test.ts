@@ -86,7 +86,7 @@ async function test_create_agent_with_permissions(): Promise<string> {
 
   console.log('Exit code:', result.exitCode)
   console.log('Stdout:', result.stdout)
-  if (result.stderr) console.log('Stderr:', result.stderr)
+  if (result.stderr) {console.log('Stderr:', result.stderr)}
 
   assert.strictEqual(result.exitCode, 0, 'agent run should succeed')
 
@@ -152,7 +152,7 @@ async function test_permit_ls(): Promise<{ agentShortId: string; requestId: stri
 
   console.log('Exit code:', result.exitCode)
   console.log('Stdout:', result.stdout)
-  if (result.stderr) console.log('Stderr:', result.stderr)
+  if (result.stderr) {console.log('Stderr:', result.stderr)}
 
   assert.strictEqual(result.exitCode, 0, 'permit ls should succeed')
 
@@ -183,7 +183,7 @@ async function test_permit_allow(agentShortId: string, requestId: string): Promi
 
   console.log('Exit code:', result.exitCode)
   console.log('Stdout:', result.stdout)
-  if (result.stderr) console.log('Stderr:', result.stderr)
+  if (result.stderr) {console.log('Stderr:', result.stderr)}
 
   assert.strictEqual(result.exitCode, 0, 'permit allow should succeed')
 
@@ -202,7 +202,7 @@ async function test_agent_continues(agentId: string): Promise<void> {
 
   console.log('Exit code:', result.exitCode)
   console.log('Stdout:', result.stdout)
-  if (result.stderr) console.log('Stderr:', result.stderr)
+  if (result.stderr) {console.log('Stderr:', result.stderr)}
 
   assert.strictEqual(result.exitCode, 0, 'agent wait should succeed after permission granted')
 
@@ -222,7 +222,7 @@ async function test_agent_stop(agentId: string): Promise<void> {
 
   console.log('Exit code:', result.exitCode)
   console.log('Stdout:', result.stdout)
-  if (result.stderr) console.log('Stderr:', result.stderr)
+  if (result.stderr) {console.log('Stderr:', result.stderr)}
 
   assert.strictEqual(result.exitCode, 0, 'agent stop should succeed')
 

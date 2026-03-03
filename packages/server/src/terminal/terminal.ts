@@ -401,7 +401,7 @@ export async function createTerminal(options: CreateTerminalOptions): Promise<Te
 
   // Pipe PTY output to terminal emulator
   ptyProcess.onData((data) => {
-    if (killed) return;
+    if (killed) {return;}
     appendRawOutputChunk(data);
     terminal.write(data, () => {
       // Notify listeners of changes
@@ -432,7 +432,7 @@ export async function createTerminal(options: CreateTerminalOptions): Promise<Te
   }
 
   function send(msg: ClientMessage): void {
-    if (killed) return;
+    if (killed) {return;}
 
     try {
       switch (msg.type) {

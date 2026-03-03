@@ -75,11 +75,11 @@ export function parseDiff(diffText: string): ParsedDiffFile[] {
       const line = lines[i];
 
       // Skip metadata lines
-      if (line.startsWith("index ")) continue;
-      if (line.startsWith("--- ")) continue;
-      if (line.startsWith("+++ ")) continue;
-      if (line.startsWith("new file mode")) continue;
-      if (line.startsWith("deleted file mode")) continue;
+      if (line.startsWith("index ")) {continue;}
+      if (line.startsWith("--- ")) {continue;}
+      if (line.startsWith("+++ ")) {continue;}
+      if (line.startsWith("new file mode")) {continue;}
+      if (line.startsWith("deleted file mode")) {continue;}
 
       // Parse hunk header: @@ -oldStart,oldCount +newStart,newCount @@
       const hunkMatch = line.match(
@@ -99,7 +99,7 @@ export function parseDiff(diffText: string): ParsedDiffFile[] {
         continue;
       }
 
-      if (!currentHunk) continue;
+      if (!currentHunk) {continue;}
 
       if (line.startsWith("+")) {
         currentHunk.lines.push({ type: "add", content: line.slice(1) });
@@ -136,7 +136,7 @@ export function reconstructNewFile(hunks: DiffHunk[]): Map<number, string> {
     let newLineNum = hunk.newStart;
 
     for (const line of hunk.lines) {
-      if (line.type === "header") continue;
+      if (line.type === "header") {continue;}
 
       if (line.type === "add" || line.type === "context") {
         lines.set(newLineNum, line.content);
@@ -159,7 +159,7 @@ export function reconstructOldFile(hunks: DiffHunk[]): Map<number, string> {
     let oldLineNum = hunk.oldStart;
 
     for (const line of hunk.lines) {
-      if (line.type === "header") continue;
+      if (line.type === "header") {continue;}
 
       if (line.type === "remove" || line.type === "context") {
         lines.set(oldLineNum, line.content);
@@ -172,7 +172,7 @@ export function reconstructOldFile(hunks: DiffHunk[]): Map<number, string> {
 }
 
 function buildFileContent(lineMap: Map<number, string>): string {
-  if (lineMap.size === 0) return "";
+  if (lineMap.size === 0) {return "";}
 
   const lineNumbers = Array.from(lineMap.keys()).sort((a, b) => a - b);
   const minLine = lineNumbers[0];
@@ -192,7 +192,7 @@ function buildTokenLookup(
 ): Map<number, HighlightToken[]> {
   const lookup = new Map<number, HighlightToken[]>();
 
-  if (lineMap.size === 0) return lookup;
+  if (lineMap.size === 0) {return lookup;}
 
   const lineNumbers = Array.from(lineMap.keys()).sort((a, b) => a - b);
   const minLine = lineNumbers[0];

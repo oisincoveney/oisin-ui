@@ -77,7 +77,7 @@ interface TurnContext {
 function normalizeClaudeModelLabel(model: ModelInfo): string {
   const fallback = model.displayName?.trim() || model.value;
   const prefix = model.description?.split(/[·•]/)[0]?.trim() || "";
-  if (!prefix) return fallback;
+  if (!prefix) {return fallback;}
 
   // Prefer concrete versioned labels from description (e.g. "Opus 4.6",
   // "Sonnet 4.5"), especially when displayName is generic like
@@ -510,7 +510,7 @@ function resolvePermissionKind(
   toolName: string,
   input: Record<string, unknown>
 ): AgentPermissionRequestKind {
-  if (toolName === "ExitPlanMode") return "plan";
+  if (toolName === "ExitPlanMode") {return "plan";}
   if (toolName === "AskUserQuestion" && Array.isArray(input.questions)) {
     return "question";
   }
@@ -1302,7 +1302,7 @@ class ClaudeAgentSession implements AgentSession {
       const content = fs.readFileSync(historyPath, "utf8");
       for (const line of content.split(/\n+/)) {
         const trimmed = line.trim();
-        if (!trimmed) continue;
+        if (!trimmed) {continue;}
         try {
           const entry = JSON.parse(trimmed);
           if (entry?.type === "user" && typeof entry.uuid === "string") {
@@ -2062,7 +2062,7 @@ class ClaudeAgentSession implements AgentSession {
       const timeline: AgentTimelineItem[] = [];
       for (const line of content.split(/\n+/)) {
         const trimmed = line.trim();
-        if (!trimmed) continue;
+        if (!trimmed) {continue;}
         try {
           const entry = JSON.parse(trimmed);
           if (entry.isSidechain) {
@@ -2090,7 +2090,7 @@ class ClaudeAgentSession implements AgentSession {
 
   private resolveHistoryPath(sessionId: string): string | null {
     const cwd = this.config.cwd;
-    if (!cwd) return null;
+    if (!cwd) {return null;}
     // Match Claude CLI's path sanitization: replace slashes, dots, and underscores with dashes
     const sanitized = cwd.replace(/[\\/.]/g, "-").replace(/_/g, "-");
     const configDir = process.env.CLAUDE_CONFIG_DIR ?? path.join(os.homedir(), ".claude");
@@ -2796,7 +2796,7 @@ async function parseClaudeSessionDescriptor(
 
   for (const rawLine of content.split(/\r?\n/)) {
     const line = rawLine.trim();
-    if (!line) continue;
+    if (!line) {continue;}
     let entry: any;
     try {
       entry = JSON.parse(line);

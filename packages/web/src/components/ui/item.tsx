@@ -32,16 +32,23 @@ const itemVariants = cva(
         default: 'border-transparent',
         outline: 'border-border',
         muted: 'bg-muted/50 border-transparent',
+        ghost: 'border-none p-0 w-auto',
       },
       size: {
         default: 'gap-2.5 px-3 py-2.5',
         sm: 'gap-2.5 px-3 py-2.5',
         xs: 'gap-2.5 px-2.5 py-2 in-data-[slot=dropdown-menu-content]:p-0',
+        none: 'gap-0 p-0',
+      },
+      spacing: {
+        none: '',
+        'sidebar-action': 'mb-1 pl-2',
       },
     },
     defaultVariants: {
       variant: 'default',
       size: 'default',
+      spacing: 'none',
     },
   },
 )
@@ -50,6 +57,7 @@ function Item({
   className,
   variant = 'default',
   size = 'default',
+  spacing = 'none',
   render,
   ...props
 }: useRender.ComponentProps<'div'> & VariantProps<typeof itemVariants>) {
@@ -57,7 +65,7 @@ function Item({
     defaultTagName: 'div',
     props: mergeProps<'div'>(
       {
-        className: cn(itemVariants({ variant, size, className })),
+        className: cn(itemVariants({ variant, size, spacing, className })),
       },
       props,
     ),
@@ -66,6 +74,7 @@ function Item({
       slot: 'item',
       variant,
       size,
+      spacing,
     },
   })
 }

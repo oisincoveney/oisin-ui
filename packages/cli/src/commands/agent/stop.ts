@@ -64,7 +64,7 @@ export async function runStopCommand(
       // Stop agents in directory
       const filterCwd = options.cwd
       agents = agents.filter((a) => {
-        if (a.archivedAt) return false
+        if (a.archivedAt) {return false}
         const agentCwd = a.cwd.replace(/\/$/, '')
         const targetCwd = filterCwd.replace(/\/$/, '')
         return agentCwd === targetCwd || agentCwd.startsWith(targetCwd + '/')

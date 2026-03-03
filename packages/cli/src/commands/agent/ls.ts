@@ -20,9 +20,9 @@ function relativeTime(date: Date | string): string {
   const then = new Date(date).getTime()
   const seconds = Math.floor((now - then) / 1000)
 
-  if (seconds < 60) return 'just now'
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`
+  if (seconds < 60) {return 'just now'}
+  if (seconds < 3600) {return `${Math.floor(seconds / 60)} minutes ago`}
+  if (seconds < 86400) {return `${Math.floor(seconds / 3600)} hours ago`}
   return `${Math.floor(seconds / 86400)} days ago`
 }
 
@@ -47,9 +47,9 @@ export const agentLsSchema: OutputSchema<AgentListItem> = {
       field: 'status',
       width: 10,
       color: (value) => {
-        if (value === 'running') return 'green'
-        if (value === 'idle') return 'yellow'
-        if (value === 'error') return 'red'
+        if (value === 'running') {return 'green'}
+        if (value === 'idle') {return 'yellow'}
+        if (value === 'error') {return 'red'}
         return undefined
       },
     },
@@ -169,7 +169,7 @@ export async function runLsCommand(
       // Primary sort: by status
       const aOrder = statusOrder[a.status] ?? 999
       const bOrder = statusOrder[b.status] ?? 999
-      if (aOrder !== bOrder) return aOrder - bOrder
+      if (aOrder !== bOrder) {return aOrder - bOrder}
 
       // Secondary sort: by creation time (most recent first)
       const aTime = new Date(a.createdAt).getTime()

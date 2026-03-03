@@ -25,7 +25,7 @@ function assertFileExists(filePath: string, label: string): void {
 
 function product(dims: number[]): number {
   let out = 1;
-  for (const d of dims) out *= d;
+  for (const d of dims) {out *= d;}
   return out;
 }
 
@@ -35,8 +35,8 @@ function normalizeDims(dims: Array<number | string | null | undefined>): number[
   // Preserve explicit 0 dims (some models use empty initial state buffers with shape [0]).
   return dims.map((d) => {
     if (typeof d === "number" && Number.isFinite(d)) {
-      if (d === 0) return 0;
-      if (d > 0) return d;
+      if (d === 0) {return 0;}
+      if (d > 0) {return d;}
       return 1;
     }
     return 1;
@@ -50,7 +50,7 @@ function getSessionInputMeta(
   const metaAny = (session as any).inputMetadata as unknown;
   if (Array.isArray(metaAny)) {
     const entry = metaAny.find((m) => m && typeof m === "object" && (m as any).name === inputName) as any;
-    if (!entry) return undefined;
+    if (!entry) {return undefined;}
     return { type: entry.type, dims: entry.shape };
   }
 
@@ -74,8 +74,8 @@ function randn(): number {
   // Box–Muller
   let u = 0;
   let v = 0;
-  while (u === 0) u = Math.random();
-  while (v === 0) v = Math.random();
+  while (u === 0) {u = Math.random();}
+  while (v === 0) {v = Math.random();}
   return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
 }
 
@@ -125,8 +125,8 @@ async function loadSentencePiece(tokenizerModelPath: string): Promise<SentencePi
 
 function getOrtProviders(ort: OrtModule, device: "auto" | "cpu" | "cuda"): string[] {
   // NOTE: onnxruntime-node uses backend names like "cpu"/"coreml"/"webgpu" (not "CPUExecutionProvider").
-  if (device === "cpu") return ["cpu"];
-  if (device === "cuda") return ["cuda", "cpu"];
+  if (device === "cpu") {return ["cpu"];}
+  if (device === "cuda") {return ["cuda", "cpu"];}
   // auto
   // CoreML EP does not support some dynamic/zero-length shapes used by Pocket TTS (e.g. [1, 0, 32]).
   // Default to CPU to keep behavior predictable across platforms.
@@ -168,7 +168,7 @@ function updateStateFromOutputs(
   outputs: Record<string, OrtTensor>
 ): void {
   for (const [name, tensor] of Object.entries(outputs)) {
-    if (!name.startsWith("out_state_")) continue;
+    if (!name.startsWith("out_state_")) {continue;}
     const idx = Number.parseInt(name.replace("out_state_", ""), 10);
     if (Number.isFinite(idx)) {
       state[`state_${idx}`] = tensor;
@@ -178,8 +178,8 @@ function updateStateFromOutputs(
 
 function tensorDataFloat32(t: OrtTensor): Float32Array {
   const data = (t as any).data;
-  if (data instanceof Float32Array) return data;
-  if (Array.isArray(data)) return Float32Array.from(data as number[]);
+  if (data instanceof Float32Array) {return data;}
+  if (Array.isArray(data)) {return Float32Array.from(data as number[]);}
   throw new Error("Unexpected tensor data type (expected Float32Array)");
 }
 
@@ -363,7 +363,7 @@ class PocketTtsOnnxEngine {
     const out = await this.textConditioner.run({ token_ids: tokenIds } as any);
     const firstOutName = (this.textConditioner as any).outputNames?.[0] as string | undefined;
     const t = firstOutName ? (out as any)[firstOutName] : (Object.values(out)[0] as any);
-    if (!t) throw new Error("PocketTTS text_conditioner: missing output");
+    if (!t) {throw new Error("PocketTTS text_conditioner: missing output");}
     return t;
   }
 
@@ -443,7 +443,7 @@ class PocketTtsOnnxEngine {
         } as any);
         const first = (this.flowLmFlow as any).outputNames?.[0] as string | undefined;
         const flowTensor = first ? (flowOut as any)[first] : (Object.values(flowOut)[0] as any);
-        if (!flowTensor) throw new Error("PocketTTS flow_lm_flow: missing output");
+        if (!flowTensor) {throw new Error("PocketTTS flow_lm_flow: missing output");}
         const delta = tensorDataFloat32(flowTensor);
         for (let i = 0; i < x.length; i += 1) {
           x[i] = x[i]! + delta[i]! * dt;

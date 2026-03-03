@@ -3,16 +3,16 @@ import type { QRCodeToStringOptionsTerminal, QRCodeToStringOptionsOther } from "
 import type { Logger } from "pino";
 
 function parseBooleanEnv(value: string | undefined): boolean | undefined {
-  if (value === undefined) return undefined;
+  if (value === undefined) {return undefined;}
   const normalized = value.trim().toLowerCase();
-  if (["1", "true", "yes", "y", "on"].includes(normalized)) return true;
-  if (["0", "false", "no", "n", "off"].includes(normalized)) return false;
+  if (["1", "true", "yes", "y", "on"].includes(normalized)) {return true;}
+  if (["0", "false", "no", "n", "off"].includes(normalized)) {return false;}
   return undefined;
 }
 
 function shouldPrintPairingQr(): boolean {
   const env = parseBooleanEnv(process.env.PASEO_PAIRING_QR);
-  if (env !== undefined) return env;
+  if (env !== undefined) {return env;}
   return Boolean(process.stdout.isTTY);
 }
 
@@ -37,7 +37,7 @@ export async function printPairingQrIfEnabled(args: {
   url: string;
   logger?: Logger;
 }): Promise<void> {
-  if (!shouldPrintPairingQr()) return;
+  if (!shouldPrintPairingQr()) {return;}
 
   const qr = await renderPairingQr(args.url);
   const out = `\nScan to pair:\n${qr}\n${args.url}\n`;

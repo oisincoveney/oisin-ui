@@ -185,7 +185,7 @@ export async function acquirePidLock(
           raceLock
         );
       } catch (innerErr) {
-        if (innerErr instanceof PidLockError) throw innerErr;
+        if (innerErr instanceof PidLockError) {throw innerErr;}
         throw new PidLockError("Failed to acquire PID lock due to race condition");
       }
     }

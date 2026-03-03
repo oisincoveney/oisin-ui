@@ -29,8 +29,8 @@ function waitForAgentUpdate(
     const interval = setInterval(() => {
       for (let i = startIndex; i < messages.length; i++) {
         const msg = messages[i];
-        if (msg.type !== "agent_update") continue;
-        if (msg.payload.kind !== "upsert") continue;
+        if (msg.type !== "agent_update") {continue;}
+        if (msg.payload.kind !== "upsert") {continue;}
         if (predicate(msg.payload.agent)) {
           clearTimeout(timeout);
           clearInterval(interval);

@@ -17,3 +17,4 @@ pre-commit:
     web-fix:
       glob: "packages/web/src/**/*.{ts,tsx,js}"
       run: cd packages/web && bun run fix
+      stage_fixed: true

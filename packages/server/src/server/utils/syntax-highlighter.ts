@@ -109,7 +109,7 @@ const highlighter = tagHighlighter([
 
 function getParserForFile(filename: string): Parser | null {
   const ext = filename.split(".").pop()?.toLowerCase();
-  if (!ext) return null;
+  if (!ext) {return null;}
   return parsersByExtension[ext] ?? null;
 }
 

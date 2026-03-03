@@ -1074,10 +1074,10 @@ export class DaemonClient {
       message: { type: 'ping', requestId, clientSentAt },
       timeout: params?.timeoutMs ?? 5000,
       select: (msg) => {
-        if (msg.type !== 'pong') return null
-        if (msg.payload.requestId !== requestId) return null
-        if (typeof msg.payload.serverReceivedAt !== 'number') return null
-        if (typeof msg.payload.serverSentAt !== 'number') return null
+        if (msg.type !== 'pong') {return null}
+        if (msg.payload.requestId !== requestId) {return null}
+        if (typeof msg.payload.serverReceivedAt !== 'number') {return null}
+        if (typeof msg.payload.serverSentAt !== 'number') {return null}
         return msg.payload
       },
     })
@@ -3105,12 +3105,12 @@ export class DaemonClient {
 
     const promise = new Promise<T>((resolve, reject) => {
       const wrappedResolve = (value: T) => {
-        if (settled) return
+        if (settled) {return}
         settled = true
         resolve(value)
       }
       const wrappedReject = (error: Error) => {
-        if (settled) return
+        if (settled) {return}
         settled = true
         reject(error)
       }

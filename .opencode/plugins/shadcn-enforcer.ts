@@ -1,8 +1,9 @@
 import * as fs from "fs"
 import * as path from "path"
 
-// Matches lowercase JSX tags except <form
-const LOWERCASE_JSX_TAG = /<(?!form\b)[a-z][a-z0-9-]*[\s>/]/g
+// Matches lowercase JSX tags except <form>
+// Uses negative lookbehind (?<!\w) to prevent matching TS generics like useState<string>
+const LOWERCASE_JSX_TAG = /(?<!\w)<(?!form\b)[a-z][a-z0-9-]*[\s>/]/g
 // Matches React.createElement with string (lowercase) tag
 const CREATE_ELEMENT_STRING_TAG = /React\.createElement\(\s*['"][a-z]/g
 
@@ -67,12 +68,12 @@ export const ShadcnEnforcerPlugin = async ({ directory }: { directory: string })
       output: { args?: Record<string, unknown> },
     ) => {
       const tool = input.tool
-      if (!tool || !["write", "edit", "multiedit"].includes(tool)) return
+      if (!tool || !["write", "edit", "multiedit"].includes(tool)) {return}
 
       const args = output.args ?? {}
 
       const filePath = (args.filePath ?? "") as string
-      if (!isJsxFile(filePath) || isShadcnUiFile(filePath)) return
+      if (!isJsxFile(filePath) || isShadcnUiFile(filePath)) {return}
 
       let contentToCheck = ""
 
@@ -86,10 +87,10 @@ export const ShadcnEnforcerPlugin = async ({ directory }: { directory: string })
         contentToCheck = edits.map((e) => e.newString ?? "").join("\n")
       }
 
-      if (!contentToCheck) return
+      if (!contentToCheck) {return}
 
       const violations = getViolations(contentToCheck)
-      if (violations.length === 0) return
+      if (violations.length === 0) {return}
 
       const violationList = violations.map((v) => `  - ${v.tag} (line ${v.line})`).join("\n")
 

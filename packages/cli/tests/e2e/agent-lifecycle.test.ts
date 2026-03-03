@@ -64,7 +64,7 @@ async function test_agent_ls_empty(): Promise<void> {
 
   console.log('Exit code:', result.exitCode)
   console.log('Stdout:', result.stdout)
-  if (result.stderr) console.log('Stderr:', result.stderr)
+  if (result.stderr) {console.log('Stderr:', result.stderr)}
 
   assert.strictEqual(result.exitCode, 0, 'agent ls should succeed')
 
@@ -101,7 +101,7 @@ async function test_agent_run_detached(): Promise<string> {
 
   console.log('Exit code:', result.exitCode)
   console.log('Stdout:', result.stdout)
-  if (result.stderr) console.log('Stderr:', result.stderr)
+  if (result.stderr) {console.log('Stderr:', result.stderr)}
 
   assert.strictEqual(result.exitCode, 0, 'agent run should succeed')
 
@@ -143,7 +143,7 @@ async function test_agent_wait(agentId: string): Promise<void> {
 
   console.log('Exit code:', result.exitCode)
   console.log('Stdout:', result.stdout)
-  if (result.stderr) console.log('Stderr:', result.stderr)
+  if (result.stderr) {console.log('Stderr:', result.stderr)}
 
   assert.strictEqual(result.exitCode, 0, 'agent wait should succeed')
 
@@ -193,7 +193,7 @@ async function test_agent_stop(agentId: string): Promise<void> {
 
   console.log('Exit code:', result.exitCode)
   console.log('Stdout:', result.stdout)
-  if (result.stderr) console.log('Stderr:', result.stderr)
+  if (result.stderr) {console.log('Stderr:', result.stderr)}
 
   assert.strictEqual(result.exitCode, 0, 'agent stop should succeed')
 

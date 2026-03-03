@@ -21,7 +21,7 @@ export type AgentLogsResult = void
 
 
 function parseTailCount(raw: string | undefined): number | undefined {
-  if (raw === undefined) return undefined
+  if (raw === undefined) {return undefined}
   const parsed = Number.parseInt(raw, 10)
   if (Number.isNaN(parsed) || parsed < 0) {
     return undefined
@@ -33,7 +33,7 @@ function parseTailCount(raw: string | undefined): number | undefined {
  * Check if a timeline item matches the filter type
  */
 function matchesFilter(item: AgentTimelineItem, filter?: string): boolean {
-  if (!filter) return true
+  if (!filter) {return true}
 
   const filterLower = filter.toLowerCase()
   const type = item.type.toLowerCase()
@@ -171,8 +171,8 @@ async function runFollowMode(
 
   const unsubscribe = client.on('agent_stream', (msg: unknown) => {
     const message = msg as AgentStreamMessage
-    if (message.type !== 'agent_stream') return
-    if (message.payload.agentId !== agentId) return
+    if (message.type !== 'agent_stream') {return}
+    if (message.payload.agentId !== agentId) {return}
 
     if (message.payload.event.type === 'timeline') {
       const item = message.payload.event.item

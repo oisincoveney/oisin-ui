@@ -295,9 +295,9 @@ describe("daemon client E2E", () => {
 
     const infoPromise = waitForSignal<{ serverId: string }>(5000, (resolve) => {
       const unsubscribe = client.on("status", (message) => {
-        if (message.type !== "status") return;
+        if (message.type !== "status") {return;}
         const payload = parseServerInfoStatusPayload(message.payload);
-        if (!payload) return;
+        if (!payload) {return;}
         resolve({ serverId: payload.serverId });
       });
       return unsubscribe;
@@ -333,11 +333,11 @@ describe("daemon client E2E", () => {
         voiceReason: string;
       }>(5000, (resolve) => {
         const unsubscribe = client.on("status", (message) => {
-          if (message.type !== "status") return;
+          if (message.type !== "status") {return;}
           const payload = parseServerInfoStatusPayload(message.payload);
-          if (!payload) return;
+          if (!payload) {return;}
           const voice = payload.capabilities?.voice;
-          if (!voice) return;
+          if (!voice) {return;}
           resolve({
             dictationEnabled: voice.dictation.enabled,
             dictationReason: voice.dictation.reason,

@@ -19,7 +19,7 @@ class Pushable<T> implements AsyncIterable<T> {
   private closed = false;
 
   push(item: T) {
-    if (this.closed) return;
+    if (this.closed) {return;}
     if (this.resolvers.length > 0) {
       const resolve = this.resolvers.shift()!;
       resolve({ value: item, done: false });

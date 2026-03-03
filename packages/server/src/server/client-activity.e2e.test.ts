@@ -41,8 +41,8 @@ describe("client activity tracking", () => {
   });
 
   afterEach(async () => {
-    if (client1) await client1.close().catch(() => {});
-    if (client2) await client2.close().catch(() => {});
+    if (client1) {await client1.close().catch(() => {});}
+    if (client2) {await client2.close().catch(() => {});}
     await daemon.close();
   }, 30000);
 
@@ -67,9 +67,9 @@ describe("client activity tracking", () => {
       }, timeout);
 
       const cleanup = client.on("agent_stream", (msg) => {
-        if (msg.type !== "agent_stream") return;
-        if (msg.payload.agentId !== agentId) return;
-        if (msg.payload.event.type !== "attention_required") return;
+        if (msg.type !== "agent_stream") {return;}
+        if (msg.payload.agentId !== agentId) {return;}
+        if (msg.payload.event.type !== "attention_required") {return;}
 
         clearTimeout(timer);
         cleanup();

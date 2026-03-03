@@ -129,7 +129,7 @@ export async function listSessions(): Promise<TmuxSession[]> {
     "#{session_id}:#{session_name}:#{?session_attached,1,0}:#{session_windows}";
   const output = await executeTmux(["list-sessions", "-F", format]);
 
-  if (!output) return [];
+  if (!output) {return [];}
 
   return output.split("\n").map((line) => {
     const [id, name, attached, windows] = line.split(":");
@@ -195,7 +195,7 @@ export async function listWindows(sessionId: string): Promise<TmuxWindow[]> {
     format,
   ]);
 
-  if (!output) return [];
+  if (!output) {return [];}
 
   return output.split("\n").map((line) => {
     const [id, name, active] = line.split(":");
@@ -221,7 +221,7 @@ export async function listPanes(windowId: string): Promise<TmuxPane[]> {
     format,
   ]);
 
-  if (!output) return [];
+  if (!output) {return [];}
 
   return output.split("\n").map((line) => {
     const [id, title, active] = line.split(":");
@@ -467,7 +467,7 @@ export async function createWindow(
   const windows = await listWindows(sessionId);
   const window = windows.find((window) => window.name === name);
 
-  if (!window) return null;
+  if (!window) {return null;}
 
   // Disable automatic window renaming
   await executeTmux([
@@ -868,9 +868,9 @@ export async function checkCommandStatus(
   commandId: string
 ): Promise<CommandExecution | null> {
   const command = activeCommands.get(commandId);
-  if (!command) return null;
+  if (!command) {return null;}
 
-  if (command.status !== "pending") return command;
+  if (command.status !== "pending") {return command;}
 
   const content = await capturePaneContent(command.paneId, 1000);
 

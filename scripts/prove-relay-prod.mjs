@@ -5,7 +5,7 @@ function parseArgs(argv) {
   const args = {};
   for (let i = 2; i < argv.length; i += 1) {
     const part = argv[i];
-    if (!part.startsWith('--')) continue;
+    if (!part.startsWith('--')) {continue;}
     const key = part.slice(2);
     const next = argv[i + 1];
     if (!next || next.startsWith('--')) {

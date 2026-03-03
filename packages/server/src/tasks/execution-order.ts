@@ -1,10 +1,10 @@
 import type { Task, TaskStore } from "./types.js";
 
 function sortByPriorityThenCreated(a: Task, b: Task): number {
-  if (a.priority !== undefined && b.priority === undefined) return -1;
-  if (a.priority === undefined && b.priority !== undefined) return 1;
+  if (a.priority !== undefined && b.priority === undefined) {return -1;}
+  if (a.priority === undefined && b.priority !== undefined) {return 1;}
   if (a.priority !== undefined && b.priority !== undefined) {
-    if (a.priority !== b.priority) return a.priority - b.priority;
+    if (a.priority !== b.priority) {return a.priority - b.priority;}
   }
   return a.created.localeCompare(b.created);
 }
@@ -68,7 +68,7 @@ export async function computeExecutionOrder(
 
   const isReady = (taskId: string): boolean => {
     const task = taskMap.get(taskId);
-    if (!task) return false;
+    if (!task) {return false;}
     // All deps done (deps can be outside scope)
     const depsOk = task.deps.every((depId) => simDone.has(depId));
     // All children done (only consider children in scope)
@@ -99,7 +99,7 @@ export async function computeExecutionOrder(
       .map((tid) => taskMap.get(tid)!)
       .sort(sortByPriorityThenCreated);
 
-    if (readyNow.length === 0) break; // No more can be done (cycle or blocked)
+    if (readyNow.length === 0) {break;} // No more can be done (cycle or blocked)
 
     const next = readyNow[0];
     timeline.push(next);

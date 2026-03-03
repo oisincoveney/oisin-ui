@@ -57,8 +57,8 @@ describe("daemon E2E - permission flow: Claude", () => {
         expect(existsSync(filePath)).toBe(false);
 
         const hasPermissionResolved = collector.messages.some((m) => {
-          if (m.type !== "agent_stream") return false;
-          if (m.payload.agentId !== agent.id) return false;
+          if (m.type !== "agent_stream") {return false;}
+          if (m.payload.agentId !== agent.id) {return false;}
           return (
             m.payload.event.type === "permission_resolved" &&
             m.payload.event.requestId === permission.id &&
@@ -111,8 +111,8 @@ describe("daemon E2E - permission flow: Claude", () => {
         expect(existsSync(filePath)).toBe(true);
 
         const hasPermissionResolved = collector.messages.some((m) => {
-          if (m.type !== "agent_stream") return false;
-          if (m.payload.agentId !== agent.id) return false;
+          if (m.type !== "agent_stream") {return false;}
+          if (m.payload.agentId !== agent.id) {return false;}
           return (
             m.payload.event.type === "permission_resolved" &&
             m.payload.event.requestId === permission.id &&

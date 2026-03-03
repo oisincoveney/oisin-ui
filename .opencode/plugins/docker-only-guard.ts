@@ -17,17 +17,17 @@ const normalizeCommand = (command: string): string => command.replace(/\s+/g, " 
 export const DockerOnlyGuardPlugin = async () => {
   return {
     "tool.execute.before": async (input: { tool?: string }, output: { args?: { command?: string } }) => {
-      if (input.tool !== "bash") return
+      if (input.tool !== "bash") {return}
 
       const rawCommand = output.args?.command
-      if (typeof rawCommand !== "string" || rawCommand.length === 0) return
+      if (typeof rawCommand !== "string" || rawCommand.length === 0) {return}
 
       const command = normalizeCommand(rawCommand)
 
-      if (ALLOWED_DOCKER_MISE_COMMAND.test(command)) return
+      if (ALLOWED_DOCKER_MISE_COMMAND.test(command)) {return}
 
       const isBlocked = BLOCKED_LOCAL_RUN_PATTERNS.some((pattern) => pattern.test(command))
-      if (!isBlocked) return
+      if (!isBlocked) {return}
 
       throw new Error(
         [

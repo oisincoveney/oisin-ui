@@ -229,7 +229,7 @@ async function searchAcrossHomeTree(input: {
     queueIndex += 1
   ) {
     const current = queue[queueIndex]
-    if (!current) continue
+    if (!current) {continue}
     const entries = await listChildDirectories({
       directory: current.directory,
       homeRoot: input.homeRoot,
@@ -334,7 +334,7 @@ async function searchWorkspaceAcrossTree(input: {
     queueIndex += 1
   ) {
     const current = queue[queueIndex]
-    if (!current) continue
+    if (!current) {continue}
 
     const entries = await listWorkspaceChildEntries({
       directory: current.directory,

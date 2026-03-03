@@ -19,8 +19,8 @@ export function extractRelayMessageData(event: unknown): string | ArrayBuffer {
     event && typeof event === "object" && "data" in event
       ? (event as { data: unknown }).data
       : event;
-  if (typeof raw === "string") return raw;
-  if (raw instanceof ArrayBuffer) return raw;
+  if (typeof raw === "string") {return raw;}
+  if (raw instanceof ArrayBuffer) {return raw;}
   if (ArrayBuffer.isView(raw)) {
     return copyArrayBufferViewToBuffer(raw);
   }

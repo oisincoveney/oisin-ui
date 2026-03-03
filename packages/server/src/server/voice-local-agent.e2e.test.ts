@@ -94,14 +94,14 @@ function waitForSignal<T>(
 
         const transcriptionPromise = waitForSignal<string>(120000, (resolve, reject) => {
           const offTranscript = ctx.client.on("transcription_result", (msg) => {
-            if (msg.type !== "transcription_result") return;
+            if (msg.type !== "transcription_result") {return;}
             const text = String(msg.payload.text ?? "").trim();
-            if (!text) return;
+            if (!text) {return;}
             resolve(text);
           });
           const offError = ctx.client.on("activity_log", (msg) => {
-            if (msg.type !== "activity_log") return;
-            if (msg.payload.type !== "error") return;
+            if (msg.type !== "activity_log") {return;}
+            if (msg.payload.type !== "error") {return;}
             reject(new Error(String(msg.payload.content)));
           });
           return () => {
@@ -112,17 +112,17 @@ function waitForSignal<T>(
 
         const speakToolPromise = waitForSignal<string>(120000, (resolve, reject) => {
           const offStream = ctx.client.on("agent_stream", (msg) => {
-            if (msg.type !== "agent_stream") return;
-            if (msg.payload.event.type !== "timeline") return;
+            if (msg.type !== "agent_stream") {return;}
+            if (msg.payload.event.type !== "timeline") {return;}
             const item = msg.payload.event.item;
-            if (item.type !== "tool_call") return;
+            if (item.type !== "tool_call") {return;}
             const name = String(item.name ?? "");
-            if (!name.toLowerCase().includes("speak")) return;
+            if (!name.toLowerCase().includes("speak")) {return;}
             resolve(name);
           });
           const offError = ctx.client.on("activity_log", (msg) => {
-            if (msg.type !== "activity_log") return;
-            if (msg.payload.type !== "error") return;
+            if (msg.type !== "activity_log") {return;}
+            if (msg.payload.type !== "error") {return;}
             reject(new Error(String(msg.payload.content)));
           });
           return () => {

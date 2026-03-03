@@ -49,7 +49,7 @@ export function parseHostPort(input: string): HostPortParts {
       throw new Error("Invalid host:port (expected [::1]:6767)");
     }
     const host = match[1].trim();
-    if (!host) throw new Error("Host is required");
+    if (!host) {throw new Error("Host is required");}
     const port = parsePort(match[2], "Invalid host:port");
     return { host, port, isIpv6: true };
   }
@@ -59,7 +59,7 @@ export function parseHostPort(input: string): HostPortParts {
     throw new Error("Invalid host:port (expected localhost:6767)");
   }
   const host = match[1].trim();
-  if (!host) throw new Error("Host is required");
+  if (!host) {throw new Error("Host is required");}
   const port = parsePort(match[2], "Invalid host:port");
   return { host, port, isIpv6: false };
 }

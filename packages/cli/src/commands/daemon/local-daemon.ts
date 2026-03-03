@@ -319,7 +319,7 @@ export async function startLocalDaemonDetached(
       let settled = false
 
       const finish = (value: DetachedStartupResult) => {
-        if (settled) return
+        if (settled) {return}
         settled = true
         resolve(value)
       }

@@ -127,7 +127,7 @@ function areServerCapabilitiesEqual(
 }
 
 function bufferFromWsData(data: Buffer | ArrayBuffer | Buffer[] | string): Buffer {
-  if (typeof data === "string") return Buffer.from(data, "utf8");
+  if (typeof data === "string") {return Buffer.from(data, "utf8");}
   if (Array.isArray(data)) {
     return Buffer.concat(
       data.map((item) =>
@@ -135,7 +135,7 @@ function bufferFromWsData(data: Buffer | ArrayBuffer | Buffer[] | string): Buffe
       )
     );
   }
-  if (Buffer.isBuffer(data)) return data;
+  if (Buffer.isBuffer(data)) {return data;}
   return Buffer.from(data as ArrayBuffer);
 }
 
@@ -703,7 +703,7 @@ export class VoiceAssistantWebSocketServer {
     }
   ): Promise<void> {
     const activeConnection = this.sessions.get(ws);
-    if (activeConnection !== connection) return;
+    if (activeConnection !== connection) {return;}
     this.sessions.delete(ws);
     connection.sockets.delete(ws);
 

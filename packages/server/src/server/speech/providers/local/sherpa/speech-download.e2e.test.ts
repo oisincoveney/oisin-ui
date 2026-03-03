@@ -22,8 +22,8 @@ type ModelSet = "zipformer-kitten" | "parakeet-pocket";
 
 function getModelSet(): ModelSet {
   const raw = (process.env.PASEO_SPEECH_E2E_MODEL_SET ?? "parakeet-pocket").trim().toLowerCase();
-  if (raw === "zipformer-kitten" || raw === "zipformer") return "zipformer-kitten";
-  if (raw === "parakeet-pocket" || raw === "parakeet") return "parakeet-pocket";
+  if (raw === "zipformer-kitten" || raw === "zipformer") {return "zipformer-kitten";}
+  if (raw === "parakeet-pocket" || raw === "parakeet") {return "parakeet-pocket";}
   throw new Error(`Unknown PASEO_SPEECH_E2E_MODEL_SET: ${raw}`);
 }
 
@@ -146,8 +146,8 @@ describe("speech models (download E2E)", () => {
         const dictationId = `dict-download-${Date.now()}`;
         let partialCount = 0;
         const unsubscribe = ctx.client.on("dictation_stream_partial", (message) => {
-          if (message.type !== "dictation_stream_partial") return;
-          if (message.payload.dictationId !== dictationId) return;
+          if (message.type !== "dictation_stream_partial") {return;}
+          if (message.payload.dictationId !== dictationId) {return;}
           partialCount += 1;
         });
 
@@ -171,15 +171,15 @@ describe("speech models (download E2E)", () => {
         // Voice-mode STT: chunked upload until isLast=true
         const transcriptionPromise = waitForSignal<string>(30000, (resolve, reject) => {
           const offResult = ctx.client.on("transcription_result", (message) => {
-            if (message.type !== "transcription_result") return;
+            if (message.type !== "transcription_result") {return;}
             resolve(message.payload.text);
           });
           const offError = ctx.client.on("activity_log", (message) => {
-            if (message.type !== "activity_log") return;
+            if (message.type !== "activity_log") {return;}
             const payload = message.payload as { type?: unknown; content?: unknown };
-            if (payload.type !== "error") return;
+            if (payload.type !== "error") {return;}
             const content = typeof payload.content === "string" ? payload.content : null;
-            if (!content) return;
+            if (!content) {return;}
             reject(new Error(content));
           });
           return () => {

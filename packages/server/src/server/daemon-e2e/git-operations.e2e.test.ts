@@ -75,12 +75,12 @@ async function waitForTimelineToolCall(
   const recentToolCalls: Array<{ name: string; status?: string; callId?: string }> = [];
   for (let i = messages.length - 1; i >= 0 && recentToolCalls.length < 10; i -= 1) {
     const msg = messages[i];
-    if (msg?.type !== "agent_stream") continue;
-    if (msg.payload.agentId !== agentId) continue;
+    if (msg?.type !== "agent_stream") {continue;}
+    if (msg.payload.agentId !== agentId) {continue;}
     const event = msg.payload.event as any;
-    if (event?.type !== "timeline") continue;
+    if (event?.type !== "timeline") {continue;}
     const item = event.item as AgentTimelineItem;
-    if (item?.type !== "tool_call") continue;
+    if (item?.type !== "tool_call") {continue;}
     recentToolCalls.push({ name: item.name, status: item.status, callId: item.callId });
   }
   throw new Error(

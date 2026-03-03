@@ -55,9 +55,9 @@ function createInspectSchema(agent: AgentInspect): OutputSchema<InspectRow> {
         field: 'value',
         color: (_, item) => {
           if (item.key === 'Status') {
-            if (item.value === 'running') return 'green'
-            if (item.value === 'idle') return 'yellow'
-            if (item.value === 'error') return 'red'
+            if (item.value === 'running') {return 'green'}
+            if (item.value === 'idle') {return 'yellow'}
+            if (item.value === 'error') {return 'red'}
           }
           return undefined
         },
@@ -79,8 +79,8 @@ function shortenPath(path: string): string {
 
 /** Format cost in USD */
 function formatCost(costUsd: number): string {
-  if (costUsd === 0) return '$0.00'
-  if (costUsd < 0.01) return `$${costUsd.toFixed(4)}`
+  if (costUsd === 0) {return '$0.00'}
+  if (costUsd < 0.01) {return `$${costUsd.toFixed(4)}`}
   return `$${costUsd.toFixed(2)}`
 }
 

@@ -59,7 +59,7 @@ export function encodeOfferToFragmentUrl(args: {
 
 function getPrimaryLanIp(): string | null {
   const override = process.env.PASEO_PRIMARY_LAN_IP?.trim();
-  if (override) return override;
+  if (override) {return override;}
 
   const nets = os.networkInterfaces();
   const names = Object.keys(nets).sort();
@@ -79,7 +79,7 @@ function dedupePreserveOrder(values: string[]): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   for (const value of values) {
-    if (seen.has(value)) continue;
+    if (seen.has(value)) {continue;}
     seen.add(value);
     out.push(value);
   }

@@ -405,7 +405,7 @@ class FakeAgentSession implements AgentSession {
 
     for (const line of contents.split("\n")) {
       const trimmed = line.trim();
-      if (!trimmed) continue;
+      if (!trimmed) {continue;}
       yield JSON.parse(trimmed) as AgentStreamEvent;
     }
   }
@@ -509,21 +509,21 @@ class FakeAgentSession implements AgentSession {
     if (respondExactlyMatch) {
       return (respondExactlyMatch[1] ?? "").trim();
     }
-    if (lower.includes("state saved")) return "state saved";
-    if (lower.includes("timeline test")) return "timeline test";
+    if (lower.includes("state saved")) {return "state saved";}
+    if (lower.includes("timeline test")) {return "timeline test";}
     if (lower.includes("quick brown fox") && lower.includes("lazy dog")) {
       return "The quick brown fox jumps over the lazy dog. Then the fox ran away.";
     }
-    if (lower.includes("what did i ask you to say earlier")) return "You asked me to say state saved.";
-    if (lower.includes("say 'timeline test'")) return "timeline test";
-    if (lower.includes("say 'state saved'")) return "state saved";
+    if (lower.includes("what did i ask you to say earlier")) {return "You asked me to say state saved.";}
+    if (lower.includes("say 'timeline test'")) {return "timeline test";}
+    if (lower.includes("say 'state saved'")) {return "state saved";}
     if (lower.includes("return schema-valid json") || lower.includes("schema-valid json")) {
       return JSON.stringify({ ok: true });
     }
     if (lower.includes("what was the marker") || lower.includes("what was the project name")) {
       return this.memoryMarker ?? "unknown";
     }
-    if (lower.includes("stop")) return "Stopped.";
+    if (lower.includes("stop")) {return "Stopped.";}
     return "Hello world";
   }
 

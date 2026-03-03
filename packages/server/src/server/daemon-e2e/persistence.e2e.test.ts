@@ -135,9 +135,9 @@ describe("daemon E2E - persistence", () => {
 function extractAssistantText(queue: SessionOutboundMessage[], agentId: string): string {
   const parts: string[] = [];
   for (const m of queue) {
-    if (m.type !== "agent_stream") continue;
-    if (m.payload.agentId !== agentId) continue;
-    if (m.payload.event.type !== "timeline") continue;
+    if (m.type !== "agent_stream") {continue;}
+    if (m.payload.agentId !== agentId) {continue;}
+    if (m.payload.event.type !== "timeline") {continue;}
     const item = m.payload.event.item;
     if (item.type === "assistant_message") {
       parts.push(item.text);

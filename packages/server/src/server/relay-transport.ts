@@ -47,9 +47,9 @@ function tryParseControlMessage(raw: unknown): ControlMessage | null {
     const text =
       typeof raw === "string" ? raw : Buffer.isBuffer(raw) ? raw.toString("utf8") : String(raw);
     const parsed = JSON.parse(text) as any;
-    if (!parsed || typeof parsed !== "object") return null;
-    if (parsed.type === "ping") return { type: "ping" };
-    if (parsed.type === "pong") return { type: "pong" };
+    if (!parsed || typeof parsed !== "object") {return null;}
+    if (parsed.type === "ping") {return { type: "ping" };}
+    if (parsed.type === "pong") {return { type: "pong" };}
     if (parsed.type === "sync" && Array.isArray(parsed.clientIds)) {
       const clientIds = parsed.clientIds.filter((id: unknown) => typeof id === "string" && id.trim().length > 0);
       return { type: "sync", clientIds };
@@ -118,7 +118,7 @@ export function startRelayTransport({
   };
 
   const connectControl = (): void => {
-    if (stopped) return;
+    if (stopped) {return;}
 
     const connectionId = ++controlConnectionSeq;
     const url = buildRelayWebSocketUrl({
@@ -131,8 +131,8 @@ export function startRelayTransport({
     let controlConnected = false;
 
     const markControlReady = () => {
-      if (controlWs !== socket) return;
-      if (controlConnected) return;
+      if (controlWs !== socket) {return;}
+      if (controlConnected) {return;}
       controlConnected = true;
       reconnectAttempt = 0;
       if (controlReadyTimeout) {
@@ -143,7 +143,7 @@ export function startRelayTransport({
     };
 
     socket.on("open", () => {
-      if (controlWs !== socket) return;
+      if (controlWs !== socket) {return;}
 
       controlLastSeenAt = Date.now();
       if (controlKeepaliveInterval) {
@@ -155,9 +155,9 @@ export function startRelayTransport({
         controlReadyTimeout = null;
       }
       controlReadyTimeout = setTimeout(() => {
-        if (stopped) return;
-        if (controlWs !== socket) return;
-        if (controlConnected) return;
+        if (stopped) {return;}
+        if (controlWs !== socket) {return;}
+        if (controlConnected) {return;}
         relayLogger.warn(
           { url, connectionId, waitedMs: CONTROL_READY_TIMEOUT_MS },
           "relay_control_ready_timeout_terminating"
@@ -169,9 +169,9 @@ export function startRelayTransport({
         }
       }, CONTROL_READY_TIMEOUT_MS);
       controlKeepaliveInterval = setInterval(() => {
-        if (stopped) return;
-        if (controlWs !== socket) return;
-        if (socket.readyState !== WebSocket.OPEN) return;
+        if (stopped) {return;}
+        if (controlWs !== socket) {return;}
+        if (socket.readyState !== WebSocket.OPEN) {return;}
 
         const now = Date.now();
         const staleForMs = now - controlLastSeenAt;
@@ -215,7 +215,7 @@ export function startRelayTransport({
     });
 
     socket.on("close", (code, reason) => {
-      if (controlWs !== socket) return;
+      if (controlWs !== socket) {return;}
       relayLogger.warn(
         { code, reason: reason?.toString?.(), url, connectionId },
         "relay_control_disconnected"
@@ -233,19 +233,19 @@ export function startRelayTransport({
     });
 
     socket.on("error", (err) => {
-      if (controlWs !== socket) return;
+      if (controlWs !== socket) {return;}
       relayLogger.warn({ err, url, connectionId }, "relay_error");
       // close event will schedule reconnect
     });
 
     socket.on("message", (data) => {
-      if (controlWs !== socket) return;
+      if (controlWs !== socket) {return;}
       controlLastSeenAt = Date.now();
       const msg = tryParseControlMessage(data);
       if (msg) {
         markControlReady();
       }
-      if (!msg) return;
+      if (!msg) {return;}
       if (msg.type === "ping") {
         try {
           socket.send(JSON.stringify({ type: "pong", ts: Date.now() }));
@@ -254,7 +254,7 @@ export function startRelayTransport({
         }
         return;
       }
-      if (msg.type === "pong") return;
+      if (msg.type === "pong") {return;}
       if (msg.type === "sync") {
         for (const clientId of msg.clientIds) {
           ensureClientDataSocket(clientId);
@@ -280,8 +280,8 @@ export function startRelayTransport({
   };
 
   const scheduleReconnect = (): void => {
-    if (stopped) return;
-    if (reconnectTimeout) return;
+    if (stopped) {return;}
+    if (reconnectTimeout) {return;}
 
     reconnectAttempt += 1;
     const delayMs = Math.min(30000, 1000 * reconnectAttempt);
@@ -292,9 +292,9 @@ export function startRelayTransport({
   };
 
   const ensureClientDataSocket = (clientId: string): void => {
-    if (stopped) return;
-    if (!clientId) return;
-    if (dataSockets.has(clientId)) return;
+    if (stopped) {return;}
+    if (!clientId) {return;}
+    if (dataSockets.has(clientId)) {return;}
 
     const url = buildRelayWebSocketUrl({
       endpoint: relayEndpoint,
@@ -307,8 +307,8 @@ export function startRelayTransport({
 
     let attached = false;
     const openTimeout = setTimeout(() => {
-      if (stopped) return;
-      if (socket.readyState === WebSocket.OPEN) return;
+      if (stopped) {return;}
+      if (socket.readyState === WebSocket.OPEN) {return;}
       relayLogger.warn({ url, clientId }, "relay_data_open_timeout_terminating");
       try {
         socket.terminate();
@@ -320,7 +320,7 @@ export function startRelayTransport({
     socket.on("open", () => {
       clearTimeout(openTimeout);
       relayLogger.info({ url, clientId }, "relay_data_connected");
-      if (attached) return;
+      if (attached) {return;}
       attached = true;
       const externalMetadata: ExternalSocketMetadata = {
         transport: "relay",
@@ -421,13 +421,13 @@ function createEncryptedSocket(
   channel.setState("open");
 
   const close = (code?: number, reason?: string) => {
-    if (readyState === 3) return;
+    if (readyState === 3) {return;}
     readyState = 3;
     channel.close(code, reason);
   };
 
   emitter.on("close", () => {
-    if (readyState === 3) return;
+    if (readyState === 3) {return;}
     readyState = 3;
   });
 
@@ -465,13 +465,13 @@ function createEncryptedSocket(
 
 function normalizeMessageData(data: unknown, isBinary: boolean): string | ArrayBuffer {
   if (!isBinary) {
-    if (typeof data === "string") return data;
+    if (typeof data === "string") {return data;}
     const buffer = bufferFromWsData(data);
-    if (buffer) return buffer.toString("utf8");
+    if (buffer) {return buffer.toString("utf8");}
     return String(data);
   }
 
-  if (data instanceof ArrayBuffer) return data;
+  if (data instanceof ArrayBuffer) {return data;}
 
   const buffer = bufferFromWsData(data);
   if (buffer) {
@@ -485,7 +485,7 @@ function normalizeMessageData(data: unknown, isBinary: boolean): string | ArrayB
 }
 
 function bufferFromWsData(data: unknown): Buffer | null {
-  if (Buffer.isBuffer(data)) return data;
+  if (Buffer.isBuffer(data)) {return data;}
   if (Array.isArray(data)) {
     const buffers: Buffer[] = [];
     for (const part of data) {
@@ -503,7 +503,7 @@ function bufferFromWsData(data: unknown): Buffer | null {
     }
     return Buffer.concat(buffers);
   }
-  if (data instanceof ArrayBuffer) return Buffer.from(data);
+  if (data instanceof ArrayBuffer) {return Buffer.from(data);}
   if (ArrayBuffer.isView(data)) {
     return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
   }

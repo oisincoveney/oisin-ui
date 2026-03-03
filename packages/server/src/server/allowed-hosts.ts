@@ -8,12 +8,12 @@ function normalizeHostname(hostname: string): string {
 
 function parseHostnameFromHostHeader(hostHeader: string): string | null {
   const trimmed = hostHeader.trim();
-  if (!trimmed) return null;
+  if (!trimmed) {return null;}
 
   // IPv6 in brackets: [::1]:6767
   if (trimmed.startsWith("[")) {
     const end = trimmed.indexOf("]");
-    if (end === -1) return null;
+    if (end === -1) {return null;}
     return normalizeHostname(trimmed.slice(1, end));
   }
 
@@ -27,11 +27,11 @@ function parseHostnameFromHostHeader(hostHeader: string): string | null {
 
 function matchesAllowedHostPattern(hostname: string, pattern: string): boolean {
   const normalizedPattern = normalizeHostname(pattern);
-  if (!normalizedPattern) return false;
+  if (!normalizedPattern) {return false;}
 
   if (normalizedPattern.startsWith(".")) {
     const base = normalizedPattern.slice(1);
-    if (!base) return false;
+    if (!base) {return false;}
     return hostname === base || hostname.endsWith(`.${base}`);
   }
 
@@ -40,9 +40,9 @@ function matchesAllowedHostPattern(hostname: string, pattern: string): boolean {
 
 function isDefaultAllowedHostname(hostname: string): boolean {
   // Vite-style defaults: localhost, *.localhost, and all IP addresses.
-  if (hostname === "localhost") return true;
-  if (hostname.endsWith(".localhost")) return true;
-  if (net.isIP(hostname) !== 0) return true;
+  if (hostname === "localhost") {return true;}
+  if (hostname.endsWith(".localhost")) {return true;}
+  if (net.isIP(hostname) !== 0) {return true;}
   return false;
 }
 
@@ -59,16 +59,16 @@ export function isHostAllowed(
   allowedHosts: AllowedHostsConfig
 ): boolean {
   const hostname = hostHeader ? parseHostnameFromHostHeader(hostHeader) : null;
-  if (!hostname) return false;
+  if (!hostname) {return false;}
 
-  if (allowedHosts === true) return true;
+  if (allowedHosts === true) {return true;}
 
   // Defaults are always allowed.
-  if (isDefaultAllowedHostname(hostname)) return true;
+  if (isDefaultAllowedHostname(hostname)) {return true;}
 
   const patterns = allowedHosts ?? [];
   for (const pattern of patterns) {
-    if (matchesAllowedHostPattern(hostname, pattern)) return true;
+    if (matchesAllowedHostPattern(hostname, pattern)) {return true;}
   }
   return false;
 }
@@ -78,8 +78,8 @@ export function mergeAllowedHosts(
 ): AllowedHostsConfig {
   let merged: string[] = [];
   for (const value of values) {
-    if (value === true) return true;
-    if (!value) continue;
+    if (value === true) {return true;}
+    if (!value) {continue;}
     merged = merged.concat(value);
   }
 
@@ -92,10 +92,10 @@ export function mergeAllowedHosts(
 export function parseAllowedHostsEnv(
   raw: string | undefined
 ): AllowedHostsConfig {
-  if (!raw) return undefined;
+  if (!raw) {return undefined;}
   const trimmed = raw.trim();
-  if (!trimmed) return undefined;
-  if (trimmed.toLowerCase() === "true") return true;
+  if (!trimmed) {return undefined;}
+  if (trimmed.toLowerCase() === "true") {return true;}
   return trimmed
     .split(",")
     .map((s) => s.trim())

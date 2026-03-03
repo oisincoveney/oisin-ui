@@ -335,7 +335,7 @@ program
     const maxDepth = opts.depth !== undefined ? parseInt(opts.depth, 10) : Infinity;
 
     const formatDeps = (task: Task): string => {
-      if (task.deps.length === 0) return "";
+      if (task.deps.length === 0) {return "";}
       return ` (deps: ${task.deps.join(", ")})`;
     };
 
@@ -398,7 +398,7 @@ program
 
       // Recursively print children in execution order
       const printChildren = (parentId: string, prefix: string, depth: number) => {
-        if (depth >= maxDepth) return;
+        if (depth >= maxDepth) {return;}
         const children = sortedChildrenMap.get(parentId) ?? [];
         for (let i = 0; i < children.length; i++) {
           const child = children[i];
@@ -1061,7 +1061,7 @@ function log(logFile: string, message: string): void {
 function parseJudgeVerdict(output: string): "DONE" | "NOT_DONE" | null {
   // Find all matches and return the last one (in case reasoning mentions verdict earlier)
   const matches = [...output.matchAll(/<VERDICT>(DONE|NOT_DONE)<\/VERDICT>/g)];
-  if (matches.length === 0) return null;
+  if (matches.length === 0) {return null;}
   return matches[matches.length - 1][1] as "DONE" | "NOT_DONE";
 }
 
@@ -1088,7 +1088,7 @@ program
     process.stdout.write(`Worker: ${baseWorkerModel}\n`);
     process.stdout.write(`Judge: ${judgeModel}\n`);
     process.stdout.write(`Max iterations: ${maxIterations === 0 ? "unlimited" : maxIterations}\n`);
-    if (scopeId) process.stdout.write(`Scope: ${scopeId}\n`);
+    if (scopeId) {process.stdout.write(`Scope: ${scopeId}\n`);}
     process.stdout.write(`Log: ${logFile}\n`);
     process.stdout.write("\n");
 
@@ -1120,7 +1120,7 @@ program
     const runTaskLoop = async (): Promise<void> => {
       // First check for in_progress tasks (resuming from crash)
       const allTasks = await store.list();
-      let candidates = scopeId
+      const candidates = scopeId
         ? [await store.get(scopeId), ...(await store.getDescendants(scopeId))].filter(Boolean) as Task[]
         : allTasks;
 
@@ -1205,7 +1205,7 @@ program
 
           // Refresh task context (notes may have been added)
           const freshTask = await store.get(task.id);
-          if (!freshTask) break;
+          if (!freshTask) {break;}
 
           const freshContext = await buildTaskContext(freshTask, scopeId);
           const workerPrompt = makeWorkerPrompt(freshTask, freshContext, iteration);
@@ -1214,7 +1214,7 @@ program
           // Step 3: Judge
           log(logFile, `[JUDGE] Verifying with ${judgeModel}...`);
           const judgeTask = await store.get(task.id);
-          if (!judgeTask) break;
+          if (!judgeTask) {break;}
 
           const judgePrompt = makeJudgePrompt(judgeTask);
           const judgeResult = runAgentWithModel(judgePrompt, judgeModel, logFile);

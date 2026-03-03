@@ -24,8 +24,8 @@ export const permitResponseSchema: OutputSchema<PermissionResponseItem> = {
       field: 'result',
       width: 10,
       color: (value) => {
-        if (value === 'allowed') return 'green'
-        if (value === 'denied') return 'red'
+        if (value === 'allowed') {return 'green'}
+        if (value === 'denied') {return 'red'}
         return undefined
       },
     },

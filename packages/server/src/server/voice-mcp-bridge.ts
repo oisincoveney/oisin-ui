@@ -123,8 +123,8 @@ export function createVoiceMcpSocketBridgeManager(params: {
     }
     await new Promise<void>((resolve, reject) => {
       entry.server.close((error) => {
-        if (error) reject(error);
-        else resolve();
+        if (error) {reject(error);}
+        else {resolve();}
       });
     });
     await rm(entry.socketPath, { force: true }).catch(() => undefined);

@@ -308,11 +308,11 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   const cleanups: Array<Promise<unknown>> = [];
-  if (controlClient) cleanups.push(controlClient.close());
-  if (runtime?.web) cleanups.push(stopProcess(runtime.web));
-  if (runtime?.daemon) cleanups.push(stopProcess(runtime.daemon));
-  if (runtime?.repoPath) cleanups.push(rm(runtime.repoPath, { recursive: true, force: true }));
-  if (runtime?.paseoHomeRoot) cleanups.push(rm(runtime.paseoHomeRoot, { recursive: true, force: true }));
+  if (controlClient) {cleanups.push(controlClient.close());}
+  if (runtime?.web) {cleanups.push(stopProcess(runtime.web));}
+  if (runtime?.daemon) {cleanups.push(stopProcess(runtime.daemon));}
+  if (runtime?.repoPath) {cleanups.push(rm(runtime.repoPath, { recursive: true, force: true }));}
+  if (runtime?.paseoHomeRoot) {cleanups.push(rm(runtime.paseoHomeRoot, { recursive: true, force: true }));}
   await Promise.allSettled(cleanups);
 });
 
