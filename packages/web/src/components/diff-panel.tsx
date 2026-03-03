@@ -70,6 +70,7 @@ export function DiffPanel({
   const [isPushing, setIsPushing] = useState(false)
   const [pendingPushCwd, setPendingPushCwd] = useState<string | null>(null)
   const [aheadOfOrigin, setAheadOfOrigin] = useState<number | null>(null)
+  const [behindOfOrigin, setBehindOfOrigin] = useState<number | null>(null)
   const [hasRemote, setHasRemote] = useState(false)
 
   useEffect(() => {
@@ -121,6 +122,7 @@ export function DiffPanel({
         return
       }
       setAheadOfOrigin(payload.checkoutStatus.aheadOfOrigin)
+      setBehindOfOrigin(payload.checkoutStatus.behindOfOrigin)
       setHasRemote(payload.checkoutStatus.hasRemote)
     })
   }, [cwd])
@@ -128,6 +130,7 @@ export function DiffPanel({
   useEffect(() => {
     if (!cwd) {
       setAheadOfOrigin(null)
+      setBehindOfOrigin(null)
       setHasRemote(false)
       return
     }
@@ -246,6 +249,7 @@ export function DiffPanel({
               <ArrowUpFromLine className="mr-1 h-4 w-4" />
               Push
               {aheadOfOrigin && aheadOfOrigin > 0 ? ` ↑${aheadOfOrigin}` : null}
+              {behindOfOrigin && behindOfOrigin > 0 ? ` ↓${behindOfOrigin}` : null}
             </>
           )}
         </Button>
