@@ -11,13 +11,13 @@ See: `.planning/PROJECT.md` (updated 2026-03-02)
 
 **Milestone:** v3 TABS COOLERS
 **Phase:** 13 - Multi-Tab (pending)
-**Plan:** 12-01 complete (1/1)
+**Plan:** 12-02 complete (2/2)
 **Status:** Phase 12 complete, ready for phase 13 planning
-**Last activity:** 2026-03-03 — Completed 12-01-PLAN.md
+**Last activity:** 2026-03-03 — Completed 12-02-PLAN.md
 
 ```
 v3 Progress: [████░░░░░░░░░░░░░░░░] 20%
-Phase 12:    [████████████████████] 100% (1/1 plans)
+Phase 12:    [████████████████████] 100% (2/2 plans)
 ```
 
 ## Performance Metrics
@@ -64,6 +64,7 @@ Phase 12:    [████████████████████] 100%
 | Voice last | Independent, can defer if needed |
 | Push button always visible, disabled when not pushable | Stable UI affordance with clear state |
 | Reuse diff-store listener pattern for push/status wiring | Keeps websocket behavior consistent with commit/stage |
+| Represent first-push explicitly with hasUpstream | Prevents null ahead count from disabling valid first push |
 
 ### Open Questions
 
@@ -73,8 +74,8 @@ Phase 12:    [████████████████████] 100%
 
 ## Session Continuity
 
-**Last session:** 2026-03-03 02:41 UTC
-**Stopped at:** Completed 12-01-PLAN.md
+**Last session:** 2026-03-03 03:05 UTC
+**Stopped at:** Completed 12-02-PLAN.md
 **Resume file:** None
 
 ## Todos
@@ -99,4 +100,4 @@ None.
 
 ---
 
-_State updated: 2026-03-03 — completed phase 12 plan 01._
+_State updated: 2026-03-03 — completed phase 12 plan 02._
