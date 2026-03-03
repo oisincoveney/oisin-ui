@@ -1,6 +1,7 @@
 import { atom, getDefaultStore, useAtomValue } from 'jotai'
 import { getConnectionStatus, sendWsMessage, subscribeConnectionStatus, subscribeTextMessages } from '@/lib/ws'
 import type {
+  CheckoutStatus,
   CheckoutDiffPayload,
   DiffCacheEntry,
   DiffSessionMessage,
@@ -25,6 +26,14 @@ const commitResponseListeners = new Set<
     requestId: string
   }) => void
 >()
+const pushResponseListeners = new Set<
+  (payload: {
+    cwd: string
+    success: boolean
+    error: { code: string; message: string } | null
+    requestId: string
+  }) => void
+>()
 const stageResponseListeners = new Set<
   (payload: {
     cwd: string
@@ -35,6 +44,9 @@ const stageResponseListeners = new Set<
     requestId: string
   }) => void
 >()
+const checkoutStatusResponseListeners = new Set<
+  (payload: { cwd: string; checkoutStatus: CheckoutStatus; requestId: string }) => void
+>()
 
 const initialState: DiffStoreState = {
   connectionStatus: getConnectionStatus(),
@@ -43,6 +55,7 @@ const initialState: DiffStoreState = {
   activeRequestId: null,
   loading: false,
   error: null,
+  checkoutStatusByCwd: {},
   panel: {
     isOpen: false,
     widthPercent: DEFAULT_PANEL_WIDTH_PERCENT,
@@ -130,6 +143,75 @@ function parseCheckoutCommitResponsePayload(payload: unknown): {
       isRecord(error) && typeof error.message === 'string' && typeof error.code === 'string'
         ? { code: error.code, message: error.message }
         : null,
+    requestId,
+  }
+}
+
+function parseCheckoutPushResponsePayload(payload: unknown): {
+  cwd: string
+  success: boolean
+  error: { code: string; message: string } | null
+  requestId: string
+} | null {
+  if (!isRecord(payload)) {
+    return null
+  }
+
+  const cwd = payload.cwd
+  const success = payload.success
+  const error = payload.error
+  const requestId = payload.requestId
+
+  if (typeof cwd !== 'string' || typeof success !== 'boolean' || typeof requestId !== 'string') {
+    return null
+  }
+
+  return {
+    cwd,
+    success,
+    error:
+      isRecord(error) && typeof error.message === 'string' && typeof error.code === 'string'
+        ? { code: error.code, message: error.message }
+        : null,
+    requestId,
+  }
+}
+
+function parseCheckoutStatusResponsePayload(payload: unknown): {
+  cwd: string
+  checkoutStatus: CheckoutStatus
+  requestId: string
+} | null {
+  if (!isRecord(payload)) {
+    return null
+  }
+
+  const cwd = payload.cwd
+  const aheadOfOrigin = payload.aheadOfOrigin
+  const behindOfOrigin = payload.behindOfOrigin
+  const hasRemote = payload.hasRemote
+  const requestId = payload.requestId
+
+  const validAhead = typeof aheadOfOrigin === 'number' || aheadOfOrigin === null
+  const validBehind = typeof behindOfOrigin === 'number' || behindOfOrigin === null
+
+  if (
+    typeof cwd !== 'string' ||
+    typeof hasRemote !== 'boolean' ||
+    typeof requestId !== 'string' ||
+    !validAhead ||
+    !validBehind
+  ) {
+    return null
+  }
+
+  return {
+    cwd,
+    checkoutStatus: {
+      aheadOfOrigin,
+      behindOfOrigin,
+      hasRemote,
+    },
     requestId,
   }
 }
@@ -224,9 +306,34 @@ function toCacheEntry(target: ThreadDiffTarget, payload: CheckoutDiffPayload): D
     files: payload.files,
     stagedFiles: payload.stagedFiles,
     unstagedFiles: payload.unstagedFiles,
+    checkoutStatus: state.checkoutStatusByCwd[payload.cwd] ?? null,
     error: payload.error?.message ?? null,
     updatedAt: new Date().toISOString(),
   }
+}
+
+function applyCheckoutStatusPayload(payload: { cwd: string; checkoutStatus: CheckoutStatus; requestId: string }): void {
+  updateState((previous) => {
+    const cacheByThreadKey: Record<string, DiffCacheEntry> = {}
+    for (const [threadKey, entry] of Object.entries(previous.cacheByThreadKey)) {
+      cacheByThreadKey[threadKey] =
+        entry.cwd === payload.cwd
+          ? {
+              ...entry,
+              checkoutStatus: payload.checkoutStatus,
+            }
+          : entry
+    }
+
+    return {
+      ...previous,
+      checkoutStatusByCwd: {
+        ...previous.checkoutStatusByCwd,
+        [payload.cwd]: payload.checkoutStatus,
+      },
+      cacheByThreadKey,
+    }
+  })
 }
 
 function applyDiffPayload(payload: CheckoutDiffPayload): void {
@@ -280,6 +387,27 @@ function handleDiffSessionMessage(rawMessage: unknown): void {
         return
       }
       for (const listener of commitResponseListeners) {
+        listener(payload)
+      }
+      return
+    }
+    case 'checkout_push_response': {
+      const payload = parseCheckoutPushResponsePayload(message.payload)
+      if (!payload) {
+        return
+      }
+      for (const listener of pushResponseListeners) {
+        listener(payload)
+      }
+      return
+    }
+    case 'checkout_status_response': {
+      const payload = parseCheckoutStatusResponsePayload(message.payload)
+      if (!payload) {
+        return
+      }
+      applyCheckoutStatusPayload(payload)
+      for (const listener of checkoutStatusResponseListeners) {
         listener(payload)
       }
       return
@@ -456,6 +584,24 @@ export function sendCommitRequest(cwd: string, message: string): void {
   })
 }
 
+export function sendPushRequest(cwd: string): void {
+  const requestId = randomId('push')
+  sendWsMessage({
+    type: 'checkout_push_request',
+    cwd,
+    requestId,
+  })
+}
+
+export function fetchCheckoutStatus(cwd: string): void {
+  const requestId = randomId('checkout-status')
+  sendWsMessage({
+    type: 'checkout_status_request',
+    cwd,
+    requestId,
+  })
+}
+
 export function subscribeCommitResponses(
   listener: (payload: {
     cwd: string
@@ -467,6 +613,29 @@ export function subscribeCommitResponses(
   commitResponseListeners.add(listener)
   return () => {
     commitResponseListeners.delete(listener)
+  }
+}
+
+export function subscribePushResponses(
+  listener: (payload: {
+    cwd: string
+    success: boolean
+    error: { code: string; message: string } | null
+    requestId: string
+  }) => void,
+): () => void {
+  pushResponseListeners.add(listener)
+  return () => {
+    pushResponseListeners.delete(listener)
+  }
+}
+
+export function subscribeCheckoutStatusResponses(
+  listener: (payload: { cwd: string; checkoutStatus: CheckoutStatus; requestId: string }) => void,
+): () => void {
+  checkoutStatusResponseListeners.add(listener)
+  return () => {
+    checkoutStatusResponseListeners.delete(listener)
   }
 }
 

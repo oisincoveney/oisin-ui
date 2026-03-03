@@ -44,6 +44,12 @@ export type CheckoutDiffPayload = {
   error: CheckoutError | null
 }
 
+export type CheckoutStatus = {
+  aheadOfOrigin: number | null
+  behindOfOrigin: number | null
+  hasRemote: boolean
+}
+
 export type DiffSessionMessage =
   | {
       type: 'subscribe_checkout_diff_response'
@@ -84,6 +90,25 @@ export type DiffSessionMessage =
         requestId: string
       }
     }
+  | {
+      type: 'checkout_push_response'
+      payload: {
+        cwd: string
+        success: boolean
+        error: CheckoutError | null
+        requestId: string
+      }
+    }
+  | {
+      type: 'checkout_status_response'
+      payload: {
+        cwd: string
+        aheadOfOrigin: number | null
+        behindOfOrigin: number | null
+        hasRemote: boolean
+        requestId: string
+      }
+    }
 
 export type ThreadDiffTarget = {
   projectId: string
@@ -100,6 +125,7 @@ export type DiffCacheEntry = {
   files: ParsedDiffFile[]
   stagedFiles: ParsedDiffFile[]
   unstagedFiles: ParsedDiffFile[]
+  checkoutStatus: CheckoutStatus | null
   error: string | null
   updatedAt: string
 }
@@ -116,6 +142,7 @@ export type DiffStoreState = {
   activeRequestId: string | null
   loading: boolean
   error: string | null
+  checkoutStatusByCwd: Record<string, CheckoutStatus>
   panel: DiffPanelState
   cacheByThreadKey: Record<string, DiffCacheEntry>
 }
