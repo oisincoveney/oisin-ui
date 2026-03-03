@@ -42,9 +42,9 @@ Requirements for the v3 TABS COOLERS milestone.
 
 ### Git Push
 
-- [ ] **PUSH-01**: User can push committed changes to remote via button
-- [ ] **PUSH-02**: UI shows ahead/behind remote indicator
-- [ ] **PUSH-03**: Push shows progress and success/error feedback
+- [x] **PUSH-01**: User can push committed changes to remote via button
+- [x] **PUSH-02**: UI shows ahead/behind remote indicator
+- [x] **PUSH-03**: Push shows progress and success/error feedback
 
 ## Out of Scope for v3
 
@@ -65,9 +65,9 @@ Explicitly deferred to future milestones.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PUSH-01 | Phase 12 | Pending |
-| PUSH-02 | Phase 12 | Pending |
-| PUSH-03 | Phase 12 | Pending |
+| PUSH-01 | Phase 12 | Complete |
+| PUSH-02 | Phase 12 | Complete |
+| PUSH-03 | Phase 12 | Complete |
 | TABS-01 | Phase 13 | Pending |
 | TABS-02 | Phase 13 | Pending |
 | TABS-03 | Phase 13 | Pending |
@@ -111,4 +111,4 @@ All v1 requirements closed 2026-02-25. See: `.planning/milestones/v1-REQUIREMENT
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-02 — Phases 12-16 mapped*
+*Last updated: 2026-03-02 — Phase 12 complete (PUSH-01..03)*
