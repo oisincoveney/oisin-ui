@@ -10,6 +10,21 @@ Oisin UI is a shipped, Docker-first web app for managing coding-agent terminal w
 
 Work on your code from anywhere with your OpenCode instance and settings, reliably.
 
+## Current Milestone: v3 TABS COOLERS
+
+*Terminal Agent Browser System for Concurrent Operations with Orchestrated Language Execution and Reliable Speech*
+
+**Goal:** Make Oisin UI a daily driver for multi-project AI-assisted development with chat-style AI interaction and voice input.
+
+**Target features:**
+- Multi-tab threads (N terminal tabs per thread, including AI tabs)
+- AI tab = chat UI wrapper over OpenCode terminal (parse output → render as chat)
+- Multiple AI tabs per thread (like Conductor)
+- Background agents across projects (switch projects while agents run)
+- Voice input via containerized Whisper transcription
+- Push to remote from browser UI
+- Fully Dockerized deployment
+
 ## Last Milestone: v2 Code Review (Complete)
 
 **Delivered:** Improved code review UI with file list, per-file stats, file-level staging/unstaging, and commit from browser.
@@ -43,6 +58,15 @@ Work on your code from anywhere with your OpenCode instance and settings, reliab
 - ✓ Stage/unstage individual files from diff panel (DIFF-03) — v2
 - ✓ Commit staged changes from browser UI (DIFF-04) — v2
 
+### Active
+
+- [ ] Multi-tab threads (N terminal tabs per thread)
+- [ ] AI tab as chat UI wrapper over OpenCode terminal
+- [ ] Multiple AI tabs per thread
+- [ ] Background agents across projects
+- [ ] Voice input via containerized Whisper
+- [ ] Push to remote from browser UI
+
 ### Out of Scope
 
 - Mobile native app (web-first remains the strategy)
@@ -50,7 +74,7 @@ Work on your code from anywhere with your OpenCode instance and settings, reliab
 - ACP-based protocol rewrite (terminal-first remains canonical)
 - Hunk-level staging (git add -p) — can be added later as DIFF-05
 - Side-by-side diff view toggle — can be added later as DIFF-06
-- Push to remote from browser — post-commit action, deferred
+- Remote relay access (REMO-01/02) — deferred to v4
 
 ## Context
 
@@ -80,4 +104,4 @@ Work on your code from anywhere with your OpenCode instance and settings, reliab
 | Thread-scoped diff via projectId/threadId | Prevents cross-thread diff pollution on multi-thread workflows | ✓ Good (v2) |
 
 ---
-*Last updated: 2026-03-02 — v2 Code Review milestone shipped*
+*Last updated: 2026-03-02 — v3 TABS COOLERS milestone started*
