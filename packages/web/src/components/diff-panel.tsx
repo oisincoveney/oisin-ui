@@ -72,6 +72,7 @@ export function DiffPanel({
   const [aheadOfOrigin, setAheadOfOrigin] = useState<number | null>(null)
   const [behindOfOrigin, setBehindOfOrigin] = useState<number | null>(null)
   const [hasRemote, setHasRemote] = useState(false)
+  const [hasUpstream, setHasUpstream] = useState(false)
 
   useEffect(() => {
     return subscribeCommitResponses((payload) => {
@@ -124,6 +125,7 @@ export function DiffPanel({
       setAheadOfOrigin(payload.checkoutStatus.aheadOfOrigin)
       setBehindOfOrigin(payload.checkoutStatus.behindOfOrigin)
       setHasRemote(payload.checkoutStatus.hasRemote)
+      setHasUpstream(payload.checkoutStatus.hasUpstream)
     })
   }, [cwd])
 
@@ -132,6 +134,7 @@ export function DiffPanel({
       setAheadOfOrigin(null)
       setBehindOfOrigin(null)
       setHasRemote(false)
+      setHasUpstream(false)
       return
     }
     fetchCheckoutStatus(cwd)
@@ -232,7 +235,7 @@ export function DiffPanel({
           type="button"
           size="sm"
           variant="outline"
-          disabled={isPushing || !cwd || !hasRemote || aheadOfOrigin === 0 || aheadOfOrigin === null}
+          disabled={isPushing || !cwd || !hasRemote || (hasUpstream && aheadOfOrigin === 0)}
           onClick={() => {
             if (!cwd || !hasRemote) {
               return
@@ -248,7 +251,8 @@ export function DiffPanel({
             <>
               <ArrowUpFromLine className="mr-1 h-4 w-4" />
               Push
-              {aheadOfOrigin && aheadOfOrigin > 0 ? ` ↑${aheadOfOrigin}` : null}
+              {hasUpstream && aheadOfOrigin && aheadOfOrigin > 0 ? ` ↑${aheadOfOrigin}` : null}
+              {!hasUpstream && hasRemote ? ' (first push)' : null}
               {behindOfOrigin && behindOfOrigin > 0 ? ` ↓${behindOfOrigin}` : null}
             </>
           )}

@@ -48,6 +48,7 @@ export type CheckoutStatus = {
   aheadOfOrigin: number | null
   behindOfOrigin: number | null
   hasRemote: boolean
+  hasUpstream: boolean
 }
 
 export type DiffSessionMessage =
@@ -106,6 +107,7 @@ export type DiffSessionMessage =
         aheadOfOrigin: number | null
         behindOfOrigin: number | null
         hasRemote: boolean
+        hasUpstream: boolean
         requestId: string
       }
     }

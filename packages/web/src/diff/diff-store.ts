@@ -190,6 +190,7 @@ function parseCheckoutStatusResponsePayload(payload: unknown): {
   const aheadOfOrigin = payload.aheadOfOrigin
   const behindOfOrigin = payload.behindOfOrigin
   const hasRemote = payload.hasRemote
+  const hasUpstream = payload.hasUpstream
   const requestId = payload.requestId
 
   const validAhead = typeof aheadOfOrigin === 'number' || aheadOfOrigin === null
@@ -198,6 +199,7 @@ function parseCheckoutStatusResponsePayload(payload: unknown): {
   if (
     typeof cwd !== 'string' ||
     typeof hasRemote !== 'boolean' ||
+    typeof hasUpstream !== 'boolean' ||
     typeof requestId !== 'string' ||
     !validAhead ||
     !validBehind
@@ -211,6 +213,7 @@ function parseCheckoutStatusResponsePayload(payload: unknown): {
       aheadOfOrigin,
       behindOfOrigin,
       hasRemote,
+      hasUpstream,
     },
     requestId,
   }
