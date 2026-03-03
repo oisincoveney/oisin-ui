@@ -1,12 +1,16 @@
-import { ChevronDown, RefreshCw, X } from 'lucide-react'
+import { ArrowUpFromLine, ChevronDown, RefreshCw, X } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import type { ParsedDiffFile } from '@/diff/diff-types'
 import {
+  fetchCheckoutStatus,
   sendCommitRequest,
+  sendPushRequest,
   sendStageRequest,
   sendUnstageRequest,
+  subscribeCheckoutStatusResponses,
   subscribeCommitResponses,
+  subscribePushResponses,
   subscribeStageResponses,
 } from '@/diff/diff-store'
 import { DiffFileSection } from '@/components/diff-file-section'
@@ -63,6 +67,9 @@ export function DiffPanel({
   const [commitMessage, setCommitMessage] = useState('')
   const [isCommitting, setIsCommitting] = useState(false)
   const [pendingCommitCwd, setPendingCommitCwd] = useState<string | null>(null)
+  const [isPushing, setIsPushing] = useState(false)
+  const [pendingPushCwd, setPendingPushCwd] = useState<string | null>(null)
+  const [aheadOfOrigin, setAheadOfOrigin] = useState<number | null>(null)
 
   useEffect(() => {
     return subscribeCommitResponses((payload) => {
@@ -75,12 +82,54 @@ export function DiffPanel({
 
       if (payload.success) {
         setCommitMessage('')
+        fetchCheckoutStatus(payload.cwd)
         return
       }
 
       toast.error(payload.error?.message ?? 'Commit failed')
     })
   }, [pendingCommitCwd])
+
+  useEffect(() => {
+    return subscribePushResponses((payload) => {
+      if (!pendingPushCwd || payload.cwd !== pendingPushCwd) {
+        return
+      }
+
+      setIsPushing(false)
+      setPendingPushCwd(null)
+
+      if (payload.success) {
+        toast.success('Pushed to origin')
+        fetchCheckoutStatus(payload.cwd)
+        return
+      }
+
+      const errorMessage = payload.error?.message ?? 'Push failed'
+      if (payload.error?.code === 'NOT_ALLOWED') {
+        toast.error(`${errorMessage}. Check auth/permissions in terminal.`)
+        return
+      }
+      toast.error(errorMessage)
+    })
+  }, [pendingPushCwd])
+
+  useEffect(() => {
+    return subscribeCheckoutStatusResponses((payload) => {
+      if (!cwd || payload.cwd !== cwd) {
+        return
+      }
+      setAheadOfOrigin(payload.checkoutStatus.aheadOfOrigin)
+    })
+  }, [cwd])
+
+  useEffect(() => {
+    if (!cwd) {
+      setAheadOfOrigin(null)
+      return
+    }
+    fetchCheckoutStatus(cwd)
+  }, [cwd])
 
   useEffect(() => {
     return subscribeStageResponses((payload) => {
@@ -172,6 +221,30 @@ export function DiffPanel({
           disabled={!commitMessage.trim() || stagedFiles.length === 0 || isCommitting || !cwd}
         >
           Commit
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={isPushing || !cwd || aheadOfOrigin === 0 || aheadOfOrigin === null}
+          onClick={() => {
+            if (!cwd) {
+              return
+            }
+            setIsPushing(true)
+            setPendingPushCwd(cwd)
+            sendPushRequest(cwd)
+          }}
+        >
+          {isPushing ? (
+            <RefreshCw className="h-4 w-4 animate-spin" />
+          ) : (
+            <>
+              <ArrowUpFromLine className="mr-1 h-4 w-4" />
+              Push
+              {aheadOfOrigin && aheadOfOrigin > 0 ? ` ↑${aheadOfOrigin}` : null}
+            </>
+          )}
         </Button>
       </form>
 
