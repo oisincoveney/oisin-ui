@@ -1,241 +1,215 @@
-# Project Research Summary
+# Research Summary: v3 TABS COOLERS
 
-**Project:** Oisin UI
-**Domain:** AI Coding Agent Web UI (self-hosted, terminal-based)
-**Researched:** 2026-02-21
-**Confidence:** HIGH
+**Synthesized:** 2026-03-02  
+**Research Files:** STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md  
+**Overall Confidence:** HIGH
+
+---
 
 ## Executive Summary
 
-Oisin UI is a self-hosted web interface for managing AI coding agents (OpenCode, Claude Code, Aider, Codex CLI — any terminal-based agent) across multiple projects and threads. The research confirms this is a well-defined problem space with proven architectural patterns: a long-running Node.js daemon orchestrates tmux sessions and git worktrees, while a browser client renders terminals via xterm.js over a multiplexed WebSocket. Paseo (the upstream fork) already implements the hardest parts — binary-multiplexed terminal I/O, offset-based replay, headless terminal emulation, and worktree management. The core work is **simplification** (strip Expo/mobile/voice/Tauri), **reliability** (fix WebSocket reconnection, the #1 Paseo pain point), and **UI reshaping** (Codex-inspired 3-panel layout: sidebar + terminal + diffs).
+v3 TABS COOLERS adds four features to Oisin UI's existing terminal-first architecture: multi-tab terminals (N xterm.js instances per thread backed by tmux windows), AI chat overlay (rendering existing `AgentTimelineItem` stream as chat bubbles), voice input (leveraging existing `DictationStreamManager` with containerized Whisper), and git push (UI wiring only — backend already implemented via `checkout_push_request`).
 
-The recommended approach is to preserve Paseo's daemon (`packages/server`) nearly wholesale — its terminal manager, binary mux protocol, daemon-client SDK, and worktree utilities are battle-tested and correct. Replace the Expo-based client with a Vite + React web app. Add tmux session management as a persistence layer (Paseo currently spawns agents directly via node-pty without tmux). The key technology additions are `@xterm/xterm` v6 for browser rendering, `reconnecting-websocket` for connection reliability, and `diff2html` for code review. The stack is mature, well-documented, and used by VS Code, Gitpod, and similar production systems.
+The architecture analysis reveals surprisingly little greenfield work. Multi-tab is pure state orchestration over existing binary mux + tmux infrastructure. Chat overlay consumes the existing `agent_stream` messages. Voice input uses the existing dictation protocol. Git push needs only a button.
 
-The primary risks are WebSocket state recovery on reconnection (the existing Paseo failure mode), terminal dimension desynchronization between xterm.js and tmux, orphaned process/session cleanup in Docker, and Docker PID 1 signal propagation. All four are well-understood problems with documented solutions. The single biggest differentiator — agent-agnosticism via terminal-first architecture — is also the simplest to implement because it's a design decision, not a feature to build. No competitor (Codex, Cursor, Windsurf, Aider) offers this.
+The critical risk is **xterm.js memory leaks** — each Terminal instance must be disposed correctly or memory spirals after 20+ tab open/close cycles. Secondary risks: OpenCode output parsing for chat (custom parser needs iteration), and SSH auth for git push in containers.
+
+---
 
 ## Key Findings
 
-### Recommended Stack
+### Stack Additions
 
-| Technology | Version | Purpose | Rationale |
-|------------|---------|---------|-----------|
-| **@xterm/xterm** | 6.0.0 | Browser terminal emulator | Industry standard. Used by VS Code. v6 has ESM, WebGL improvements. No viable alternative exists. |
-| **@xterm/addon-fit** | 0.10.0+ | Auto-resize terminal | Required for responsive multi-panel layout. |
-| **@xterm/addon-webgl** | 0.18.0+ | GPU-accelerated rendering | For high-throughput agent output. Fall back to DOM renderer. |
-| **node-pty** | 1.1.0 | Server-side PTY spawning | Microsoft-maintained. Powers VS Code terminal. Required for tmux session attachment. |
-| **tmux** | 3.4+ (system) | Session persistence | Agent sessions survive browser disconnects and daemon restarts. |
-| **diff2html** | 3.4.55 | Git diff rendering | Actively maintained, parses raw git diff natively, supports dark mode. Beats dead react-diff-viewer. |
-| **reconnecting-websocket** | 4.4.0 | Client WebSocket reliability | Drop-in WebSocket replacement with exponential backoff, message buffering. Solves Paseo's #1 problem. |
-| **ws** | 8.19.0 | Server WebSocket | Already in Paseo. 22.7k stars. Built-in ping/pong heartbeat. |
-| **simple-git** | 3.x | Git operations | Wraps real git CLI. Required for worktree management, diff generation. |
-| **Vite + React** | Latest | Web client framework | **Replaces Expo.** Web-only, faster builds, no mobile overhead. Keep Zustand stores pattern. |
-| **Node.js 22 slim** | LTS | Docker base image | Active LTS through Oct 2027. Slim variant for image size. |
-| **tini** | Latest | Docker PID 1 init | Signal propagation to child processes. Non-negotiable for multi-process container. |
+| Library | Purpose | Package | Confidence |
+|---------|---------|---------|------------|
+| `ansi_up` v6.0.6 | ANSI→HTML for chat code blocks | web | HIGH |
+| `whisper-asr-webservice` Docker | Local STT (optional) | docker-compose | HIGH |
+| `simple-git` v3.x | Git push (if not already present) | server | HIGH |
 
-**Critical version note:** Use `@xterm/xterm` (scoped package), NOT the deprecated `xterm` package. v6.0.0 is current.
+**Already Present:** @xterm/xterm 6.0.0, @xterm/headless, binary-mux, tmux session management, DictationStreamManager, SpeechToTextProvider, AgentTimelineItem streaming.
 
-**What NOT to use:** socket.io (unnecessary abstraction), Monaco Editor for diffs (5MB overkill), Electron/Tauri (web-first), isomorphic-git (no worktree support), Redux (over-engineered for single-user).
+**No new libraries needed for multi-tab.** Tab state is frontend-only over existing multiplexing.
 
-### Expected Features
+### Feature Landscape
 
-**Table Stakes (P0 — users expect these):**
-- Multi-project sidebar with thread management
-- Embedded interactive terminal per thread (xterm.js → tmux)
-- Real-time agent output streaming
-- Reliable WebSocket with automatic reconnection and state recovery
-- Git worktree isolation per thread
-- Dark theme, responsive layout
-
-**Differentiators (what makes Oisin UI unique):**
-- **Agent-agnostic:** Works with ANY terminal-based CLI agent — OpenCode, Claude Code, Aider, Codex CLI, custom scripts. No vendor lock-in. This is the #1 differentiator vs every competitor.
-- **Self-hosted Docker deployment:** Work from anywhere on your own infrastructure. No SaaS dependency.
-- **Direct terminal access:** Not just agent output — full interactive terminal. Run any command remotely.
-- **Codex-inspired 3-panel layout:** Sidebar | Terminal | Diffs — proven UX pattern.
-
-**Defer to v2+ (anti-features):**
-- In-browser code editor (use terminal vim/nano instead)
-- Built-in LLM API integration (let the CLI agent handle it)
-- Custom agent protocol/ACP (terminal approach is universal)
-- Multi-user authentication (single-user personal tool)
-- Mobile native app (responsive web is sufficient)
-- Codebase indexing/semantic search (agent handles this)
-- File tree explorer (terminal `ls`/`tree` suffices)
+| Category | Table Stakes | Differentiators | Anti-Features |
+|----------|-------------|-----------------|---------------|
+| **Multi-Tab** | Add/close/rename tabs, keyboard shortcuts (Cmd+T/W/1-9), status indicators | Split panes, tab type selection (Shell vs Agent) | Full tmux control UI, remote SSH tabs |
+| **Chat Overlay** | Message bubbles, markdown, code blocks, streaming, scroll history | Terminal/chat toggle, tool call visualization, file diff inline | LLM API in chat, multi-agent orchestration |
+| **Voice Input** | PTT button, recording indicator, transcription display, permission handling | VAD auto-detect, streaming transcription, wake word | Real-time conversation, voice navigation |
+| **Git Push** | Push button, ahead/behind indicator, progress, auth handling | Force-with-lease option, PR creation link | Full PR UI, merge conflicts in UI |
 
 ### Architecture Approach
 
-**Preserve from Paseo (don't reinvent):**
-- `server/terminal/` — node-pty + @xterm/headless with offset-based replay (correct approach)
-- `server/client/` — ~3000-line daemon-client SDK with reconnection, binary mux, stream management
-- `shared/binary-mux.ts` — 24-byte header binary protocol for terminal I/O multiplexing
-- `shared/messages.ts` — Zod-validated message schemas (trim voice messages, keep rest)
-- `utils/worktree.ts` — 987 lines of tested git worktree management
-- `relay/node-adapter.ts` — Custom Node relay server (already replaced Cloudflare)
-- Zustand for client state management
+**Multi-Tab:** Extend binary mux `streamId` to N streams per thread. Each tab = 1 xterm.js Terminal + 1 tmux window (not session). Tab state in new Zustand `TabStore`. Frame routing by streamId to correct adapter.
 
-**Change from Paseo:**
-- **Replace Expo → Vite + React** (web-only, no mobile overhead)
-- **Add tmux sessions** as persistence layer (Paseo spawns agents directly; tmux survives daemon restarts)
-- **Drop:** Tauri desktop, voice/speech, website, mobile-specific code
+**Chat Overlay:** Subscribe to existing `agent_stream` messages. Map `AgentTimelineItem` → `ChatMessage`. New `ChatStore` (Zustand). `ChatOverlay` component with bubbles. Two input paths: terminal stdin (existing) + chat composer via `send_agent_message_request` (existing).
 
-**Key architectural patterns to follow:**
-1. Single WebSocket with binary multiplexing (JSON for control, binary for terminal I/O)
-2. Offset-based terminal replay (8MB buffer per terminal, reconnect from last-seen offset)
-3. Server-side headless terminal as source of truth (client xterm.js is just a renderer)
-4. tmux sessions per thread/worktree (persistence, isolation, crash recovery)
-5. Git worktrees for thread isolation (branch-per-thread, shared object store)
+**Voice Input:** Use existing `DictationStreamManager` + `SpeechToTextProvider`. MediaRecorder chunks → WebSocket → server → Whisper → `dictation_stream_final`. Optional: add `LocalWhisperSTTProvider` for containerized Whisper.
 
-**Data flow:** Agent writes stdout → node-pty captures → buffer with offset tracking → @xterm/headless updates server state → binary mux frame via WebSocket → client xterm.js renders
+**Git Push:** Call existing `checkout_push_request` from new button in DiffPanel. Handler already implemented in session.ts lines 4609-4635.
 
 ### Critical Pitfalls
 
-**1. WebSocket Reconnection Without State Recovery (CRITICAL — Phase 1)**
-The #1 Paseo pain point. Transport reconnection alone is worthless without terminal state recovery. Solution: offset-based replay from server buffer, fall back to `tmux capture-pane` for full state snapshot. Use `reconnecting-websocket` with exponential backoff. Server-side ping/pong heartbeat at 30s intervals.
+| # | Pitfall | Severity | Prevention |
+|---|---------|----------|------------|
+| P1 | xterm.js memory leak on tab close | **CRITICAL** | Dispose addons before terminal, clear refs, use xterm 6.x, test with 50-cycle loop |
+| P2 | Tmux session proliferation | HIGH | Use tmux windows within sessions, not N sessions per thread |
+| P5 | OpenCode parsing edge cases | HIGH | Strip ANSI first, marker-based parsing, graceful degradation to raw output |
+| P11 | SSH auth in container | HIGH | Mount ~/.ssh, prepopulate known_hosts, SSH agent forwarding |
+| P12 | Force push danger | HIGH | Block --force on protected branches, require --force-with-lease, confirm dialog |
 
-**2. Terminal Dimension Desync (CRITICAL — Phase 1)**
-xterm.js, the WebSocket relay, and tmux must all agree on cols/rows. Desync causes garbled TUI output (vim, OpenCode). Solution: debounce resize events (200ms), propagate via `tmux resize-window`, always send dimensions on reconnect handshake, use ResizeObserver (not window resize).
+---
 
-**3. Orphaned tmux Sessions / Process Leaks (CRITICAL — Phase 1-2)**
-Over days, zombie sessions accumulate. Solution: deterministic session naming (`oisin-{project}-{thread}`), session reaper every 5 minutes, `tmux kill-session` on thread delete (not just detach), reconcile on daemon startup.
+## Recommended Build Order
 
-**4. Docker PID 1 Signal Propagation (CRITICAL — Phase 1)**
-Multi-process container (Node.js + tmux + agents) doesn't propagate signals by default. Solution: Use `tini` as entrypoint (`ENTRYPOINT ["/tini", "--"]`), graceful shutdown handler in Node.js that kills tmux sessions on SIGTERM, Docker HEALTHCHECK for both daemon and tmux server.
+Based on dependency analysis across all research:
 
-**5. xterm.js addon-fit Requires Visible Container (Phase 1)**
-`fit()` returns 0 cols/0 rows on hidden containers. Solution: Use ResizeObserver, guard against zero dimensions, call `fit()` only after tab transitions complete.
+### Phase 1: Git Push UI (1-2 days)
+**Rationale:** Zero backend work. Handler exists. Quick win establishes momentum.
 
-## Implications for Roadmap
+**Delivers:**
+- Push button in DiffPanel
+- Ahead/behind indicator
+- Success/failure toast
+- Force-with-lease option with warning
 
-### Suggested Phase Structure
+**Pitfalls to avoid:** P11 (SSH auth), P12 (force push danger), P13 (remote confusion)
 
-**Phase 1: Foundation (Daemon Core + Web Shell + Docker)**
-- Fork Paseo, strip voice/speech/Tauri/Expo-mobile
-- Simplify `bootstrap.ts` to Express + WS + AgentManager + TerminalManager
-- Replace Expo web → Vite + React app scaffold
-- Basic web shell: connect to daemon, show connection status
-- Docker container with `tini`, `tmux`, `git`, proper signal handling
-- Bind daemon to localhost only (security baseline)
-- **Delivers:** Running daemon in Docker, web client connects, connection status visible
-- **Features from FEATURES.md:** WebSocket reliability (P0), dark theme scaffold
-- **Pitfalls to avoid:** Docker PID 1 (#4), protocol versioning (Debt 1), localhost binding (Security 1)
-- **Rationale:** Everything depends on the daemon running and the web client connecting. Get Docker right from day one.
+**Research flags:** None — straightforward wiring
 
-**Phase 2: Terminal I/O (The Critical Path)**
-- Terminal component with xterm.js (reuse Paseo's terminal runtime)
-- Wire up binary mux terminal streams end-to-end
-- tmux session integration (daemon spawns/attaches to tmux sessions)
-- Reconnection with offset-based replay + `tmux capture-pane` fallback
-- Resize propagation (xterm.js → WebSocket → tmux)
-- Copy/paste keyboard handling
-- Scrollback limits (conservative defaults)
-- **Delivers:** Type in browser terminal, see agent output, survive reconnection
-- **Features from FEATURES.md:** Embedded terminal (P0), agent output streaming (P0), reliable WebSocket (P0)
-- **Pitfalls to avoid:** WebSocket state recovery (#1), dimension desync (#2), fit addon visibility (Gotcha 1), scrollback limits (Trap 1), copy/paste UX (UX 2)
-- **Rationale:** Terminal is the entire product. Nothing else matters until this works flawlessly.
+### Phase 2: Multi-Tab Foundation (3-5 days)
+**Rationale:** Highest complexity, foundational for other features, no external dependencies.
 
-**Phase 3: Thread & Worktree Management**
-- Worktree creation/listing/deletion (reuse Paseo's `worktree.ts`)
-- Thread = worktree + tmux session + agent process
-- Multi-project sidebar
-- Thread switching (destroy/recreate xterm.js, attach to different tmux session)
-- Thread status indicators (running/idle/complete/error)
-- Session reaper for orphaned tmux sessions
-- Branch-per-thread enforcement
-- **Delivers:** Create tasks, switch between them, see agent work in isolated worktrees
-- **Features from FEATURES.md:** Multi-project sidebar (P0), thread management (P0), git worktree per thread (P0)
-- **Pitfalls to avoid:** Orphaned sessions (#3), branch checkout restrictions (Gotcha 3), lazy terminal instances (Trap 3), thread switching UX (UX 3)
-- **Rationale:** Multi-thread is the core differentiator after terminal works. Requires working terminals (Phase 2).
+**Server (2 days):**
+- `createThreadTab()` using tmux `new-window`
+- `listThreadTabs()` using tmux `list-windows`
+- `closeThreadTab()` using tmux `kill-window`
+- Message handlers in session.ts
 
-**Phase 4: Code Review & Diffs**
-- Three-panel Codex layout (sidebar | terminal | diffs)
-- diff2html integration for git diff rendering per worktree
-- Stage/unstage hunks from UI
-- Commit from UI (message field + button)
-- File change list per thread
-- **Delivers:** Full code review workflow without leaving the browser
-- **Features from FEATURES.md:** Code diff panel (P1), git stage/commit UI (P1), 3-panel layout (P1)
-- **Pitfalls to avoid:** Large diff handling (Trap 2), WebGL context loss (Gotcha 2), separate diff data channel (don't mix with terminal stream)
-- **Rationale:** Diffs are table stakes but come after the core terminal + thread loop works.
+**Client (2-3 days):**
+- TabStore (Zustand)
+- TabBar component
+- Multiple TerminalStreamAdapter instances
+- Frame routing by streamId
 
-**Phase 5: Remote Access & Hardening**
-- Relay integration for remote access
-- Authentication (API tokens, reverse proxy guidance)
-- WSS/TLS for remote connections
-- E2EE for relay connections
-- Docker deployment optimization (multi-stage build, image size)
-- Health checks and monitoring
-- Worktree cleanup automation
-- Session persistence across browser reload
-- **Delivers:** Access your dev environment from anywhere, securely
-- **Features from FEATURES.md:** Remote access, worktree sync (P2), notifications (P2), session persistence (P2)
-- **Pitfalls to avoid:** Auth exposure (Security 1 full version), real network conditions testing
-- **Rationale:** Remote access is the "from anywhere" promise but not needed until local experience is solid.
+**Pitfalls to avoid:** P1 (memory leak), P2 (session proliferation), P3 (state sync), P4 (resize), P15 (protocol changes), P16 (terminal manager refactor), P17 (reconnect)
 
-### Phase Ordering Rationale
+**Research flags:** None — patterns well-documented in architecture research
 
-The ordering is strictly dependency-driven:
-1. **Foundation first** — everything depends on daemon + web client + Docker running correctly
-2. **Terminal second** — the product IS a terminal UI; without it, there's nothing to show
-3. **Threads third** — multi-thread requires working terminals; this is the differentiator
-4. **Diffs fourth** — code review requires threads and worktrees to exist
-5. **Remote fifth** — remote access amplifies a working local product
+### Phase 3: AI Chat Overlay (3-5 days)
+**Rationale:** Uses existing AgentTimelineItem stream. No backend changes. Medium complexity parsing.
 
-Each phase produces a usable increment. After Phase 2, you have a functional (if single-thread) terminal-in-a-browser. After Phase 3, you have the core multi-thread agent management workflow. After Phase 4, it's a complete local development tool. Phase 5 unlocks the "from anywhere" vision.
+**Days 1-2:**
+- ChatStore (Zustand)
+- Subscribe to `agent_stream` events
+- Timeline item → chat message mapping
 
-### Research Flags
+**Days 3-4:**
+- ChatOverlay component
+- ChatBubble components (user, assistant, tool, reasoning)
+- ChatInput with submit
 
-| Phase | Needs `/gsd-research-phase`? | Rationale |
-|-------|------------------------------|-----------|
-| Phase 1: Foundation | **No** | Well-documented patterns. Paseo codebase is the reference. Docker + tini + Node.js is standard. |
-| Phase 2: Terminal I/O | **Yes — light research** | xterm.js + tmux integration specifics. Paseo's terminal runtime is a starting point but tmux attachment is new. Research the reconnection flow details. |
-| Phase 3: Threads | **No** | Paseo's `worktree.ts` (987 lines) covers the hard parts. Thread lifecycle is architectural, not novel. |
-| Phase 4: Diffs | **Yes — light research** | diff2html integration patterns, hunk staging UX. How Codex implements stage/unstage per hunk. |
-| Phase 5: Remote | **No** | Paseo's relay already works. Auth patterns are standard (token + reverse proxy). |
+**Day 5:**
+- Toggle/position controls
+- Integration with layout
+
+**Pitfalls to avoid:** P5 (parsing edge cases), P6 (terminal/chat mismatch), P7 (parsing performance)
+
+**Research flags:** **NEEDS RESEARCH** — OpenCode output format not fully documented. Need sample captures for parser development.
+
+### Phase 4: Voice Input (2-3 days)
+**Rationale:** Independent, uses existing dictation infrastructure. Can be deferred or parallelized.
+
+**Day 1:**
+- VoiceInput component with MediaRecorder
+- Dictation stream messaging (use existing protocol)
+
+**Day 2:**
+- Handle transcription responses
+- Insert text into chat input
+- Visual feedback (recording indicator)
+
+**Day 3 (optional):**
+- Local Whisper container setup
+- LocalWhisperSTTProvider
+
+**Pitfalls to avoid:** P8 (Whisper resources), P9 (audio capture), P10 (voice UX)
+
+**Research flags:** Container resource sizing needs validation. Start with OpenAI API, add local Whisper later.
+
+---
+
+## Open Questions
+
+### Unresolved from Research
+
+1. **OpenCode output format:** What exact patterns demarcate message boundaries? Need sample terminal recordings.
+2. **Tab limits:** Should we cap tabs per thread? Architecture says 5, but UX research doesn't specify.
+3. **Chat persistence:** Regenerate from terminal on each view, or persist ChatStore? Architecture says regenerate, but performance implications unclear.
+4. **Voice model selection:** Start with OpenAI API or local Whisper? Research recommends API first.
+5. **Split panes:** Listed as differentiator. Phase 2 or defer to v4?
+
+### Decisions for Roadmap Phase
+
+1. **Tmux windows vs sessions:** Architecture recommends windows. Confirm before implementation.
+2. **Protocol versioning:** Handshake with capabilities or implicit? Architecture shows pattern but not mandatory.
+3. **Force push policy:** Block entirely or confirm dialog? Pitfalls research recommends blocking on protected + confirm otherwise.
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| **Stack** | HIGH | All libraries verified via GitHub releases (2025-12 to 2026-02). xterm.js v6, node-pty 1.1.0, diff2html 3.4.55 are current stable. Only `reconnecting-websocket` (last release 2020) is old but stable/API-frozen. |
-| **Features** | HIGH | Direct analysis of Codex App, Cursor, Windsurf, Aider, Continue.dev official docs. Feature landscape is clear and convergent. Anti-features list is well-reasoned. |
-| **Architecture** | HIGH | Based on detailed analysis of Paseo source code (~3000-line daemon-client, 987-line worktree manager, binary mux protocol). Patterns validated against VS Code, Gitpod, ttyd architectures. |
-| **Pitfalls** | HIGH (core) / MEDIUM (edge cases) | Critical pitfalls (WebSocket, dimensions, Docker PID 1) are well-documented with proven solutions. tmux control mode and worktree scaling edge cases are less certain. |
+| Stack | HIGH | All libraries verified via GitHub. Minimal additions needed. |
+| Features | HIGH | Table stakes clear from competitor analysis (Warp, iTerm2, Cursor). |
+| Architecture | HIGH | Verified against existing codebase. Most features use existing infrastructure. |
+| Git Push | HIGH | Backend already implemented. UI-only work. |
+| Multi-Tab | HIGH | Binary mux already supports multiple streamIds. Pattern clear. |
+| Chat Overlay | MEDIUM | AgentTimelineItem is solid, but OpenCode-specific parsing needs iteration. |
+| Voice Input | MEDIUM | Existing dictation infra is extensive, but container setup untested. |
+| Pitfalls | HIGH | xterm.js issues verified via GitHub. SSH/git patterns documented. |
 
-### Gaps to Address During Planning
+### Gaps to Address
 
-1. **tmux session attachment specifics:** Paseo doesn't currently use tmux — it spawns agents directly via node-pty. The integration pattern (node-pty → tmux attach) needs validation during Phase 2 implementation. How exactly does the PTY connect to an existing tmux session vs creating a new one?
+- **OpenCode output samples:** Need actual terminal recordings for parser development.
+- **Whisper container sizing:** Need to validate memory/CPU requirements in practice.
+- **xterm.js dispose chain:** Verify correct cleanup sequence with addons.
+- **Split pane complexity:** If included, needs deeper architecture research.
 
-2. **Expo → Vite migration scope:** How much of Paseo's app code (Zustand stores, hooks, contexts) can be reused vs rewritten? The stores are framework-agnostic but component code is Expo-specific.
-
-3. **Hunk staging UX:** diff2html renders diffs but doesn't provide stage/unstage per hunk. This requires custom UI work over `git add --patch` equivalent. Research needed in Phase 4.
-
-4. **Relay authentication flow:** Paseo's relay uses serverId/clientId pairing but the auth story for internet-exposed deployments needs hardening beyond what exists.
-
-5. **Agent process spawning:** How exactly does a "create thread" flow work? Create worktree → create tmux session → start agent in tmux → attach PTY? The orchestration sequence needs careful design.
+---
 
 ## Sources
 
-### Stack Sources
-- @xterm/xterm 6.0.0: https://github.com/xtermjs/xterm.js/releases/tag/6.0.0 (Dec 2025) — HIGH
-- node-pty 1.1.0: https://github.com/microsoft/node-pty/releases/tag/v1.1.0 (Dec 2025) — HIGH
-- ws 8.19.0: https://github.com/websockets/ws/releases/tag/8.19.0 (Jan 2026) — HIGH
-- diff2html 3.4.55: https://github.com/rtfpessoa/diff2html/releases (Jan 2026) — HIGH
-- reconnecting-websocket 4.4.0: https://github.com/pladaria/reconnecting-websocket (Feb 2020) — MEDIUM (stable, API frozen)
-- Paseo v0.1.15: https://github.com/getpaseo/paseo (Feb 2026) — HIGH
+### Primary (HIGH confidence)
+- @xterm/xterm 6.0.0 — GitHub releases, docs (verified 2026-02-21)
+- node-pty 1.1.0 — GitHub releases (verified 2026-02-21)
+- diff2html 3.4.55 — GitHub releases (verified 2026-02-21)
+- ansi_up 6.0.6 — GitHub (verified 2026-03-02)
+- whisper-asr-webservice — Docker Hub (1M+ pulls, verified 2026-03-02)
+- simple-git 3.x — GitHub (3.8k stars, verified 2026-03-02)
+- Warp, iTerm2, Cursor, GitButler — Product analysis (2026-03-02)
+- OpenAI Whisper docs — platform.openai.com (verified 2026-03-02)
 
-### Feature Sources
-- OpenAI Codex App: developers.openai.com/codex/app/features — HIGH
-- Cursor: cursor.com/features — HIGH
-- Windsurf: docs.windsurf.com — HIGH
-- Aider: aider.chat/docs — HIGH
-- Continue.dev: github.com/continuedev/continue — HIGH
+### Codebase (HIGH confidence)
+- binary-mux.ts, terminal-manager.ts, session.ts, messages.ts
+- dictation-stream-manager.ts, speech providers
+- agent-sdk-types.ts, timeline-projection.ts
 
-### Architecture Sources
-- Paseo source code (old-oisin-ui fork): direct code analysis — HIGH
-- xterm.js documentation and API: official docs — HIGH
-- ttyd project: github.com/tsl0922/ttyd — HIGH (reference implementation)
+### Issue Trackers (HIGH confidence)
+- xterm.js #4935, #4645, #3889 (memory leak issues)
 
-### Pitfall Sources
-- xterm.js FAQ (dimension desync): xtermjs/xterm.js wiki — HIGH
-- git-worktree docs (v2.53.0 BUGS section): git-scm.com — HIGH
-- tmux man page (control mode, signals): man7.org — HIGH
-- Docker PID 1 / tini patterns: well-documented community patterns — HIGH
+---
+
+## Ready for Roadmap
+
+Research synthesis complete. Key recommendations:
+
+1. **Build order:** Git Push → Multi-Tab → Chat Overlay → Voice Input
+2. **Most complex:** Multi-Tab (but architecture is solid)
+3. **Most uncertain:** Chat Overlay (OpenCode parsing)
+4. **Quickest win:** Git Push (UI only, 1-2 days)
+5. **Critical pitfall:** xterm.js memory leaks — must test dispose chain before shipping multi-tab
+
+Total estimated timeline: **2-3 weeks** for all four features.

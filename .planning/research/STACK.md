@@ -261,3 +261,279 @@ npm install ws
 - **react-diff-viewer**: https://github.com/praneshr/react-diff-viewer — last release v3.1.0 May 2020, confirmed unmaintained
 - **reconnecting-websocket 4.4.0**: https://github.com/pladaria/reconnecting-websocket/releases/tag/v4.4.0 (Feb 2020) — MEDIUM confidence (stable but not recently updated; however, WebSocket API hasn't changed so this is fine)
 - **Paseo**: https://github.com/getpaseo/paseo — v0.1.15, Feb 19, 2026 — HIGH confidence
+
+---
+
+# Stack Research: v3 TABS COOLERS (Milestone Additions)
+
+**Researched:** 2026-03-02
+**Focus:** Stack additions for multi-tab terminals, AI chat overlay, voice input, git push
+**Context:** Subsequent milestone building on existing validated capabilities
+
+## Executive Summary
+
+Minimal stack additions needed. Multi-tab management is pure frontend state orchestration over existing xterm.js + tmux infrastructure. AI chat overlay requires `ansi_up` for ANSI→HTML conversion and custom parsing for OpenCode output format. Voice input via containerized `whisper-asr-webservice` (already Dockerized). Git push uses existing `simple-git` recommendation.
+
+---
+
+## Feature 1: Multi-Tab Terminal Management
+
+### Recommendation: No new libraries needed
+
+**Rationale:**
+- Already have `@xterm/xterm` v6.0.0 in packages/web
+- Already have `@xterm/headless` v6.0.0 in packages/server
+- Already have tmux session management on backend
+- Tab state is frontend-only: array of `{ id, sessionId, title, xterm instance }`
+
+**Pattern:**
+```typescript
+// Tab abstraction over existing xterm
+interface TerminalTab {
+  id: string;
+  threadId: string;
+  sessionId: string; // tmux session
+  title: string;
+  xterm: Terminal;
+  isActive: boolean;
+}
+```
+
+**Integration with existing stack:**
+- Each tab = 1 xterm.js Terminal instance
+- Each tab maps to 1 tmux pane/window via existing WebSocket binary mux
+- Tab switching = hide/show xterm container, no reconnection needed
+- Backend already multiplexes via `binary-mux.ts` (verified in package exports)
+
+**Confidence:** HIGH — Pure state management over existing infrastructure
+
+---
+
+## Feature 2: AI Chat Overlay
+
+### Recommendation: `ansi_up` v6.0.6 (MIT, 865 stars, zero dependencies)
+
+| Library | Stars | Deps | TypeScript | Streaming | Rec |
+|---------|-------|------|------------|-----------|-----|
+| ansi_up | 865 | 0 | Yes (.d.ts) | Yes (stateful) | **YES** |
+| ansi-to-html | 377 | 0 | No | Yes | NO |
+
+**Why ansi_up:**
+- Zero dependencies (important for browser bundle)
+- Native TypeScript definitions bundled
+- Stateful streaming API (handles partial escape sequences across chunks)
+- ES6 module (matches codebase style)
+- Active maintenance (v6.0.6 released May 2025)
+- Handles 256-color and true-color ANSI codes
+
+**Source:** https://github.com/drudru/ansi_up (verified 2026-03-02)
+
+**Installation:**
+```bash
+cd packages/web
+bun add ansi_up
+```
+
+**Custom parsing needed:**
+OpenCode terminal output has structured format. Need custom parser to:
+1. Detect OpenCode message boundaries (box-drawing characters)
+2. Extract role (assistant/user/tool)
+3. Strip ANSI for text display, preserve for code blocks
+4. Render as chat bubbles with ansi_up for syntax-colored code
+
+```typescript
+// Parser detects patterns like:
+// ╭─ Assistant ─────────────────────────────
+// │ <content>
+// ╰─────────────────────────────────────────
+interface ChatMessage {
+  role: 'assistant' | 'user' | 'tool';
+  content: string;      // ANSI stripped for text
+  rawContent: string;   // ANSI preserved for code
+  timestamp: number;
+}
+```
+
+**Confidence:** MEDIUM — ansi_up is verified, but custom OpenCode parsing needs iteration
+
+---
+
+## Feature 3: Voice Input (Containerized Whisper)
+
+### Recommendation: `onerahmet/openai-whisper-asr-webservice:latest` (Docker image)
+
+| Option | Model Support | GPU | REST API | Containerized | Rec |
+|--------|---------------|-----|----------|---------------|-----|
+| whisper-asr-webservice | turbo, large-v3 | Yes | Yes (Swagger) | Yes | **YES** |
+| Raw openai/whisper | All | Yes | No | No | NO |
+| faster-whisper standalone | All | Yes | No | No | NO |
+
+**Why whisper-asr-webservice:**
+- Pre-built Docker image, 1M+ pulls on Docker Hub
+- REST API with Swagger documentation (port 9000)
+- Supports multiple engines: openai_whisper, faster_whisper, whisperX
+- Model caching via volume mount (reduces startup time)
+- CPU and GPU variants available (`:latest` vs `:latest-gpu`)
+- Production-ready (v1.9.1 released July 2025)
+
+**Sources:**
+- GitHub: https://github.com/ahmetoner/whisper-asr-webservice (verified 2026-03-02)
+- Docker Hub: https://hub.docker.com/r/onerahmet/openai-whisper-asr-webservice
+
+**Docker Compose addition:**
+```yaml
+services:
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    # Use :latest-gpu for GPU acceleration
+    ports:
+      - "9000:9000"
+    environment:
+      - ASR_MODEL=base  # or turbo for better accuracy
+      - ASR_ENGINE=faster_whisper  # 4x faster than openai_whisper
+    volumes:
+      - whisper_cache:/root/.cache/
+volumes:
+  whisper_cache:
+```
+
+**Integration pattern (server-side):**
+```typescript
+// Server-side API proxy to Whisper container
+async function transcribe(audioBlob: Blob): Promise<string> {
+  const form = new FormData();
+  form.append('audio_file', audioBlob);
+  
+  const response = await fetch('http://whisper:9000/asr?output=txt', {
+    method: 'POST',
+    body: form
+  });
+  return response.text();
+}
+```
+
+**Model selection guidance:**
+| Model | Size | Speed | Accuracy | Use Case |
+|-------|------|-------|----------|----------|
+| tiny | 39M | 10x | Lower | Quick tests |
+| base | 74M | 7x | Good | Default choice |
+| small | 244M | 4x | Better | When accuracy matters |
+| turbo | 809M | 8x | Best | Optimal speed/accuracy |
+
+**Confidence:** HIGH — Docker image verified, 1M+ pulls, REST API documented
+
+---
+
+## Feature 4: Git Push from Browser
+
+### Recommendation: `simple-git` v3.x (already recommended in base stack)
+
+**Verified capabilities for git push:**
+- `.push(remote, branch, [options])` — Full push support
+- `.push([options])` — Uses `--verbose --porcelain` for progress parsing
+- `.pushTags(remote)` — Push tags
+- Progress events via plugin system
+- Environment variable injection for auth (`.env()`)
+
+**Source:** https://github.com/steveukx/git-js (3.8k stars, verified 2026-03-02)
+
+**Installation:** Already in base stack recommendations
+```bash
+cd packages/server
+bun add simple-git
+```
+
+**Key push implementation:**
+```typescript
+import { simpleGit, SimpleGit } from 'simple-git';
+
+const git: SimpleGit = simpleGit(worktreePath);
+
+// Push with upstream tracking
+await git.push('origin', branch, {
+  '--set-upstream': null  // for new branches
+});
+
+// Credential handling via environment
+git.env('GIT_SSH_COMMAND', 'ssh -o StrictHostKeyChecking=no');
+// OR for HTTPS with token
+// remote URL: https://<token>@github.com/owner/repo.git
+```
+
+**Auth handling strategies:**
+1. **SSH keys**: Mount host SSH agent or key files into container, use `GIT_SSH_COMMAND`
+2. **HTTPS tokens**: Embed in remote URL or use credential helper
+3. **GitHub App tokens**: Generate via API, use as HTTPS basic auth
+
+**UX considerations:**
+- Show push progress via simple-git progress plugin
+- Handle auth failures with clear error messages
+- Show branch diff summary before push confirmation
+- Warn if pushing to protected branches
+
+**Confidence:** HIGH — simple-git is mature (3.8k stars), push is core functionality
+
+---
+
+## Integration Points Summary
+
+| New Feature | Integrates With | How |
+|-------------|-----------------|-----|
+| Multi-tab | xterm.js, binary-mux, tmux | Tab state wraps existing terminal lifecycle |
+| AI Chat | xterm.js buffer, new ansi_up | Parse xterm output, convert ANSI to HTML |
+| Voice | Docker compose, server API | New sidecar container, server proxies to it |
+| Git Push | simple-git, worktree paths | Same pattern as existing git operations |
+
+---
+
+## What NOT to Add for This Milestone
+
+| Library | Why NOT |
+|---------|---------|
+| `xterm-addon-attach` | Already have custom WebSocket handling via binary-mux |
+| `node-whisper` | Requires Python deps in main container, prefer isolated Docker |
+| `isomorphic-git` | Confirmed no worktree support (base research), simple-git wraps CLI |
+| `ansi-to-html` | No TypeScript, fewer features than ansi_up |
+| `xterm-for-react` | Wrapper adds complexity, raw xterm.js works fine |
+| Additional state libs | Existing jotai (in web package) handles tab state |
+
+---
+
+## Installation Commands Summary
+
+```bash
+# Web package (browser) — new for AI chat
+cd packages/web
+bun add ansi_up
+
+# Server package — if simple-git not already added
+cd packages/server
+bun add simple-git
+
+# Docker compose — add whisper service (no npm install)
+# See docker-compose.yml modification above
+```
+
+---
+
+## Confidence Assessment
+
+| Area | Confidence | Notes |
+|------|------------|-------|
+| Multi-tab | HIGH | Pure state management over existing infra |
+| ansi_up | HIGH | GitHub verified, active maintenance, zero deps |
+| OpenCode parser | MEDIUM | Custom work needed, pattern TBD through iteration |
+| Whisper container | HIGH | Docker Hub verified, 1M+ pulls, REST API |
+| simple-git push | HIGH | Core feature of mature library |
+| Integration | HIGH | All components are additive, no breaking changes |
+
+---
+
+## Sources for Milestone Additions
+
+- **ansi_up v6.0.6**: https://github.com/drudru/ansi_up (May 2025 release) — HIGH
+- **whisper-asr-webservice v1.9.1**: https://github.com/ahmetoner/whisper-asr-webservice (July 2025) — HIGH
+- **Docker Hub image**: https://hub.docker.com/r/onerahmet/openai-whisper-asr-webservice — HIGH
+- **simple-git**: https://github.com/steveukx/git-js (3.8k stars, 1,493 commits) — HIGH
+- **xterm.js docs**: https://xtermjs.org/docs/ (v6.0) — HIGH
+- **openai/whisper**: https://github.com/openai/whisper (v20250625) — HIGH

@@ -1,414 +1,613 @@
-# Pitfalls Research
+# Pitfalls Research: v3 TABS COOLERS
 
-**Domain:** AI Coding Agent Web UI (self-hosted, terminal-based)
-**Researched:** 2026-02-21
-**Confidence:** HIGH (WebSocket, terminal, Docker) / MEDIUM (tmux edge cases, worktree scaling)
+**Domain:** Adding multi-tab terminals, AI chat overlay, voice input, git push to existing Oisin UI
+**Researched:** 2026-03-02
+**Confidence:** HIGH (xterm.js memory), MEDIUM (Whisper container, OpenCode parsing), LOW (voice UX)
 
-## Critical Pitfalls
+## Executive Summary
 
-These cause rewrites, data loss, or fundamental architecture failure.
+The highest-risk pitfalls for v3 are: (1) xterm.js memory leaks when creating/destroying multiple Terminal instances per thread, (2) parsing OpenCode output for chat overlay without breaking on edge cases, and (3) git push authentication in containerized environment. The existing architecture handles single-terminal-per-thread well but multi-tab multiplies resource management complexity.
 
 ---
 
-### Pitfall 1: WebSocket Reconnection Without State Recovery
+## Multi-Tab Terminal Pitfalls
 
-**What goes wrong:** The WebSocket connection drops (network switch, laptop sleep, mobile data transition, reverse proxy timeout) and the client reconnects, but the terminal shows a blank screen or stale output. The user has lost all visual context of what the agent was doing. This is already a known Paseo problem.
+### P1: xterm.js Instance Memory Leak on Tab Close
 
-**Why it happens:** Naive WebSocket implementations treat each connection as stateless. When the socket drops, the server creates a new connection but doesn't replay the terminal buffer. The tmux session is still running server-side, but the client has no way to get the current terminal content. Most tutorials show WebSocket with `onclose` + `new WebSocket()` and call it "reconnection" -- but that's just reconnection of the *transport*, not recovery of the *state*.
+**What goes wrong:** Each closed terminal tab leaks memory because event listeners, DOM observers, and WebGL contexts aren't properly cleaned up. After opening/closing 20+ tabs, the browser becomes sluggish. Confirmed xterm.js issues: #4935 (CoreBrowserService leak), #4645 (API facades leak), #3889 (WebGL GPU memory leak).
 
-**How to avoid:**
-1. Use tmux's `capture-pane` command to snapshot the visible terminal content on reconnection. When a client reconnects, capture the current pane content and send it as the initial payload before resuming the live stream.
-2. Alternatively, use the xterm.js `@xterm/addon-serialize` addon to serialize terminal state server-side (xterm-headless). On reconnect, deserialize and restore.
-3. Implement a message sequence numbering protocol: each message from server gets an incrementing ID. On reconnect, client sends last-seen ID; server replays from that point or falls back to full pane capture.
-4. Use WebSocket ping/pong (ws library supports this natively) with a 30-second interval to detect dead connections proactively rather than waiting for TCP timeout.
-5. Client-side: exponential backoff with jitter for reconnection (1s, 2s, 4s... cap at 30s). Show clear "reconnecting..." UI state.
+**Why it happens:** xterm.js Terminal instances register event listeners on `window` (resize, focus, blur) and the document. If you don't call `terminal.dispose()` properly, or if you dispose but keep references to the terminal object, garbage collection can't reclaim the memory. The WebGL addon has additional GPU texture buffers that need explicit cleanup.
+
+Specific leak sources from xterm.js issues:
+- `CoreBrowserService`: `ScreenDprMonitor` not registered as disposable (fixed in 6.0.0)
+- API facades (`BufferNamespaceApi`): EventEmitter instances not disposed
+- WebGL addon: GPU textures not deleted on addon dispose
 
 **Warning signs:**
-- Blank terminal after reconnection
-- "Connection lost" with no automatic recovery
-- User manually refreshing the page to restore terminal state
-- Duplicate output after reconnect (replaying already-seen data)
+- Chrome DevTools Memory tab shows increasing heap size after closing tabs
+- `performance.measureMemory()` shows growth over time
+- Browser tab becomes sluggish after many tab open/close cycles
+- WebGL context lost errors in console
 
-**Phase to address:** Phase 1 (Foundation). This is the core value proposition -- "work from anywhere, reliably." WebSocket reliability is non-negotiable.
+**Prevention:**
+1. **Always call `terminal.dispose()`** when closing a tab. Not just removing from DOM.
+2. **Dispose addons first**: `fitAddon.dispose()`, `webglAddon?.dispose()` before `terminal.dispose()`
+3. **Clear references**: Set terminal variable to null after dispose
+4. **Use canvas renderer initially**: Skip WebGL addon until performance proves it's needed. Canvas renderer has simpler cleanup.
+5. **Test with memory profiler**: Before shipping multi-tab, run a loop of 50 tab open/close cycles and verify heap doesn't grow
+6. **Upgrade to xterm.js 6.x+**: The CoreBrowserService leak was fixed in 6.0.0
+
+**Code pattern:**
+```typescript
+function closeTab(tabId: string) {
+  const tab = tabs.get(tabId);
+  if (!tab) return;
+  
+  // Dispose addons first
+  tab.fitAddon?.dispose();
+  tab.webglAddon?.dispose();
+  
+  // Dispose terminal
+  tab.terminal.dispose();
+  
+  // Clear references
+  tabs.delete(tabId);
+  
+  // Notify backend to detach from stream (but keep tmux session)
+  ws.send({ type: 'tab-close', tabId });
+}
+```
+
+**Phase to address:** Multi-Tab Phase (implementation). Must be correct from first multi-tab commit.
 
 ---
 
-### Pitfall 2: Terminal Dimension Desync Between xterm.js and tmux PTY
+### P2: Tmux Session Proliferation (N Sessions per Thread)
 
-**What goes wrong:** The terminal display shows garbled output -- text overwrites itself, lines wrap incorrectly, full-screen applications (vim, htop, OpenCode's TUI) render as visual garbage. The xterm.js FAQ explicitly documents this: "Characters are being overwritten when wrapped to a new line -- this is typically caused by xterm.js having different dimensions set to the backing pty."
+**What goes wrong:** Each tab in a thread creates its own tmux session. With 5 threads × 3 tabs = 15 tmux sessions. Resource usage spirals. The daemon can't track which sessions belong to which tabs. Orphaned sessions accumulate.
 
-**Why it happens:** Three independent systems must agree on terminal dimensions:
-1. **xterm.js** in the browser (knows its rendered pixel size, calculates cols/rows)
-2. **The WebSocket relay/daemon** (passes resize events)
-3. **tmux** (manages the PTY dimensions for the actual process)
-
-When the browser window resizes, xterm.js calculates new dimensions using `@xterm/addon-fit`. This must propagate through the WebSocket to the daemon, which must call `tmux resize-window` or `resize-pane`. If any step is delayed, dropped, or applied out of order, dimensions desync. This is especially bad because:
-- AI agents produce large amounts of output rapidly
-- Full-screen TUIs (OpenCode) rely on exact dimensions for cursor positioning
-- Multiple connected clients may have different viewport sizes
-
-**How to avoid:**
-1. Use `@xterm/addon-fit` and debounce resize events (200ms minimum) before sending over WebSocket. Don't send every pixel of a drag resize.
-2. On the daemon side, use `tmux resize-window -t <session> -x <cols> -y <rows>` immediately upon receiving a resize event.
-3. On reconnection, ALWAYS send the current terminal dimensions as part of the handshake before any content is streamed.
-4. For single-user (our case): tie tmux window size to the connected client's size. If no client is connected, leave dimensions unchanged (so the agent process isn't disturbed).
-5. After applying a resize, use `tmux refresh-client` to force a redraw.
-6. Handle the race condition: if a resize event arrives while terminal output is being streamed, queue it and apply after the current write batch completes.
+**Why it happens:** The current architecture (`terminal-manager.ts`) derives session names from `projectId + threadId`. If we naively create one session per tab, we need a new naming scheme that includes tab ID. But the existing lifecycle management only tracks by thread, not by tab.
 
 **Warning signs:**
-- Text overwriting itself horizontally
-- Programs like `vim` or `htop` rendering with wrong column count
-- Resize flicker (terminal content briefly garbles then corrects)
-- OpenCode's TUI display breaking after browser window resize
+- `tmux ls` shows far more sessions than expected
+- Memory usage climbs over days
+- Daemon restart causes orphaned sessions
 
-**Phase to address:** Phase 1 (Foundation). Every terminal interaction depends on this being correct.
+**Prevention:**
+1. **Use tmux windows within sessions, not separate sessions**: One tmux session per thread, multiple windows (tabs). `tmux new-window -t session:1 -n "Tab 2"`. This keeps session count manageable.
+2. **If using separate sessions per tab**: Extend session naming to `oisin-${projectId}-${threadId}-tab${tabIndex}-${hash}`. Add `tabId` to the session metadata tracking.
+3. **Session cleanup on tab close**: When closing a tab, kill only that tmux window/session. Don't kill the whole thread's sessions.
+4. **Tab count limits**: Set a reasonable max tabs per thread (e.g., 5). Block creation beyond that.
+
+**Current vs proposed architecture:**
+```
+Current: 1 thread = 1 tmux session
+         oisin-myproject-thread123-abc12345
+
+Proposed Option A (windows): 
+         1 thread = 1 tmux session with N windows
+         oisin-myproject-thread123-abc12345
+           Window 0: Tab 1
+           Window 1: Tab 2
+           Window 2: Tab 3
+
+Proposed Option B (sessions):
+         1 thread = N tmux sessions
+         oisin-myproject-thread123-tab0-abc12345
+         oisin-myproject-thread123-tab1-def67890
+```
+
+**Recommendation:** Option A (windows) is cleaner for resource management and matches VSCode's terminal model.
+
+**Phase to address:** Multi-Tab Phase. Architecture decision needed before implementation.
 
 ---
 
-### Pitfall 3: Orphaned tmux Sessions and Process Leaks
+### P3: State Synchronization When Tab Switches
 
-**What goes wrong:** Over days/weeks of use, the Docker container accumulates zombie tmux sessions, orphaned shell processes, and leaked file descriptors. Memory and CPU usage creep up. Eventually the container becomes sluggish or crashes.
+**What goes wrong:** User switches from Tab 1 to Tab 2. The WebSocket connection was streaming Tab 1's terminal output. Now it needs Tab 2's output. During the switch, there's a flash of stale content, or Tab 2 shows Tab 1's output briefly, or Tab 2 is blank.
 
-**Why it happens:** Each thread creates a tmux session with a running agent process. When a thread is "closed" in the UI:
-- The tmux session may not be killed (just detached)
-- The agent process (OpenCode) may have spawned child processes (LSP servers, git operations) that aren't in the tmux session's process group
-- If the daemon crashes/restarts, it loses track of which tmux sessions it owns
-- Git worktrees accumulate on disk but are never pruned
-
-**How to avoid:**
-1. **Name tmux sessions deterministically** using a convention like `oisin-{project}-{thread-id}`. On daemon startup, enumerate all tmux sessions matching the prefix and reconcile with the database of known threads.
-2. **Implement a session reaper**: periodic check (every 5 minutes) that lists all tmux sessions, compares against active threads, and kills orphans older than a configurable threshold.
-3. **Kill session, not just detach**: When removing a thread, use `tmux kill-session -t <name>` which sends SIGHUP to all processes in the session.
-4. **Use tmux's `set-option -g destroy-unattached on`** carefully -- this auto-destroys sessions when no client is attached. Good for transient sessions, dangerous for persistent agent sessions. Better to manage lifecycle explicitly.
-5. **Store tmux session name in thread metadata**: The database should track `{ threadId, tmuxSession, worktreePath, createdAt, lastActive }` for cleanup.
-6. **Git worktree cleanup**: When deleting a thread, run `git worktree remove <path>` then `git worktree prune`. Never just `rm -rf` the worktree directory -- that corrupts git's worktree tracking (the `.git/worktrees/<name>` metadata becomes stale).
+**Why it happens:** 
+- The existing `subscribeRaw` API (`tmux-terminal.ts`) supports a single output stream per connection
+- Tab switch requires: stop Tab 1 stream, capture Tab 2's current state, start Tab 2 stream
+- Race condition: output arrives from Tab 1 after switch, before Tab 2 stream starts
 
 **Warning signs:**
-- `tmux ls` shows sessions that don't correspond to any UI thread
-- Docker container memory growing over days
-- `git worktree list` shows "prunable" entries
-- Disk space running low in the container
+- Brief flash of wrong terminal content
+- Missing output immediately after switch
+- Duplicate output after rapid tab switching
 
-**Phase to address:** Phase 1/2 (Foundation + Thread Management). Build the session lifecycle manager early, before accumulating technical debt.
+**Prevention:**
+1. **Sequence IDs per tab**: Every message includes `{ tabId, sequenceId }`. Client ignores messages for non-active tab.
+2. **Full state capture on switch**: Don't rely on incremental updates. On tab switch, request full `capture-pane` for the new tab.
+3. **Clear terminal before showing new tab**: `terminal.clear()` then write captured state, then resume stream.
+4. **Server-side multiplexing**: The daemon knows which tab is active and only sends that tab's output over WebSocket.
+
+**Mux protocol extension:**
+```typescript
+// Current protocol (single terminal per thread):
+{ type: 'terminal-output', threadId, data }
+
+// Extended protocol (multi-tab):
+{ type: 'terminal-output', threadId, tabId, data }
+{ type: 'tab-switch-ack', threadId, tabId, capturedState }
+```
+
+**Phase to address:** Multi-Tab Phase. Protocol change needed.
 
 ---
 
-### Pitfall 4: Docker Single-Container Process Management Antipatterns
+### P4: Resize Handling with Multiple Tabs
 
-**What goes wrong:** The Docker container runs the Node.js daemon, tmux server, and multiple agent processes. Process signals don't propagate correctly, the container doesn't shut down cleanly, and crash recovery is unreliable.
+**What goes wrong:** User resizes the terminal panel. Which tmux session(s) get resized? If only the active tab is resized, inactive tabs have wrong dimensions when switched to. If all tabs are resized, there's a burst of resize commands.
 
-**Why it happens:** Docker containers are designed for single-process workloads. Running multiple processes (Node.js daemon + tmux + N agent processes) creates several problems:
-- PID 1 in Docker doesn't forward signals by default. `docker stop` sends SIGTERM to PID 1, but if that's `node`, it may not forward to child processes.
-- If the daemon crashes, tmux sessions keep running but are now unmanaged.
-- Container restart kills all tmux sessions, losing agent work in progress.
-- Node.js child_process.spawn doesn't handle process groups well by default.
-
-**How to avoid:**
-1. **Use a lightweight init system as PID 1**: Use `tini` (Docker's `--init` flag) or `dumb-init`. This ensures signal propagation to all child processes. Add `ENTRYPOINT ["/tini", "--"]` to the Dockerfile.
-2. **Use a process supervisor**: Consider `supervisord` or a simple bash script that starts tmux server, then the Node.js daemon, and handles restarts. But keep it minimal -- don't turn Docker into a full VM.
-3. **Graceful shutdown handler in Node.js**: Listen for SIGTERM/SIGINT, enumerate all managed tmux sessions, send `tmux kill-server` or individually kill sessions, then exit. Set `docker stop --timeout=30` to give time for cleanup.
-4. **Daemon recovery on restart**: On startup, scan for existing tmux sessions (they may have survived a daemon restart). Reattach to known sessions rather than creating new ones.
-5. **Health check**: Docker HEALTHCHECK that verifies both the Node.js daemon is responding AND the tmux server is running.
-6. **Volumes for persistence**: Mount git repos and worktrees on a Docker volume, not in the container's ephemeral filesystem. This way, `docker restart` preserves the code even if tmux sessions are lost.
+**Why it happens:** Each xterm.js terminal instance has its own dimensions. Each tmux window/session has its own dimensions. These need to stay in sync. But only the visible terminal knows its actual pixel dimensions.
 
 **Warning signs:**
-- `docker stop` takes 10+ seconds (waiting for SIGKILL timeout)
-- Agent processes continuing after daemon crash
-- Lost work after container restart
-- Zombie processes visible in `docker exec <container> ps aux`
+- Switching tabs shows garbled output
+- Full-screen apps (vim) break after resize then tab switch
+- Resize events queued up, applied out of order
 
-**Phase to address:** Phase 1 (Docker packaging). Get this right from day one. Retrofitting process management is painful.
+**Prevention:**
+1. **Resize all tabs in a thread**: When the panel resizes, send resize to all tmux windows in that thread's session.
+2. **Store dimensions per thread, not per tab**: All tabs in a thread share the same dimensions.
+3. **On tab switch, re-apply dimensions**: After capturing state, send resize command to ensure dimensions match.
+4. **Debounce aggressively**: 300ms debounce before sending resize to any tmux session.
 
----
-
-## Technical Debt Patterns
-
-These don't break immediately but compound over time.
-
----
-
-### Debt 1: Coupling WebSocket Protocol to UI State
-
-**What goes wrong:** The WebSocket message format becomes an implicit API that's impossible to version. Adding new features requires changing both daemon and client simultaneously, making rolling updates impossible.
-
-**How to avoid:**
-1. Define a versioned message protocol from day one. Every message should have `{ type: string, version: number, payload: any }`.
-2. Separate concerns: terminal data stream (binary, high-volume) from control messages (JSON, low-volume). Use different WebSocket message types or even separate connections.
-3. The daemon should be able to serve clients at version N and N-1 simultaneously.
-
-**Phase to address:** Phase 1. The protocol is the hardest thing to change later.
+**Phase to address:** Multi-Tab Phase. Must be handled correctly or TUI apps break.
 
 ---
 
-### Debt 2: Monolith tmux Configuration
+## AI Chat Overlay Pitfalls
 
-**What goes wrong:** All tmux sessions share the same global configuration. Changing a setting for one use case (e.g., scrollback buffer size for a heavy-output agent) affects all sessions.
+### P5: OpenCode Output Parsing Edge Cases
 
-**How to avoid:**
-- Set session-specific options: `tmux set-option -t <session> history-limit 50000` rather than global `-g`.
-- Use `-f /dev/null` when starting the tmux server to avoid loading user config, then apply your own configuration programmatically.
-- Per-thread tmux config is overkill for now but keep the option open.
+**What goes wrong:** The chat overlay parses terminal output to extract OpenCode's messages (model responses, tool calls, errors). But OpenCode's output format isn't a stable API. A minor OpenCode update changes the format, breaking parsing. Or edge cases (long lines, ANSI codes, Unicode) cause parser to miss or mangle content.
 
-**Phase to address:** Phase 2 (Thread Management). Not critical initially but prevents surprises.
+**Why it happens:** OpenCode writes to a terminal, not a structured API. The output includes:
+- ANSI escape codes for colors and cursor movement
+- Line wrapping (depends on terminal width)
+- Progress spinners and overwritten lines
+- Tool call blocks with markdown-like formatting
+- Error messages with stack traces
 
----
+**Warning signs:**
+- Chat view shows garbled text
+- Messages split incorrectly
+- Tool calls not recognized
+- Chat works locally but breaks in different terminal size
 
-### Debt 3: Not Using tmux Control Mode
+**Prevention:**
+1. **Strip ANSI first**: Use `strip-ansi` library before parsing content.
+2. **Regex for known patterns, not full parsing**: Look for `###` headings, `>` quotes, code block markers. Don't try to parse the full output grammar.
+3. **Graceful degradation**: If parsing fails, show raw output. Better than nothing.
+4. **Version pin OpenCode**: If relying on specific output format, document which OpenCode version is tested.
+5. **Capture full terminal width output**: Parse at the original line length, not the wrapped display.
+6. **Test with real OpenCode output**: Record actual sessions, use as test fixtures.
 
-**What goes wrong:** The daemon communicates with tmux by running `tmux` CLI commands (spawn a child process for each operation). This is slow, creates process overhead, and makes it hard to receive asynchronous events from tmux.
+**Parsing strategy:**
+```typescript
+// DON'T: Try to fully parse structured output
+// DO: Look for specific markers
 
-**How to avoid:**
-- Consider tmux's control mode (`tmux -C` or `tmux attach -t <session> -C`). In control mode, tmux communicates via structured text over stdin/stdout instead of a terminal. This enables:
-  - Receiving output notifications without polling
-  - Sending commands without spawning processes
-  - Getting structured responses
-- iTerm2 uses this approach extensively for its tmux integration.
-- However, control mode has its own complexity. For v1, CLI commands are fine. Plan the abstraction layer so you can swap later.
+const OPENCODE_MARKERS = {
+  THINKING_START: /^#{3,}\s*Thinking/i,
+  RESPONSE_START: /^#{3,}\s*Response/i,
+  TOOL_CALL: /^>\s*Tool:\s*(\w+)/,
+  ERROR: /^Error:|^fatal:/i,
+};
 
-**Phase to address:** Phase 3+ (Optimization). CLI commands work fine initially. Migrate if performance becomes an issue.
+function extractChatBlocks(rawOutput: string): ChatBlock[] {
+  const cleaned = stripAnsi(rawOutput);
+  // ... marker-based extraction
+}
+```
 
----
-
-## Integration Gotchas
-
-Specific to combining the technologies in this stack.
-
----
-
-### Gotcha 1: xterm.js `addon-fit` Requires Visible Container
-
-**What goes wrong:** `FitAddon.fit()` returns 0 cols / 0 rows (or throws) because it's called when the terminal's DOM container has `display: none` or zero dimensions. This happens when:
-- Terminal is in a hidden tab
-- Terminal is in a collapsed sidebar panel
-- Component mounts before the container is laid out
-
-**How to avoid:**
-1. Only call `fit()` when the terminal container is visible and has non-zero dimensions.
-2. Use a ResizeObserver on the container element and call `fit()` in the callback, not on window resize.
-3. When switching between threads/tabs, call `fit()` after the tab transition completes and the container is visible.
-4. Guard: `if (container.offsetWidth === 0 || container.offsetHeight === 0) return;`
-
-**Phase to address:** Phase 1. This will bite you immediately when building the multi-panel layout.
+**Phase to address:** Chat Overlay Phase. Need OpenCode output samples first.
 
 ---
 
-### Gotcha 2: xterm.js WebGL Renderer Context Loss
+### P6: Terminal Output vs Chat State Mismatch
 
-**What goes wrong:** The terminal goes blank (white or black rectangle) and stops rendering. No error in the console. This happens when:
-- The browser tab is backgrounded for a long time
-- The system resumes from sleep
-- GPU driver issues (especially on Linux)
-- Too many WebGL contexts (each xterm.js terminal with WebGL addon uses one)
+**What goes wrong:** The chat view shows OpenCode's parsed messages. The terminal shows raw output. User sees something in terminal that doesn't appear in chat, or vice versa. Confusing experience.
 
-**How to avoid:**
-1. Start with the **canvas renderer** (default), not WebGL. WebGL is faster but more fragile. For a coding agent UI where you might have 3-5 visible terminals, canvas is fine.
-2. If using WebGL: listen for `webglcontextlost` events on the canvas and reinitialize the renderer.
-3. `terminal.clearTextureAtlas()` can fix corruption issues after OS sleep (documented in xterm.js API).
-4. Limit the number of simultaneously rendered terminals. Terminals in background tabs should be detached/disposed and recreated when the tab is focused.
+**Why it happens:**
+- Terminal has scrollback; chat may not capture everything
+- Parsing errors cause missed messages
+- User can type in terminal, which doesn't show in chat
+- OpenCode can be in states (e.g., waiting for input) that don't map to chat
 
-**Phase to address:** Phase 2 (UI polish). Start with canvas renderer. Consider WebGL only if performance is measurably bad.
+**Warning signs:**
+- "I saw that message in the terminal but not in chat"
+- Chat shows outdated state after terminal scroll
+- Duplicate messages in chat
 
----
+**Prevention:**
+1. **Chat as a filtered view, not authoritative**: Make clear that chat is derived from terminal, not separate.
+2. **Link chat messages to terminal positions**: Clicking a chat message scrolls terminal to that point.
+3. **Don't persist chat separately**: Regenerate chat from terminal output on each view.
+4. **Show terminal always, chat as optional overlay**: Never hide terminal entirely.
 
-### Gotcha 3: git worktree + Branch Checkout Restrictions
-
-**What goes wrong:** `git worktree add` fails with "fatal: '<branch>' is already checked out at '<path>'" because git prevents the same branch from being checked out in multiple worktrees simultaneously.
-
-**Why this matters:** If two threads are working on the same branch (e.g., `main`), the second thread can't create its worktree. This is a fundamental git safety mechanism to prevent index corruption.
-
-**How to avoid:**
-1. **Always create a new branch per thread**: `git worktree add ../thread-<id> -b thread/<project>/<id> <base-branch>`. This sidesteps the restriction entirely.
-2. **Never try to check out the same branch in two worktrees**. The UI should enforce this -- if a user tries to create a thread on a branch already in use, warn them.
-3. **Use `--detach` for read-only threads**: If a thread only needs to view code, `git worktree add --detach <path> <commit>` avoids branch conflicts.
-4. **Cleanup properly**: `git worktree remove <path>` then `git worktree prune`. The git documentation explicitly warns: "If a working tree is deleted without using `git worktree remove`, then its associated administrative files ... will eventually be removed automatically."
-5. **Watch for the BUGS section warning**: The official git-worktree docs state: "Multiple checkout in general is still experimental, and the support for submodules is incomplete. It is NOT recommended to make multiple checkouts of a superproject." If your projects use submodules, this is a real risk.
-
-**Phase to address:** Phase 2 (Thread Management). Design the branch-per-thread strategy early.
+**Phase to address:** Chat Overlay Phase.
 
 ---
 
-### Gotcha 4: Expo Web + Native Terminal Library Conflict
+### P7: Performance Parsing Large Terminal Output
 
-**What goes wrong:** xterm.js is a DOM-dependent library. Expo/React Native's web build may interfere with direct DOM manipulation. SSR (if used) will crash because xterm.js requires `window` and `document`.
+**What goes wrong:** OpenCode runs for an hour, generates 50MB of terminal output. Parsing this for chat view on every render is too slow. UI freezes.
 
-**How to avoid:**
-1. **Lazy-load xterm.js**: Dynamic import `const { Terminal } = await import('@xterm/xterm')` only in browser context.
-2. **Use `Platform.OS === 'web'` guards** in Expo to ensure terminal code only runs on web.
-3. **Don't render xterm.js in React's reconciler**: Use a `ref` to get the DOM element, instantiate `Terminal` imperatively, and manage it outside React's lifecycle. React should own the container div but NOT the terminal contents.
-4. **Since you're web-only for v1**: Consider whether Expo web is actually needed vs. a plain React/Vite app. Expo web adds complexity for mobile compatibility you're explicitly deferring.
+**Why it happens:** Naive implementation parses entire output buffer on each update. With large output, this becomes O(n) on every keystroke.
 
-**Phase to address:** Phase 1 (Architecture decision). Decide early whether to keep Expo web or simplify.
+**Warning signs:**
+- UI lag increases over time
+- Parser CPU spikes visible in profiler
+- Chat overlay causes terminal to stutter
 
----
+**Prevention:**
+1. **Incremental parsing**: Track last-parsed offset. Only parse new output since then.
+2. **Chunk boundaries**: Parse in chunks aligned to line boundaries.
+3. **Virtualized chat list**: Only render visible chat messages. React-window or similar.
+4. **Web Worker**: Move parsing to worker thread. Don't block main thread.
+5. **Debounce updates**: Parse at most every 500ms, not on every byte.
 
-## Performance Traps
-
----
-
-### Trap 1: Unbounded Terminal Scrollback in Long-Running Agent Sessions
-
-**What goes wrong:** AI coding agents produce enormous amounts of output (compilation logs, test results, file contents, chain-of-thought). A single session can generate megabytes of terminal output. Both xterm.js and tmux store this in memory. After hours/days, memory usage balloons.
-
-**How to avoid:**
-1. Set explicit tmux scrollback limits: `tmux set-option -t <session> history-limit 10000` (default is 2000). For agent sessions, 10,000-20,000 lines is a reasonable cap.
-2. Set xterm.js scrollback limit: `new Terminal({ scrollback: 5000 })`. This is the client-side buffer. It can be smaller than tmux's because you can always re-capture from tmux.
-3. **Do NOT set unlimited scrollback**. It's tempting because agents produce valuable output, but it will cause memory issues.
-4. Consider persisting important output separately (e.g., saving chat transcripts to files) rather than relying on terminal scrollback as the archive.
-
-**Phase to address:** Phase 1. Set conservative defaults. Tune later based on real usage.
+**Phase to address:** Chat Overlay Phase. Performance-critical.
 
 ---
 
-### Trap 2: Streaming Large Diffs Through WebSocket
+## Voice Input Pitfalls
 
-**What goes wrong:** When an agent modifies many files, the diff view tries to compute and transmit large diffs over WebSocket in real-time. This saturates the connection, causes UI lag, and can crash the browser tab.
+### P8: Whisper Container Resource Usage
 
-**How to avoid:**
-1. **Never stream raw diff output through the terminal WebSocket**. Compute diffs on the daemon side and send structured data (file list + per-file diffs) on a separate channel.
-2. **Paginate diffs**: Send file list first, load individual file diffs on demand when the user clicks.
-3. **Debounce diff computation**: Don't recompute on every file change. Use a 1-2 second debounce after the last filesystem change event.
-4. **Set a max diff size**: If a single file diff exceeds N KB (e.g., 100KB), show "Large diff -- click to load" instead of rendering inline.
+**What goes wrong:** Whisper model loads into memory (1-4GB depending on model size). Container memory spikes when processing audio. Multiple simultaneous transcription requests OOM the container.
 
-**Phase to address:** Phase 2/3 (Diff view). Design the diff data flow separately from the terminal stream.
+**Why it happens:** Whisper is a large ML model. Even "tiny" model needs ~500MB. "base" needs ~1GB. "small" needs ~2GB. Audio processing is CPU-intensive or requires GPU. Container wasn't sized for this.
 
----
+**Warning signs:**
+- Container OOM killed during transcription
+- Long delays before transcription starts (model loading)
+- Transcription times out
 
-### Trap 3: Too Many Simultaneous xterm.js Instances
+**Prevention:**
+1. **Use smallest viable model**: Start with "tiny" or "base". Accuracy is worse but resource usage manageable.
+2. **Lazy load model**: Don't load Whisper on container start. Load on first voice request.
+3. **Keep model in memory**: Once loaded, keep it. Reloading is slow.
+4. **Memory limits**: Set container memory to at least 2GB for base model.
+5. **Request queue**: Serialize transcription requests. Don't run multiple in parallel.
+6. **Timeout**: Kill transcription if it takes >30s. Show error to user.
 
-**What goes wrong:** Each xterm.js Terminal instance creates a canvas element, a render loop, and a buffer in memory. With 10+ threads each having a terminal, even backgrounded ones consume resources. The page becomes sluggish.
+**Container config:**
+```dockerfile
+# Minimum for Whisper base model
+# Memory: 2GB
+# CPU: 2 cores
 
-**How to avoid:**
-1. **Only render terminals for the active thread**. When switching threads, dispose the previous terminal and create a new one for the current thread.
-2. **Keep terminal state on the server** (tmux sessions persist regardless of client). The client is just a view -- it can be destroyed and recreated cheaply.
-3. **Lazy instantiation**: Don't create a Terminal until the user actually views that thread.
-4. On reconnect/tab switch, use `tmux capture-pane` to get current content and write it to the fresh terminal instance.
+ENV WHISPER_MODEL=base
+ENV WHISPER_DEVICE=cpu  # or cuda if GPU available
+```
 
-**Phase to address:** Phase 2 (Multi-thread UI). Critical for the multi-thread experience to feel fast.
-
----
-
-## Security Mistakes
-
----
-
-### Mistake 1: Exposing Docker Socket or Daemon API Without Auth
-
-**What goes wrong:** The daemon listens on a port for WebSocket connections. Without authentication, anyone who can reach the port can interact with your terminal sessions -- effectively getting shell access to your machine.
-
-**How to avoid:**
-1. **Phase 1 (local only)**: Bind to `127.0.0.1` only. Docker port mapping: `-p 127.0.0.1:8080:8080`.
-2. **When exposing remotely**: Use a reverse proxy (nginx/Caddy) with HTTPS + basic auth or token auth at minimum.
-3. **Never expose the daemon port directly to the internet**. Even "single user" tools get accidentally exposed.
-4. **API tokens**: Generate a random token on first run, require it in WebSocket connection headers. Store in a config file the user can reference.
-5. **WSS (WebSocket Secure)**: When behind HTTPS, WebSocket upgrades to WSS automatically. But if using bare WebSocket without a reverse proxy, add TLS support to the daemon.
-
-**Phase to address:** Phase 1 (Foundation -- bind to localhost). Phase 3+ for remote access auth.
+**Phase to address:** Voice Input Phase. Resource planning before implementation.
 
 ---
 
-### Mistake 2: Terminal Injection via Agent Output
+### P9: Browser Audio Capture Permissions and Quality
 
-**What goes wrong:** The AI agent's output contains escape sequences that, when rendered in xterm.js, could: change the terminal title (used for phishing), set clipboard content (if clipboard addon is enabled), or trigger link handler behavior.
+**What goes wrong:** User clicks "voice input" and nothing happens. Or transcription is garbage because of background noise, wrong microphone, or low sample rate.
 
-**How to avoid:**
-1. xterm.js is generally safe -- it's designed to render untrusted terminal output. But be careful with addons:
-   - `@xterm/addon-clipboard`: Only enable if you trust the source
-   - `linkHandler`: Validate URLs start with `https://` before opening
-2. **Don't reflect terminal output into HTML outside xterm.js** (e.g., in chat views or logs) without sanitizing escape sequences first.
-3. This is low-risk for a personal tool but worth documenting.
+**Why it happens:**
+- Microphone permission denied or not prompted
+- Wrong microphone selected (USB headset vs laptop mic)
+- WebRTC audio processing (echo cancellation) mangling voice
+- Low-quality audio codec for WebSocket streaming
 
-**Phase to address:** Phase 2+. Low priority for single-user but good hygiene.
+**Warning signs:**
+- Permission errors in console
+- Transcription returns wrong text consistently
+- Works on some browsers/devices but not others
 
----
+**Prevention:**
+1. **Explicit permission handling**: Show clear UI before requesting permission. Handle denial gracefully.
+2. **Audio device selection**: Let user pick microphone. Store preference.
+3. **Disable audio processing for transcription**: `{ echoCancellation: false, noiseSuppression: false, autoGainControl: false }`. These help for calls but hurt transcription.
+4. **Use high sample rate**: Request 16kHz minimum. Whisper expects 16kHz.
+5. **Test on target browsers**: Safari has different audio APIs than Chrome.
 
-## UX Pitfalls
+**Audio capture pattern:**
+```typescript
+const stream = await navigator.mediaDevices.getUserMedia({
+  audio: {
+    sampleRate: 16000,
+    channelCount: 1,
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false,
+  }
+});
+```
 
----
-
-### UX 1: "I Can't Tell If the Agent Is Working or Stuck"
-
-**What goes wrong:** The agent is thinking (waiting for API response) but the terminal shows no output. The user can't distinguish "working" from "hung" from "disconnected."
-
-**How to avoid:**
-1. **Activity indicators**: Watch for terminal output. If no output for >5 seconds, show a subtle "waiting..." indicator.
-2. **WebSocket heartbeat UI**: Show connection status clearly (connected / reconnecting / disconnected).
-3. **tmux session status**: Periodically check if the agent process is still running via `tmux list-panes -t <session> -F '#{pane_pid}'` and verify the PID is alive.
-4. **Don't rely on terminal output alone** for status. Add a daemon-level status channel that reports agent process state.
-
-**Phase to address:** Phase 2 (UI polish).
-
----
-
-### UX 2: Copy/Paste Doesn't Work as Expected in Browser Terminal
-
-**What goes wrong:** The user tries to select text in the terminal and gets unexpected behavior: browser text selection interferes with xterm.js selection, Ctrl+C kills the process instead of copying, right-click behavior is wrong.
-
-**How to avoid:**
-1. **Use xterm.js's built-in selection** (it handles this well by default).
-2. **Bind Ctrl+Shift+C / Ctrl+Shift+V** for copy/paste (standard terminal convention). Document this somewhere visible.
-3. **On macOS**: Cmd+C/Cmd+V work natively. Set `macOptionIsMeta: true` in xterm.js options so Option key works correctly for terminal shortcuts.
-4. **Enable `rightClickSelectsWord: true`** for macOS-like behavior.
-
-**Phase to address:** Phase 1 (Terminal integration). Small but critical for usability.
+**Phase to address:** Voice Input Phase.
 
 ---
 
-### UX 3: Lost Context When Switching Between Threads
+### P10: Voice Activation UX Confusion
 
-**What goes wrong:** User switches from Thread A to Thread B, then back to Thread A, and the terminal is empty or shows stale content. They've lost context of what was happening.
+**What goes wrong:** User doesn't know when voice is recording, when it's processing, when to stop. Clicks button, waits, nothing visible happens. Or recording keeps going when they thought it stopped.
 
-**How to avoid:**
-1. This is really a sub-case of Pitfall 1 (state recovery). When switching threads, treat it like a reconnection:
-   - Destroy the current xterm.js instance
-   - Create a new one
-   - Capture the target thread's tmux pane content
-   - Write it to the new terminal
-   - Attach to the live stream
-2. Consider keeping a **lightweight state cache** on the client: last ~100 lines per thread, so switching feels instant while the full capture loads.
+**Why it happens:**
+- No visual feedback during recording
+- Processing latency makes it feel broken
+- Button state unclear
 
-**Phase to address:** Phase 2 (Multi-thread UI).
+**Warning signs:**
+- Users repeatedly clicking voice button
+- Partial sentences transcribed (stopped too early)
+- Very long recordings (didn't know how to stop)
 
----
+**Prevention:**
+1. **Clear visual state**: Distinct states for idle/recording/processing/error. Animation during recording.
+2. **Audio waveform**: Show live waveform so user knows mic is working.
+3. **Push-to-talk primary**: Hold button to record, release to transcribe. Simpler than toggle.
+4. **Timeout**: Auto-stop after 60s max.
+5. **Processing indicator**: Show "Transcribing..." with spinner after recording stops.
+6. **Error messages**: "Couldn't access microphone", "Transcription failed - please try again"
 
-## "Looks Done But Isn't" Checklist
-
-Things that demo well but fail in real use.
-
-| Feature | Demo Version | Production Version |
-|---------|-------------|-------------------|
-| Terminal rendering | Shows output from a simple command | Handles full-screen TUIs (vim, htop, OpenCode), ANSI colors, Unicode, resize |
-| WebSocket connection | Works on localhost | Survives network switches, laptop sleep, 8-hour sessions, mobile data |
-| Thread creation | Creates a worktree and tmux session | Handles naming conflicts, cleanup on delete, recovery after crash, disk space |
-| Docker container | Starts and shows the UI | Graceful shutdown, process cleanup, volume persistence, health checks |
-| Multi-thread | Switching between 2 threads | 10+ threads with lazy loading, background terminals disposed, fast switching |
-| Diff view | Shows `git diff` output | Handles large diffs, binary files, renamed files, new files, merge conflicts |
-| Resize | Terminal resizes when window changes | Resize propagates to tmux, debounced, works across reconnect, no garbled output |
+**Phase to address:** Voice Input Phase.
 
 ---
 
-## Recovery Strategies
+## Git Push Pitfalls
 
-When things go wrong despite prevention.
+### P11: SSH Authentication in Container
 
-| Failure | Recovery |
-|---------|----------|
-| WebSocket won't reconnect | Client falls back to polling endpoint that returns connection status. UI shows "reconnecting" with manual "retry" button. |
-| Orphaned tmux sessions | Admin endpoint: `GET /api/admin/sessions` lists all tmux sessions with their match status. `DELETE /api/admin/sessions/:name` force-kills. |
-| Terminal dimension desync | "Reset terminal" button that sends `tmux resize-pane` + `terminal.reset()` + re-fit. |
-| Docker container OOM | Set container memory limit. Monitor with HEALTHCHECK. Auto-restart policy. |
-| Corrupted git worktree | `git worktree repair` command. If that fails, `git worktree remove --force` + recreate. |
-| Daemon crash with running sessions | On restart, daemon discovers existing tmux sessions via `tmux ls`, reconciles with stored state, reattaches. |
+**What goes wrong:** User runs `git push` and gets "Permission denied (publickey)". SSH keys aren't available in the container, or ssh-agent isn't running, or known_hosts is empty.
+
+**Why it happens:**
+- SSH keys are on host, not mounted into container
+- ssh-agent isn't forwarded
+- Container doesn't have GitHub's host key in known_hosts
+- User expects GitHub CLI auth to work but it requires different setup
+
+**Warning signs:**
+- "Permission denied (publickey)" on push
+- "Host key verification failed"
+- Push works from host but not from container
+
+**Prevention:**
+1. **Mount SSH keys**: `-v ~/.ssh:/root/.ssh:ro` in Docker run.
+2. **Pre-populate known_hosts**: Add GitHub's host keys to container at build time.
+3. **SSH agent forwarding**: Use `SSH_AUTH_SOCK` forwarding if host uses ssh-agent.
+4. **HTTPS fallback**: Support HTTPS remotes with credential helper.
+5. **Clear error messages**: Detect permission denied and explain "SSH keys not configured".
+
+**Docker run additions:**
+```bash
+docker run \
+  -v ~/.ssh:/root/.ssh:ro \
+  -v $SSH_AUTH_SOCK:/ssh-agent \
+  -e SSH_AUTH_SOCK=/ssh-agent \
+  oisin-ui
+```
+
+**known_hosts prebuild:**
+```dockerfile
+RUN mkdir -p /root/.ssh && \
+    ssh-keyscan github.com >> /root/.ssh/known_hosts
+```
+
+**Phase to address:** Git Push Phase. Config before implementation.
 
 ---
 
-## Pitfall-to-Phase Mapping
+### P12: Force Push Danger
 
-| Phase | Critical Pitfalls to Address | Warning: Watch For |
-|-------|-----------------------------|--------------------|
-| **Phase 1: Foundation** | WebSocket state recovery (#1), Dimension sync (#2), Docker process management (#4), Protocol versioning (Debt 1), xterm.js fit visibility (Gotcha 1), Scrollback limits (Trap 1), Localhost binding (Security 1), Copy/paste UX (UX 2) | Don't over-engineer reconnection -- get basic capture-pane working first |
-| **Phase 2: Thread Management** | Orphaned session cleanup (#3), Branch-per-thread strategy (Gotcha 3), Lazy terminal instances (Trap 3), Thread switching UX (UX 3), Agent status indicators (UX 1) | Worktree cleanup is easy to defer and painful to retrofit |
-| **Phase 3: Diff & Polish** | Large diff handling (Trap 2), WebGL context recovery (Gotcha 2) | Diffs are a separate data channel, don't mix with terminal stream |
-| **Phase 4: Remote Access** | Authentication (Security 1 -- full version), WSS, Reverse proxy compatibility | Test with real network conditions (high latency, packet loss) |
+**What goes wrong:** User or agent runs `git push --force` and overwrites commits on shared branch. Other collaborators lose work. Even worse: force push to main/master.
+
+**Why it happens:**
+- AI agent doesn't understand the danger
+- Merge conflicts lead to "just force push"
+- No guardrails
+
+**Warning signs:**
+- "force" appearing in git commands
+- Complaints from collaborators about missing commits
+
+**Prevention:**
+1. **Block `--force` on protected branches**: Parse git command, reject if force push to main/master/develop.
+2. **Confirmation dialog for any force push**: "You are about to force push to 'feature-x'. This will overwrite remote history. Continue?"
+3. **Prefer `--force-with-lease`**: If force push is needed, require `--force-with-lease` which fails if remote has new commits.
+4. **Log all pushes**: Audit log of what was pushed, by whom/what.
+5. **Agent instruction**: System prompt should forbid force push without explicit user confirmation.
+
+**Force push guard:**
+```typescript
+function validateGitCommand(command: string): ValidationResult {
+  const tokens = command.split(/\s+/);
+  if (tokens[0] === 'git' && tokens[1] === 'push') {
+    const hasForce = tokens.includes('--force') || tokens.includes('-f');
+    const hasLease = tokens.includes('--force-with-lease');
+    const branch = extractPushTarget(tokens);
+    
+    if (hasForce && !hasLease) {
+      return { 
+        allowed: false, 
+        reason: 'Use --force-with-lease instead of --force',
+        requiresConfirmation: true 
+      };
+    }
+    if (isProtectedBranch(branch)) {
+      return {
+        allowed: false,
+        reason: `Cannot push directly to protected branch: ${branch}`,
+      };
+    }
+  }
+  return { allowed: true };
+}
+```
+
+**Phase to address:** Git Push Phase. Non-negotiable guardrail.
+
+---
+
+### P13: Remote Configuration Complexity
+
+**What goes wrong:** User has multiple remotes (origin, upstream, fork). Push goes to wrong remote. Or remote doesn't exist. Or remote URL is wrong.
+
+**Why it happens:**
+- Worktree inherits repo remotes but user expectation differs
+- Default push behavior varies by git config
+- Fork workflows have origin=fork, upstream=original
+
+**Warning signs:**
+- "Push to wrong repo"
+- "remote 'upstream' not found"
+- Confused about which remote is which
+
+**Prevention:**
+1. **Show current remote in UI**: Before push, display "Pushing to: origin (git@github.com:user/repo.git)"
+2. **Remote selector**: Let user pick remote if multiple exist.
+3. **Default remote config**: Store user's preferred default per worktree.
+4. **Validate remote exists**: Check `git remote -v` before push.
+5. **Handle upstream tracking**: If branch has no upstream, prompt to set one.
+
+**Phase to address:** Git Push Phase. UX design before implementation.
+
+---
+
+### P14: Push Fails Mid-Way
+
+**What goes wrong:** Large push with many commits/LFS objects fails partway through. Unclear what succeeded and what didn't. User doesn't know if it's safe to retry.
+
+**Why it happens:**
+- Network interruption
+- GitHub rate limiting
+- LFS bandwidth limits
+- Hook rejection
+
+**Warning signs:**
+- Timeout errors
+- Partial push (some refs updated, others not)
+- LFS errors
+
+**Prevention:**
+1. **Parse push output**: Detect partial success vs full failure.
+2. **Clear status**: After push, show "Pushed: main, feature-x. Failed: hotfix-y (rejected by hook)"
+3. **Retry guidance**: "Safe to retry" vs "Resolve conflict first"
+4. **LFS awareness**: If repo uses LFS, warn about large files.
+
+**Phase to address:** Git Push Phase.
+
+---
+
+## Integration Pitfalls (Existing Oisin Architecture)
+
+### P15: WebSocket Protocol Extension Breaking Changes
+
+**What goes wrong:** Adding multi-tab support requires new message types (`tab-create`, `tab-switch`, `tab-output`). Old clients don't understand new messages. New clients expect messages old daemon doesn't send.
+
+**Why it happens:** The existing binary mux protocol (`terminal-stream.ts`) wasn't designed for multi-tab. Adding tab semantics requires protocol changes.
+
+**Warning signs:**
+- Old client + new daemon: missing tab UI
+- New client + old daemon: errors on tab operations
+- Mixed deployments during rollout
+
+**Prevention:**
+1. **Version field in handshake**: Client sends protocol version. Daemon negotiates.
+2. **Graceful fallback**: New client on old daemon falls back to single-tab mode.
+3. **Unknown message handling**: Both sides ignore unknown message types instead of erroring.
+4. **Feature flags**: `capabilities: { multiTab: true, voiceInput: true }` in handshake.
+
+**Protocol extension pattern:**
+```typescript
+// Handshake
+{ type: 'hello', version: 2, capabilities: ['multi-tab', 'voice'] }
+{ type: 'hello-ack', version: 2, capabilities: ['multi-tab'] }  // daemon doesn't support voice
+
+// Feature check
+if (capabilities.includes('multi-tab')) {
+  enableMultiTab();
+} else {
+  // Single tab mode
+}
+```
+
+**Phase to address:** Multi-Tab Phase. First thing to implement.
+
+---
+
+### P16: Terminal Manager Refactor for Multi-Tab
+
+**What goes wrong:** Existing `terminal-manager.ts` assumes 1 terminal per thread (`ensureThreadTerminal`). Refactoring for N terminals per thread breaks existing tests and behavior.
+
+**Why it happens:** The current API returns a single `TerminalSession`. Multi-tab needs `TerminalSession[]` or a different abstraction.
+
+**Warning signs:**
+- Tests failing after refactor
+- Existing single-terminal functionality regresses
+- Session naming conflicts
+
+**Prevention:**
+1. **Additive, not breaking**: Keep `ensureThreadTerminal` as "ensure default tab". Add `createThreadTab`, `getThreadTabs`.
+2. **Internal: tmux windows**: Use tmux windows within session. Manager creates session once, then adds windows.
+3. **Migrate incrementally**: First release keeps single-tab behavior. Multi-tab enabled by flag.
+
+**API evolution:**
+```typescript
+// Existing (keep working)
+ensureThreadTerminal(options): Promise<{ terminal, sessionKey, cwd }>
+
+// New additions
+createThreadTab(options): Promise<{ terminal, tabId, sessionKey }>
+getThreadTabs(sessionKey): Promise<TerminalSession[]>
+closeThreadTab(sessionKey, tabId): void
+```
+
+**Phase to address:** Multi-Tab Phase. Careful refactor.
+
+---
+
+### P17: Existing Reconnect Logic with Multi-Tab
+
+**What goes wrong:** Current reconnect logic (`subscribeRaw` with `fromOffset`) replays a single terminal stream. With multiple tabs, client needs to recover all tabs' states. Reconnect takes much longer or misses some tabs.
+
+**Why it happens:** Single-terminal reconnect captures one pane. Multi-tab needs to capture N panes and multiplex the replay.
+
+**Warning signs:**
+- Some tabs blank after reconnect
+- Reconnect slower with more tabs
+- Tab state inconsistent after reconnect
+
+**Prevention:**
+1. **Reconnect per active tab first**: On reconnect, only recover the currently-viewed tab initially.
+2. **Lazy tab recovery**: Other tabs captured on-demand when switched to.
+3. **Track all tabs server-side**: Daemon knows all tabs for a thread, can enumerate on reconnect.
+4. **Client tab state**: Store tab IDs locally. On reconnect, request status of known tabs.
+
+**Phase to address:** Multi-Tab Phase.
+
+---
+
+## Prevention Summary
+
+| Pitfall | Prevention Strategy | Phase |
+|---------|---------------------|-------|
+| P1: xterm.js memory leak | Proper dispose chain, canvas renderer | Multi-Tab |
+| P2: Tmux session proliferation | Tmux windows, not sessions | Multi-Tab |
+| P3: Tab switch state sync | Sequence IDs, full capture on switch | Multi-Tab |
+| P4: Multi-tab resize | Resize all tabs, debounce | Multi-Tab |
+| P5: OpenCode parsing edge cases | Marker-based, graceful degradation | Chat Overlay |
+| P6: Terminal/chat mismatch | Chat as filtered view, link to terminal | Chat Overlay |
+| P7: Parsing performance | Incremental, Web Worker | Chat Overlay |
+| P8: Whisper resources | Smallest model, lazy load, memory limits | Voice Input |
+| P9: Audio capture issues | Explicit permissions, device selection | Voice Input |
+| P10: Voice UX confusion | Clear states, push-to-talk | Voice Input |
+| P11: SSH auth in container | Mount keys, known_hosts, agent forwarding | Git Push |
+| P12: Force push danger | Block on protected, require --force-with-lease | Git Push |
+| P13: Remote confusion | Show remote before push, selector | Git Push |
+| P14: Push fails mid-way | Parse output, clear status | Git Push |
+| P15: Protocol breaking changes | Version handshake, feature flags | Multi-Tab |
+| P16: Terminal manager refactor | Additive API, tmux windows | Multi-Tab |
+| P17: Reconnect with multi-tab | Active tab first, lazy recovery | Multi-Tab |
 
 ---
 
@@ -416,14 +615,12 @@ When things go wrong despite prevention.
 
 | Source | Type | Confidence |
 |--------|------|------------|
-| xterm.js FAQ (xtermjs/xterm.js wiki) -- dimension desync documentation | Official docs | HIGH |
-| xterm.js v6.0.0 TypeScript declarations -- API for Terminal, fit, serialize addons | Official API | HIGH |
-| git-worktree documentation (git-scm.com/docs/git-worktree, v2.53.0) -- BUGS section, branch checkout restrictions | Official docs | HIGH |
-| tmux man page (man7.org) -- control mode, session management, socket architecture, signal handling | Official docs | HIGH |
-| Paseo v0.1.15 repository (github.com/getpaseo/paseo) -- architecture, known limitations | Primary source | HIGH |
-| ttyd project (github.com/tsl0922/ttyd) -- reference terminal-over-web implementation, WebSocket ping interval | Reference impl | HIGH |
-| Docker PID 1 signal propagation, tini/dumb-init patterns | Well-known patterns | HIGH |
-| PROJECT.md -- known Paseo problems, architecture constraints | Project context | HIGH |
-| WebSocket reconnection with exponential backoff patterns | Training knowledge | MEDIUM |
-| tmux control mode real-world usage patterns | Training knowledge | MEDIUM |
-| xterm.js WebGL context loss behavior | Training knowledge + xterm.js API docs | MEDIUM |
+| xterm.js #4935 (CoreBrowserService memory leak) | GitHub issue | HIGH |
+| xterm.js #4645 (API facades leak memory) | GitHub issue | HIGH |
+| xterm.js #3889 (WebGL addon GPU memory leak) | GitHub issue | HIGH |
+| xterm.js docs (parser hooks, dispose pattern) | Official docs | HIGH |
+| GitHub docs (SSH agent forwarding) | Official docs | HIGH |
+| Existing Oisin codebase (terminal-manager.ts, tmux-terminal.ts) | Primary source | HIGH |
+| Whisper model sizes and requirements | OpenAI docs | HIGH |
+| WebRTC audio constraints | MDN | MEDIUM |
+| OpenCode output format | Training knowledge | LOW |

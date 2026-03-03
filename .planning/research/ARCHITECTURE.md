@@ -1,661 +1,874 @@
-# Architecture Research
+# Architecture Research: v3 TABS COOLERS
 
-**Domain:** AI Coding Agent Web UI (self-hosted, terminal-based)
-**Researched:** 2026-02-21
-**Confidence:** HIGH (based on detailed analysis of existing Paseo codebase + ecosystem patterns)
+**Project:** Oisin UI v3 — Multi-tab terminals, AI chat overlay, voice input, git push
+**Researched:** 2026-03-02
+**Confidence:** HIGH (verified against existing codebase)
 
 ## Executive Summary
 
-The architecture of a self-hosted AI coding agent UI follows a well-established pattern: a **long-running daemon** on the host machine manages terminal processes, git worktrees, and agent sessions, while a **web client** communicates over WebSocket for real-time terminal I/O and structured JSON messages for commands/state.
+The existing Oisin UI architecture provides strong foundations for v3 features. The binary mux WebSocket protocol already supports multiple stream IDs, terminal manager handles session creation, and the agent timeline system provides structured AI output. Key integration points:
 
-Paseo's existing architecture is fundamentally sound and well-engineered. The daemon (Express + ws), terminal management (node-pty + @xterm/headless), worktree orchestration (git CLI), and client communication (WebSocket with binary mux) are the right technology choices. The changes needed are about **simplification** (dropping Expo/mobile, voice, Tauri), **reliability** (fixing WebSocket reconnection), and **UI reshaping** (Codex-inspired layout instead of Paseo's mobile-first layout).
+1. **Multi-tab:** Extend `streamId` multiplexing to N terminals per thread; add tab state to thread store
+2. **AI chat:** Parse existing `AgentTimelineItem` from agent stream events; render as overlay
+3. **Voice:** Existing dictation infrastructure handles Whisper STT via `SpeechToTextProvider`
+4. **Git push:** Already implemented (`checkout_push_request`); needs UI wiring only
 
-## Standard Architecture
-
-### System Overview
+## Current Architecture Overview
 
 ```
-┌─────────────────────── Docker Container ───────────────────────┐
-│                                                                 │
-│  ┌────────────────── Daemon (packages/server) ──────────────┐  │
-│  │                                                           │  │
-│  │  ┌──────────┐  ┌──────────────┐  ┌─────────────────┐    │  │
-│  │  │ Express  │  │ WebSocket    │  │ Agent Manager   │    │  │
-│  │  │ HTTP     │  │ Server (ws)  │  │                 │    │  │
-│  │  │          │  │              │  │ ┌─────────────┐ │    │  │
-│  │  │ /api/*   │  │ JSON msgs   │  │ │ Agent Store │ │    │  │
-│  │  │ /public  │  │ Binary mux  │  │ │ (persisted) │ │    │  │
-│  │  │ /mcp/*   │  │ (terminal)  │  │ └─────────────┘ │    │  │
-│  │  └──────────┘  └──────┬───────┘  └────────┬────────┘    │  │
-│  │                       │                    │              │  │
-│  │  ┌────────────────────┴────────────────────┴──────────┐  │  │
-│  │  │              Terminal Manager                       │  │  │
-│  │  │                                                     │  │  │
-│  │  │  ┌─────────┐  ┌─────────┐  ┌─────────┐            │  │  │
-│  │  │  │ PTY +   │  │ PTY +   │  │ PTY +   │  ...       │  │  │
-│  │  │  │ xterm   │  │ xterm   │  │ xterm   │            │  │  │
-│  │  │  │ headless│  │ headless│  │ headless│            │  │  │
-│  │  │  └────┬────┘  └────┬────┘  └────┬────┘            │  │  │
-│  │  └───────┼────────────┼────────────┼──────────────────┘  │  │
-│  │          │            │            │                      │  │
-│  │  ┌───────┴────────────┴────────────┴──────────────────┐  │  │
-│  │  │              tmux sessions (per worktree)           │  │  │
-│  │  │                                                     │  │  │
-│  │  │  [project-a/feat-1]  [project-a/feat-2]  [proj-b]  │  │  │
-│  │  └─────────────────────────────────────────────────────┘  │  │
-│  │                                                           │  │
-│  │  ┌─────────────────────────────────────────────────────┐  │  │
-│  │  │              Git Worktree Manager                    │  │  │
-│  │  │                                                     │  │  │
-│  │  │  ~/.oisin/worktrees/{hash}/{slug}/                  │  │  │
-│  │  │  Each worktree = branch + isolated directory        │  │  │
-│  │  └─────────────────────────────────────────────────────┘  │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                                                                 │
-│  ┌──── Relay (packages/relay) ────┐                            │
-│  │  Node WS relay for remote      │                            │
-│  │  access (optional, same        │                            │
-│  │  container or separate)        │                            │
-│  └────────────────────────────────┘                            │
+┌─────────────────────────────────────────────────────────────────┐
+│                        Web Client                                │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
+│  │ TerminalView │  │ ThreadStore  │  │  DiffStore   │           │
+│  │  (xterm.js)  │  │  (Zustand)   │  │  (Zustand)   │           │
+│  └──────┬───────┘  └──────┬───────┘  └──────────────┘           │
+│         │                 │                                      │
+│  ┌──────▼───────────────────────────┐                           │
+│  │    TerminalStreamAdapter         │ ← single streamId         │
+│  │    Binary Mux (24-byte header)   │                           │
+│  └──────┬───────────────────────────┘                           │
+└─────────┼───────────────────────────────────────────────────────┘
+          │ WebSocket
+┌─────────▼───────────────────────────────────────────────────────┐
+│                         Server                                   │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │
+│  │   Session    │  │ AgentManager │  │TerminalMgr  │           │
+│  │  (ws conn)   │  │ (AI agents)  │  │ (tmux PTY)  │           │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘           │
+│         │                 │                 │                    │
+│  ┌──────▼─────────────────▼─────────────────▼──────┐            │
+│  │              ThreadLifecycle                     │            │
+│  │     One tmux session per thread (currently)     │            │
+│  └──────────────────────────────────────────────────┘           │
 └─────────────────────────────────────────────────────────────────┘
-         │
-         │ WebSocket (ws:// or wss:// via relay)
-         │
-┌────────┴──────────── Web Client ────────────────────────────────┐
-│                                                                  │
-│  ┌──────────┐  ┌──────────────┐  ┌─────────────────────────┐   │
-│  │ Sidebar  │  │ Center Panel │  │ Right Panel             │   │
-│  │          │  │              │  │                         │   │
-│  │ Projects │  │ Terminal     │  │ Code Diff View          │   │
-│  │ Threads  │  │ (xterm.js)  │  │ (file changes per       │   │
-│  │          │  │              │  │  worktree)              │   │
-│  │ Status   │  │ Chat/Agent   │  │                         │   │
-│  │ indicators│ │ Output       │  │ File Explorer           │   │
-│  └──────────┘  └──────────────┘  └─────────────────────────┘   │
-│                                                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │  Daemon Client (from @getpaseo/server client/)            │  │
-│  │  - WebSocket transport (JSON messages + binary mux)       │  │
-│  │  - Terminal stream manager (offset-based replay)          │  │
-│  │  - Reconnection logic                                     │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────┘
 ```
 
-### Component Responsibilities
+---
 
-| Component | Responsibility | Communicates With |
-|-----------|---------------|-------------------|
-| **Daemon (server)** | Lifecycle orchestrator. Manages agent sessions, terminals, worktrees, file operations. Single long-running Node.js process. | Web Client (WebSocket), tmux/PTY (child processes), git (CLI), relay (WebSocket) |
-| **Terminal Manager** | Creates/destroys PTY sessions via `node-pty`, wraps each in `@xterm/headless` for server-side terminal emulation. Manages raw output buffering with offset-based replay. | Daemon (direct API), PTY processes |
-| **Agent Manager** | Tracks agent lifecycle (creating, running, stopped, archived). Persists agent metadata to disk. Manages agent process spawning. | Terminal Manager (creates terminal per agent), Agent Storage (persistence) |
-| **Worktree Manager** | Creates/lists/deletes git worktrees under `~/.oisin/worktrees/{project-hash}/{slug}/`. Runs setup/destroy commands from config. | git CLI, file system |
-| **WebSocket Server** | Multiplexes JSON control messages and binary terminal data over single WebSocket connection. Handles client sessions, authentication. | Web Client, Terminal Manager, Agent Manager |
-| **Binary Mux Protocol** | Efficient binary framing for terminal I/O. 24-byte header with channel, message type, stream ID, offset. Supports replay from offset. | WebSocket Server, Terminal Stream Manager (client) |
-| **Web Client** | Renders UI, manages local state (Zustand), communicates with daemon via daemon-client library. | Daemon (WebSocket), xterm.js (rendering) |
-| **Daemon Client** | Client-side SDK (~3000 lines). Handles WebSocket connection, message parsing, terminal stream management, reconnection. Shared between all client surfaces. | WebSocket transport, Terminal Stream Manager |
-| **Relay** | WebSocket relay server for remote access. Pairs server↔client via `serverId` + `clientId`. Supports E2EE via encrypted channels. | Daemon (server-side WebSocket), Web Client (client-side WebSocket) |
+## Multi-Tab Architecture
 
-## Recommended Project Structure
+### Current State
 
-Based on Paseo's architecture, **simplified for web-only, Docker-first deployment**:
+- **Binary mux:** 24-byte header with `streamId` field (uint32) — already supports multiple streams
+- **Terminal manager:** Creates one session per thread via `ensureThreadTerminal()`
+- **Thread store:** Tracks single `terminalId` per thread
+- **TerminalStreamAdapter:** Manages one `streamId` at a time per adapter instance
 
-```
-packages/
-├── server/              # Node.js daemon [KEEP, MODIFY]
-│   └── src/
-│       ├── server/      # Bootstrap, Express, WebSocket server
-│       │   ├── index.ts
-│       │   ├── bootstrap.ts
-│       │   ├── config.ts
-│       │   ├── websocket-server.ts  # SIMPLIFY: remove voice
-│       │   ├── agent/               # Agent lifecycle management
-│       │   └── file-explorer/       # File browsing service
-│       ├── terminal/    # node-pty + xterm headless [KEEP AS-IS]
-│       │   ├── terminal.ts
-│       │   └── terminal-manager.ts
-│       ├── client/      # Daemon client SDK [KEEP, USED BY APP]
-│       │   ├── daemon-client.ts
-│       │   ├── daemon-client-transport.ts
-│       │   └── daemon-client-terminal-stream-manager.ts
-│       ├── shared/      # Protocol types, binary mux [KEEP AS-IS]
-│       │   ├── messages.ts
-│       │   ├── binary-mux.ts
-│       │   └── daemon-endpoints.ts
-│       └── utils/       # Worktree, git, path utilities [KEEP]
-│           ├── worktree.ts
-│           └── checkout-git.ts
-│
-├── app/                 # Web client [REPLACE EXPO → NEXT.JS or VITE REACT]
-│   └── src/
-│       ├── components/  # UI components
-│       │   ├── layout/  # Sidebar, panels, header
-│       │   ├── terminal/# xterm.js terminal component
-│       │   ├── diff/    # Code diff viewer
-│       │   └── common/  # Buttons, inputs, etc.
-│       ├── stores/      # Zustand state management [KEEP PATTERN]
-│       ├── hooks/       # React hooks [KEEP PATTERN]
-│       ├── contexts/    # Session, daemon registry [KEEP PATTERN]
-│       └── terminal/    # Terminal runtime [KEEP FROM PASEO]
-│           ├── terminal-emulator-runtime.ts
-│           ├── terminal-stream-controller.ts
-│           └── terminal-output-pump.ts
-│
-├── relay/               # WebSocket relay [KEEP, node-adapter]
-│   └── src/
-│       ├── node-adapter.ts  # Self-hosted relay server
-│       ├── encrypted-channel.ts
-│       └── crypto.ts
-│
-└── cli/                 # CLI tools [KEEP FOR ADMIN, SIMPLIFY]
-    └── src/
-        └── commands/    # Agent, daemon management
-```
+### Server Changes
 
-### What to Keep vs Change from Paseo
+**Option A: Multiple tmux windows per session (Recommended)**
 
-| Component | Action | Rationale |
-|-----------|--------|-----------|
-| `server/terminal/` | **KEEP AS-IS** | node-pty + @xterm/headless is the correct approach. Robust raw output buffering with offset-based replay. |
-| `server/client/` (daemon-client) | **KEEP AS-IS** | ~3000-line battle-tested client SDK with reconnection, binary mux, terminal stream management. Essential. |
-| `shared/binary-mux.ts` | **KEEP AS-IS** | Efficient binary protocol for terminal I/O. 24-byte header, channel multiplexing. Don't reinvent. |
-| `shared/messages.ts` | **KEEP, TRIM** | 2267-line Zod schema. Remove voice-related messages, keep agent/terminal/worktree/checkout messages. |
-| `server/bootstrap.ts` | **KEEP, SIMPLIFY** | Remove voice MCP bridge, speech runtime. Keep Express + WS + AgentManager + TerminalManager core. |
-| `utils/worktree.ts` | **KEEP AS-IS** | 987 lines of well-tested git worktree management. Handles creation, deletion, setup commands, runtime env. |
-| `relay/node-adapter.ts` | **KEEP AS-IS** | Custom Node relay server. Already replaced Cloudflare dependency. Handles V1/V2 protocol, client pairing. |
-| `app/` (Expo) | **REPLACE** | Expo is for mobile-first. Replace with Vite + React for web-only. Keep Zustand stores, hooks patterns. |
-| `desktop/` (Tauri) | **DROP** | Not needed. Docker + web UI replaces desktop app. |
-| `server/speech/` | **DROP** | Voice features not in scope for v1. |
-| `server/voice-*` | **DROP** | All voice-related server code. |
-| `website/` | **DROP** | Marketing site not needed for personal tool. |
+tmux sessions can have multiple windows. Each window is a separate shell with its own PTY.
 
-## Architectural Patterns
-
-### Pattern 1: Single WebSocket with Binary Multiplexing
-
-**What:** All daemon↔client communication goes through one WebSocket connection. JSON text frames for structured messages (agent state, commands, responses). Binary frames for terminal I/O using the BinaryMux protocol.
-
-**Why this is right:** A single connection simplifies reconnection, reduces overhead, and avoids the complexity of managing multiple connections per client. The binary mux adds < 24 bytes overhead per terminal chunk.
-
-**How Paseo does it:**
 ```typescript
-// Binary mux frame: 24-byte header
-// [2b magic][1b version][1b channel][1b msgType][1b flags][2b reserved]
-// [4b streamId][8b offset][4b payloadLen]
-// [payload...]
-
-// Channel 1 = Terminal, Channel 2 = FileTransfer
-// Terminal message types: InputUtf8(1), OutputUtf8(2), Ack(3)
-
-// JSON messages: { type: "...", ... } text frames
-// Binary messages: BinaryMuxFrame binary frames
-```
-
-**Keep this pattern.** It's efficient and proven.
-
-### Pattern 2: Offset-Based Terminal Replay
-
-**What:** Each terminal session tracks a monotonically increasing byte offset. Raw PTY output is buffered (up to 8MB) with offset tracking. Clients can reconnect and replay from their last-seen offset.
-
-**Why this is right:** Terminal output is a stream. Without offset tracking, reconnecting clients would either miss output or need a full terminal state re-render. The offset system allows efficient catch-up.
-
-**How Paseo does it:**
-```typescript
-// Server-side: terminal.ts
-subscribeRaw(listener, { fromOffset?: number }): {
-  unsubscribe, replayedFrom, currentOffset, earliestAvailableOffset, reset
+// Extend terminal-manager.ts
+interface TerminalManager {
+  // Existing
+  ensureThreadTerminal(options: {
+    projectId: string;
+    threadId: string;
+    cwd: string;
+  }): Promise<{ terminal: TerminalSession; sessionKey: string }>;
+  
+  // New: create additional tabs within existing tmux session
+  createThreadTab(options: {
+    projectId: string;
+    threadId: string;
+    tabIndex?: number;  // specific index or next available
+    tabName?: string;
+    cwd?: string;  // defaults to thread cwd
+  }): Promise<{ terminal: TerminalSession; tabIndex: number }>;
+  
+  listThreadTabs(projectId: string, threadId: string): Promise<ThreadTab[]>;
+  closeThreadTab(projectId: string, threadId: string, tabIndex: number): void;
+  switchThreadTab(projectId: string, threadId: string, tabIndex: number): void;
 }
 
-// Client-side: daemon-client-terminal-stream-manager.ts
-class TerminalStreamManager {
-  subscribe({ streamId, handler })
-  receiveChunk({ chunk: { streamId, offset, endOffset, replay, data } })
-  noteAck({ streamId, offset })
+interface ThreadTab {
+  tabIndex: number;
+  terminalId: string;
+  name: string;
+  cwd: string;
 }
 ```
-
-**Keep this pattern.** Essential for reliable terminal experience.
-
-### Pattern 3: Server-Side Terminal Emulation with Client-Side Rendering
-
-**What:** Daemon runs `@xterm/headless` (server-side xterm.js) to maintain canonical terminal state. Client runs `@xterm/xterm` (browser) for rendering. Raw PTY output is forwarded to both. The server provides full state snapshots on connect, then streams raw chunks.
-
-**Why this is right:** The headless terminal on the server means the server always knows the "true" terminal state, enabling features like:
-- Terminal state queries (what's on screen)
-- Reconnection with full state
-- Multiple clients viewing same terminal
-
-**Alternative considered:** Stream raw PTY directly to client xterm.js only.
-**Why rejected:** Client-only rendering means server can't introspect terminal state, and reconnection requires replaying entire raw history.
-
-**Keep this pattern.** Paseo chose correctly.
-
-### Pattern 4: tmux Sessions per Thread/Worktree
-
-**What:** Each thread gets a tmux session that outlives individual terminal connections. The agent (OpenCode, Claude Code) runs inside tmux. The PTY connects to the tmux session.
-
-**Why this is right for Oisin:**
-- tmux sessions persist across client disconnects
-- Multiple windows/panes per session
-- Agent processes survive daemon restarts
-- All CLI tools work naturally
-- `tmux capture-pane` provides terminal state even without daemon
 
 **Implementation approach:**
+
 ```bash
-# Create tmux session for a thread
-tmux new-session -d -s "oisin-{project}-{thread}" -c "{worktree_path}"
+# Create new window in session
+tmux new-window -t {sessionKey}:{index} -n {tabName} -c {cwd}
 
-# Attach daemon's PTY to tmux session
-tmux attach-session -t "oisin-{project}-{thread}"
+# List windows
+tmux list-windows -t {sessionKey} -F "#{window_index}:#{window_name}:#{pane_current_path}"
 
-# Or start agent in session
-tmux send-keys -t "oisin-{project}-{thread}" "opencode" Enter
+# Select window
+tmux select-window -t {sessionKey}:{index}
+
+# Kill window
+tmux kill-window -t {sessionKey}:{index}
 ```
 
-**Note:** Paseo doesn't currently use tmux — it spawns agents directly via node-pty. Adding tmux is a new layer that provides persistence and isolation benefits but adds complexity. The node-pty terminal manager can be adapted to connect to tmux sessions instead of raw shell processes.
+**Rationale:** tmux windows within a session share the session's environment while allowing separate shell instances. Maps cleanly to "tabs within a thread."
 
-### Pattern 5: Git Worktrees for Thread Isolation
+**New message schemas:**
 
-**What:** Each coding thread gets its own git worktree — a separate working directory with its own branch, sharing the same git object store. Worktrees are stored under `~/.oisin/worktrees/{project-hash}/{slug}/`.
-
-**Why this is right:**
-- Zero-copy branch isolation (git worktrees share objects)
-- Each thread can have uncommitted changes without conflicts
-- Agent can work on files without affecting other threads
-- Diff view per thread shows only that thread's changes
-
-**How Paseo does it (keep this):**
 ```typescript
-// Create: git worktree add "{path}" -b "{branch}" "{base}"
-// List: git worktree list --porcelain (filtered by Paseo-owned paths)
-// Delete: git worktree remove "{path}" --force
-// Runtime env: PASEO_WORKTREE_PATH, PASEO_BRANCH_NAME, etc.
-// Setup commands: from paseo.json (or oisin.json) worktree.setup[]
+// messages.ts additions
+export const CreateThreadTabRequestSchema = z.object({
+  type: z.literal('create_thread_tab_request'),
+  projectId: z.string(),
+  threadId: z.string(),
+  tabName: z.string().optional(),
+  requestId: z.string(),
+});
+
+export const CreateThreadTabResponseSchema = z.object({
+  type: z.literal('create_thread_tab_response'),
+  payload: z.object({
+    requestId: z.string(),
+    terminalId: z.string(),
+    tabIndex: z.number(),
+    error: z.string().nullable(),
+  }),
+});
+
+export const ListThreadTabsRequestSchema = z.object({
+  type: z.literal('list_thread_tabs_request'),
+  projectId: z.string(),
+  threadId: z.string(),
+  requestId: z.string(),
+});
+
+export const CloseThreadTabRequestSchema = z.object({
+  type: z.literal('close_thread_tab_request'),
+  projectId: z.string(),
+  threadId: z.string(),
+  tabIndex: z.number(),
+  requestId: z.string(),
+});
 ```
 
-### Pattern 6: Zustand for Client State
+### Client Changes
 
-**What:** Paseo uses Zustand (not Redux, not MobX) for client-side state management. Small, focused stores per concern (session, panel layout, checkout actions, sidebar state).
+**New TabStore (Zustand):**
 
-**Why this is right:**
-- Minimal boilerplate
-- Works with React 19
-- Easy to persist/hydrate
-- No provider nesting hell
-- Can subscribe outside React components
+```typescript
+// stores/tab-store.ts
+interface TabState {
+  terminalId: string;
+  tabIndex: number;
+  name: string;
+  streamId: number | null;  // null until attached
+}
 
-**Keep this pattern.** Zustand stores from Paseo's app can be adapted.
-
-## Data Flow
-
-### Request Flow: Client → Daemon
-
-```
-1. User action (e.g., create new thread)
-     ↓
-2. React component calls store action
-     ↓
-3. Store calls daemon client method
-     ↓
-4. Daemon client serializes to JSON + sends via WebSocket
-     ↓
-5. WebSocket server receives, validates (Zod), routes
-     ↓
-6. Handler executes (e.g., createWorktree + createAgent + createTerminal)
-     ↓
-7. Response sent back via WebSocket JSON message
-     ↓
-8. Daemon client receives, calls registered handler
-     ↓
-9. Store updates state
-     ↓
-10. React re-renders
-```
-
-### Terminal Data Flow (Critical Path)
-
-```
-Agent (OpenCode) writes to stdout
-     ↓
-PTY process captures via node-pty.onData()
-     ↓
-Raw data appended to terminal's output buffer (offset tracked)
-     ↓
-@xterm/headless processes escape sequences (server state updated)
-     ↓
-Raw data subscribers notified (WebSocket server)
-     ↓
-Binary mux frame created:
-  [channel=Terminal, msgType=OutputUtf8, streamId=terminalHash, 
-   offset=byteOffset, payload=rawData]
-     ↓
-Sent as binary WebSocket frame to all connected clients
-     ↓
-Client receives binary frame → daemon-client decodes
-     ↓
-TerminalStreamManager dispatches to subscribed handlers
-     ↓
-Terminal component feeds data to @xterm/xterm (browser)
-     ↓
-xterm.js renders to canvas/DOM
-```
-
-### Terminal Input Flow (Reverse)
-
-```
-User types in xterm.js terminal
-     ↓
-xterm.js onData callback fires
-     ↓
-Client sends binary mux frame:
-  [channel=Terminal, msgType=InputUtf8, streamId=terminalHash,
-   offset=0, payload=keystrokes]
-     ↓
-WebSocket server receives → binary mux decode
-     ↓
-Terminal manager routes to correct PTY → ptyProcess.write(data)
-     ↓
-PTY delivers to shell/tmux → agent receives input
-```
-
-### Reconnection Flow (Critical for Reliability)
-
-```
-WebSocket disconnects (network issue, daemon restart)
-     ↓
-Daemon client detects close event
-     ↓
-Exponential backoff reconnection starts
-     ↓
-On reconnect:
-  1. Send clientSessionKey for identity
-  2. For each active terminal stream:
-     - Send subscribe with lastSeenOffset
-     - Server replays from that offset (or earliest available)
-     - If offset expired: server sends reset=true, client does full refresh
-  3. Request current agent states
-  4. UI shows "reconnecting..." → "connected"
-```
-
-### State Management Architecture
-
-```
-┌─────────────────── Client State (Zustand) ─────────────────────┐
-│                                                                  │
-│  session-store       ← daemon connection state, server info      │
-│  panel-store         ← panel visibility, sizes                   │
-│  create-flow-store   ← new thread/project creation wizard        │
-│  checkout-store      ← git status, diff data per worktree        │
-│  draft-store         ← agent draft messages before sending       │
-│  section-order-store ← sidebar section ordering                  │
-│                                                                  │
-│  All stores hydrated on connect from daemon state.               │
-│  Terminal state is NOT in Zustand — lives in xterm.js instance.  │
-└──────────────────────────────────────────────────────────────────┘
-
-┌─────────────────── Server State (In-Memory) ────────────────────┐
-│                                                                   │
-│  AgentManager        ← agent lifecycle, running processes         │
-│  AgentStorage        ← persisted agent records (JSON on disk)     │
-│  TerminalManager     ← active PTY sessions + xterm headless      │
-│  WorktreeManager     ← git worktree metadata                     │
-│                                                                   │
-│  Persisted to: ~/.oisin/ (agent records, server ID, key pair)    │
-│  NOT persisted: terminal output (ephemeral, offset-buffered)     │
-└───────────────────────────────────────────────────────────────────┘
-```
-
-### Key Data Flows
-
-#### 1. Creating a New Thread
-
-```
-Client: "Create thread for project X"
-  → Daemon: createWorktree({ cwd: projectPath, branchName, baseBranch })
-    → git worktree add ...
-    → Run setup commands (from oisin.json)
-    → Assign available port
-    → Write worktree metadata
-  ← Returns: { worktreePath, branchName }
+interface TabStoreState {
+  // threadKey → tabs
+  tabsByThread: Map<string, TabState[]>;
+  // threadKey → active index
+  activeTabIndex: Map<string, number>;
   
-  → Daemon: createAgent({ cwd: worktreePath, provider: "opencode" })
-    → Start agent process in worktree directory
-    → Create terminal (node-pty → tmux session → agent)
-    → Register in AgentManager
-  ← Returns: { agentId, terminalId }
+  // Actions
+  addTab(threadKey: string, tab: TabState): void;
+  removeTab(threadKey: string, tabIndex: number): void;
+  setActiveTab(threadKey: string, tabIndex: number): void;
+  setStreamId(threadKey: string, tabIndex: number, streamId: number): void;
+}
+```
+
+**Multiple TerminalStreamAdapter instances:**
+
+```typescript
+// App.tsx changes
+const adaptersRef = useRef<Map<string, Map<number, TerminalStreamAdapter>>>(new Map());
+// Map: threadKey → Map<tabIndex, adapter>
+
+// On tab switch:
+function switchToTab(threadKey: string, tabIndex: number) {
+  const activeAdapter = getActiveAdapter();
+  activeAdapter?.setInputEnabled(false);
   
-  → Daemon: notify via WebSocket event (agent_created, terminal_created)
-  ← Client: adds to sidebar, opens center panel
+  const newAdapter = adaptersRef.current.get(threadKey)?.get(tabIndex);
+  if (newAdapter) {
+    newAdapter.setInputEnabled(true);
+    newAdapter.getTerminal().focus();
+  } else {
+    // Create and attach
+    const tab = tabStore.getTab(threadKey, tabIndex);
+    sendAttachRequest(tab.terminalId);
+  }
+}
 ```
 
-#### 2. Viewing Code Diffs
+**Frame routing:**
 
-```
-Client: selects thread in sidebar
-  → Daemon: request checkout status for worktree
-    → git status (staged/unstaged/untracked)
-    → git diff (per-file diffs)
-  ← Returns: { files: [...], diffs: {...} }
+```typescript
+// Route by streamId to correct adapter
+subscribeBinaryMessages((data) => {
+  const frame = decodeBinaryMuxFrame(data);
+  if (!frame) return;
   
-  Client: renders diff in right panel
-  Daemon: polls or watches for changes, sends updates via WS
+  // Find adapter with matching streamId
+  for (const [threadKey, adapters] of adaptersRef.current) {
+    for (const [tabIndex, adapter] of adapters) {
+      if (adapter.streamId === frame.streamId) {
+        adapter.handleFrame(frame);
+        return;
+      }
+    }
+  }
+});
 ```
 
-#### 3. Remote Access via Relay
+### Protocol Changes
 
+Binary mux already handles multiple streams. Key change:
+
+**Multiple concurrent attach requests:**
+
+```typescript
+// Can have N active streams per connection
+// Each tab gets its own attach_terminal_stream_request
+// Each response has unique streamId
+// Client maintains adapter per streamId
 ```
-Client (remote browser) → Relay Server (ws://relay:8080/ws)
-  → Relay matches serverId + clientId
-  → Relay creates data channel to Daemon
-  → Daemon treats relay connection same as direct WS
-  → Optional E2EE: client↔daemon encrypt over relay
+
+---
+
+## AI Chat Overlay Architecture
+
+### Current State
+
+- **AgentTimelineItem:** Structured format for agent output (messages, tool calls, reasoning)
+- **Timeline projection:** Server collapses tool lifecycle events, merges messages
+- **agent_stream messages:** Server already sends structured events per agent
+
+### Output Source: AgentTimelineItem Stream
+
+The server already produces structured `AgentTimelineItem` via `agent_stream` messages:
+
+```typescript
+// Existing in messages.ts
+export const AgentStreamMessageSchema = z.object({
+  type: z.literal('agent_stream'),
+  payload: z.object({
+    agentId: z.string(),
+    event: AgentStreamEventPayloadSchema,  // includes type: 'timeline'
+    timestamp: z.string(),
+    seq: z.number().optional(),
+    epoch: z.string().optional(),
+  }),
+});
+
+// AgentTimelineItem types (from agent-sdk-types.ts)
+type AgentTimelineItem =
+  | { type: 'user_message'; text: string; messageId?: string }
+  | { type: 'assistant_message'; text: string }
+  | { type: 'reasoning'; text: string }
+  | { type: 'tool_call'; callId: string; name: string; status: 'running'|'completed'|'failed'; detail: ToolCallDetail }
+  | { type: 'todo'; items: Array<{ text: string; completed: boolean }> }
+  | { type: 'error'; message: string }
+  | { type: 'compaction'; status: 'loading'|'completed' };
+```
+
+**Integration approach — subscribe to existing stream:**
+
+```typescript
+// Already receiving these via subscribeTextMessages
+if (msg.type === 'agent_stream' && msg.payload.agentId === activeAgentId) {
+  if (msg.payload.event.type === 'timeline') {
+    chatStore.addMessage(timelineItemToChatMessage(msg.payload.event.item));
+  }
+}
+```
+
+### ChatStore (New)
+
+```typescript
+// stores/chat-store.ts
+interface ChatMessage {
+  id: string;
+  type: 'user' | 'assistant' | 'tool' | 'reasoning' | 'error';
+  content: string;
+  status?: 'running' | 'completed' | 'failed' | 'canceled';
+  timestamp: string;
+  toolName?: string;
+  toolDetail?: ToolCallDetail;
+}
+
+interface ChatStoreState {
+  messagesByAgent: Map<string, ChatMessage[]>;
   
-Flow: Client ↔ Relay ↔ Daemon (transparent proxy)
+  addMessage(agentId: string, message: ChatMessage): void;
+  updateMessage(agentId: string, messageId: string, updates: Partial<ChatMessage>): void;
+  clearMessages(agentId: string): void;
+}
 ```
 
-## Anti-Patterns to Avoid
+### Chat Rendering
 
-### Anti-Pattern 1: Polling for Terminal State
+```typescript
+// components/chat-overlay.tsx
+interface ChatOverlayProps {
+  agentId: string;
+  position: 'right' | 'bottom' | 'floating';
+  isMinimized: boolean;
+  onSendMessage: (text: string) => void;
+  onMinimize: () => void;
+}
 
-**What:** Using HTTP polling or periodic WebSocket requests to fetch terminal state.
-**Why bad:** Terminal output is high-frequency (agent thinking/coding generates lots of text). Polling adds latency and misses output between polls.
-**Instead:** Use the existing streaming pattern — PTY data → WebSocket binary frames → client xterm.js. Real-time, zero-polling.
-
-### Anti-Pattern 2: Separate WebSocket per Terminal
-
-**What:** Opening a new WebSocket connection for each terminal session.
-**Why bad:** Multiple connections multiply reconnection complexity, consume more resources, and make authentication harder.
-**Instead:** Single WebSocket with binary mux (Paseo's existing approach). Stream ID identifies the terminal.
-
-### Anti-Pattern 3: Storing Terminal History in Database
-
-**What:** Persisting all terminal output to SQLite/Postgres for replay.
-**Why bad:** Terminal output is high-volume (agent sessions can produce MBs), and most of it is only needed for live viewing. Database writes become a bottleneck.
-**Instead:** In-memory ring buffer with offset tracking (Paseo's approach: 8MB max per terminal). For long-term history, tmux's capture-pane or scrollback files are sufficient.
-
-### Anti-Pattern 4: Building Custom Agent Protocol
-
-**What:** Creating a structured API to communicate with OpenCode/Claude Code/etc.
-**Why bad:** Every agent has a different protocol. ACP is unstable. Building adapters for each agent is a maintenance nightmare.
-**Instead:** Terminal-first approach. All agents work in a terminal. Wrap them in tmux sessions, pipe I/O through PTY. Universal compatibility.
-
-### Anti-Pattern 5: Client-Side Terminal State as Source of Truth
-
-**What:** Treating the browser's xterm.js as the authoritative terminal state.
-**Why bad:** If the browser tab closes, state is lost. Multiple clients see inconsistent state. Server can't introspect the terminal.
-**Instead:** Server-side @xterm/headless is source of truth. Client xterm.js is a renderer. This is what Paseo does correctly.
-
-### Anti-Pattern 6: Hot-Reloading the Daemon
-
-**What:** Using nodemon/tsx watch for daemon development.
-**Why bad:** Daemon manages long-running processes (agents, terminals). Restarting kills all sessions. 
-**Instead:** Paseo uses a supervisor script that gracefully handles restarts. For development, the daemon should handle SIGHUP for config reload without killing sessions. tmux sessions survive daemon restarts by design.
-
-## Integration Points
-
-### Daemon → Web Client (via WebSocket)
-
-**Protocol:** Single WebSocket at `/ws`
-**Authentication:** `clientSessionKey` query parameter
-**Message types:**
-- **Text frames:** JSON messages conforming to `SessionInboundMessage` / `SessionOutboundMessage` Zod schemas
-- **Binary frames:** BinaryMux frames (terminal I/O, file transfers)
-
-**Key message categories (from messages.ts):**
-- Agent lifecycle: create, stop, archive, update, permission requests
-- Terminal: list, create, subscribe, kill, input/output
-- Git/Checkout: status, diff, commit, push, PR create/status
-- Worktree: list, create, delete
-- File explorer: browse, download tokens
-- Provider/model: list providers, list models
-
-### Daemon → Terminal Processes (via node-pty)
-
-**Protocol:** node-pty spawns shell processes
-**Current:** Direct PTY → shell
-**Proposed:** PTY → tmux session → agent (OpenCode, etc.)
-
-### Daemon → Git (via CLI)
-
-**Protocol:** `child_process.exec` / `spawn` with git commands
-**Key operations:** worktree add/remove/list, status, diff, commit, push
-**Environment:** `GIT_OPTIONAL_LOCKS=0` for read-only operations
-
-### Web Client → Terminal Display (via xterm.js)
-
-**Protocol:** xterm.js Terminal API
-**Addons needed:**
-- `@xterm/addon-fit` — auto-resize to container
-- `@xterm/addon-webgl` — GPU-accelerated rendering (optional, performance)
-- `@xterm/addon-web-links` — clickable URLs
-
-### Daemon → Relay (via WebSocket)
-
-**Protocol:** V2 relay protocol. Server registers with `serverId`. Creates control channel + per-client data channels. Relay is a transparent frame forwarder.
-**E2EE:** Optional, via `encrypted-channel.ts` using ECDH key exchange.
-
-## Docker Architecture
-
-```dockerfile
-# Single container: daemon + relay + static web app
-FROM node:22-slim
-
-# Install: git, tmux, opencode (or agent binaries)
-RUN apt-get update && apt-get install -y git tmux
-
-# Copy built packages
-COPY packages/server/dist/ /app/server/
-COPY packages/app/dist/ /app/static/
-COPY packages/relay/dist/ /app/relay/
-
-# Daemon serves static web app from /public
-# Relay runs alongside daemon in same container (or separate process)
-
-EXPOSE 6767  # Daemon
-EXPOSE 8080  # Relay (optional, can be same port)
-
-# Entrypoint: start daemon (which serves web UI and terminal sessions)
-CMD ["node", "/app/server/server/index.js"]
+function ChatOverlay({ agentId, onSendMessage, ... }: ChatOverlayProps) {
+  const messages = useChatStore((s) => s.messagesByAgent.get(agentId) ?? []);
+  
+  return (
+    <ScrollArea>
+      {messages.map((msg) => (
+        <ChatBubble key={msg.id} message={msg} />
+      ))}
+    </ScrollArea>
+    <ChatInput onSubmit={onSendMessage} />
+  );
+}
 ```
 
-**Volume mounts:**
-- `~/.oisin/` → `/root/.oisin/` (agent persistence, server ID, worktree metadata)
-- Project directories → `/projects/` (git repos to work on)
+### Timeline Item to Chat Message Mapping
 
-## Build Order Implications
+```typescript
+function timelineItemToChatMessage(
+  item: AgentTimelineItem,
+  timestamp: string
+): ChatMessage {
+  const id = crypto.randomUUID();
+  
+  switch (item.type) {
+    case 'user_message':
+      return { id, type: 'user', content: item.text, timestamp };
+      
+    case 'assistant_message':
+      return { id, type: 'assistant', content: item.text, timestamp };
+      
+    case 'reasoning':
+      return { id, type: 'reasoning', content: item.text, timestamp };
+      
+    case 'tool_call':
+      return {
+        id,
+        type: 'tool',
+        content: formatToolCallSummary(item),
+        status: item.status,
+        timestamp,
+        toolName: item.name,
+        toolDetail: item.detail,
+      };
+      
+    case 'error':
+      return { id, type: 'error', content: item.message, timestamp };
+      
+    default:
+      return { id, type: 'assistant', content: JSON.stringify(item), timestamp };
+  }
+}
+```
 
-Based on component dependencies, the build order should be:
+### Input Handling — Two Paths
 
-### Phase 1: Foundation (daemon core + basic web shell)
-**Dependencies:** None
-**Build:**
-1. Fork Paseo, strip voice/speech/Tauri/Expo-mobile
-2. Simplify bootstrap.ts (remove voice, keep Express + WS + Agent + Terminal)
-3. Replace Expo web build with Vite + React
-4. Basic web shell: connect to daemon, show connection status
-5. Docker container with daemon + static web app
+**Path A: Terminal input (existing)**
+- User types in xterm.js
+- Binary mux sends to tmux session
+- Agent receives via stdin
 
-**Rationale:** Everything else depends on the daemon running and the web client connecting.
+**Path B: Chat input (new)**
+- User types in chat input field
+- Send `send_agent_message_request` via WebSocket
+- Server routes to agent via AgentManager
 
-### Phase 2: Terminal I/O (the critical path)
-**Dependencies:** Phase 1 (daemon running, web client connected)
-**Build:**
-1. Terminal component with xterm.js (reuse Paseo's terminal runtime)
-2. Wire up binary mux terminal streams
-3. Terminal input/output working end-to-end
-4. tmux session integration (daemon spawns/attaches to tmux sessions)
-5. Reconnection with offset-based replay
+```typescript
+// Already exists in messages.ts
+export const SendAgentMessageRequestSchema = z.object({
+  type: z.literal('send_agent_message_request'),
+  requestId: z.string(),
+  agentId: z.string(),
+  text: z.string(),
+  messageId: z.string().optional(),
+});
+```
 
-**Rationale:** Terminal is the core interaction. Everything else is secondary until typing in a terminal and seeing agent output works reliably.
+Both input paths work simultaneously. Chat is cleaner for multi-line prompts and image attachments.
 
-### Phase 3: Thread/Worktree Management
-**Dependencies:** Phase 2 (terminals working)
-**Build:**
-1. Worktree creation/listing/deletion (reuse Paseo's worktree.ts)
-2. Thread = worktree + tmux session + agent
-3. Sidebar showing projects and threads
-4. Thread switching (attaches terminal to different tmux session)
+---
 
-**Rationale:** Multi-thread is the core differentiator. Requires working terminals.
+## Voice Input Architecture
 
-### Phase 4: UI Polish (Codex-inspired layout)
-**Dependencies:** Phase 3 (threads working)
-**Build:**
-1. Three-panel layout (sidebar, center, right)
-2. Code diff view per thread
-3. File explorer
-4. Model/agent selector
-5. Status indicators, keyboard shortcuts
+### Current State (Extensive)
 
-**Rationale:** Polish comes after functionality. Layout can iterate once core features work.
+Voice/dictation infrastructure already exists:
 
-### Phase 5: Reliability + Remote Access
-**Dependencies:** Phase 2-4 working locally
-**Build:**
-1. WebSocket reconnection hardening
-2. Relay integration for remote access
-3. Docker deployment optimization
-4. E2EE for relay connections
+```typescript
+// Server
+- DictationStreamManager: Handles audio chunk streaming
+- SpeechToTextProvider: Abstract interface for STT
+- OpenAI Whisper: whisper-1, gpt-4o-transcribe models
+- Local speech models: Download/manage models locally
 
-**Rationale:** Remote access is important but not needed until local experience is solid.
+// Messages already defined
+DictationStreamStartMessageSchema
+DictationStreamChunkMessageSchema
+DictationStreamFinishMessageSchema
+DictationStreamCancelMessageSchema
+DictationStreamAckMessageSchema
+DictationStreamFinalMessageSchema
+DictationStreamErrorMessageSchema
+```
 
-## Technology Decisions Summary
+### Container Setup (Optional Local Whisper)
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Terminal server-side | node-pty + @xterm/headless | Paseo's proven approach. node-pty is the standard for PTY in Node.js. |
-| Terminal client-side | @xterm/xterm 6.x | Industry standard web terminal. Used by VS Code, Gitpod, etc. |
-| WebSocket | ws (server) + native WebSocket (client) | Paseo's existing choice. ws is the fastest Node.js WS implementation. |
-| Binary protocol | Custom BinaryMux (Paseo's) | Lightweight, purpose-built for terminal muxing. Keep it. |
-| Process isolation | tmux sessions | **NEW** — adds persistence, survives daemon restarts, natural CLI environment. |
-| Web framework | Vite + React | **CHANGE from Expo** — lighter, faster, web-native. No mobile overhead. |
-| State management | Zustand | Paseo's choice. Minimal, works with React 19. Keep it. |
-| Git operations | CLI via child_process | Paseo's choice. More reliable than git libraries. Keep it. |
-| Deployment | Docker single container | Specified in project requirements. |
-| Relay | Node.js WebSocket relay | Paseo's custom relay (already replaced Cloudflare). Keep it. |
+Current setup uses OpenAI API. For local:
 
-## Scalability Considerations
+```yaml
+# docker-compose.yml addition
+services:
+  whisper:
+    image: fedirz/faster-whisper-server:latest
+    ports:
+      - "8000:8000"
+    environment:
+      WHISPER_MODEL: base.en
+    volumes:
+      - whisper-models:/root/.cache/huggingface
+    # GPU acceleration (optional)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+```
 
-| Concern | At 1-5 threads | At 10-20 threads | At 50+ threads |
-|---------|----------------|-------------------|-----------------|
-| Memory | ~200MB (daemon + terminals) | ~500MB (each PTY + xterm headless costs ~20MB) | ~2GB, may need terminal hibernation |
-| CPU | Negligible | Terminal emulation overhead starts to matter with many active agents | Consider process limits |
-| Disk (worktrees) | ~100MB per worktree | 1-2GB | Need cleanup strategy, shallow clones |
-| WebSocket bandwidth | <1MB/s terminal output | ~5MB/s peak | May need per-terminal backpressure |
+**New LocalWhisperSTTProvider:**
 
-**For a personal tool (1-5 active threads), scalability is not a concern.** The architecture handles 20+ threads comfortably.
+```typescript
+// speech/providers/local-whisper/stt.ts
+export class LocalWhisperSTTProvider implements SpeechToTextProvider {
+  constructor(private endpoint: string = 'http://localhost:8000') {}
+  
+  async transcribe(audio: Buffer, format: string): Promise<TranscriptionResult> {
+    const formData = new FormData();
+    formData.append('file', new Blob([audio]), 'audio.webm');
+    formData.append('model', 'base.en');
+    
+    const response = await fetch(`${this.endpoint}/v1/audio/transcriptions`, {
+      method: 'POST',
+      body: formData,
+    });
+    
+    const result = await response.json();
+    return { text: result.text, language: result.language };
+  }
+}
+```
+
+### Client Integration
+
+```typescript
+// components/voice-input.tsx
+function VoiceInput({ onTranscription }: { onTranscription: (text: string) => void }) {
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const dictationIdRef = useRef<string | null>(null);
+  const seqRef = useRef(0);
+  
+  async function startRecording() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mediaRecorder = new MediaRecorder(stream, {
+      mimeType: 'audio/webm;codecs=opus',
+    });
+    
+    const dictationId = crypto.randomUUID();
+    dictationIdRef.current = dictationId;
+    seqRef.current = 0;
+    
+    // Start dictation stream
+    sendWsMessage({
+      type: 'dictation_stream_start',
+      dictationId,
+      format: 'audio/webm;codecs=opus',
+    });
+    
+    mediaRecorder.ondataavailable = async (event) => {
+      if (event.data.size > 0) {
+        const base64 = await blobToBase64(event.data);
+        sendWsMessage({
+          type: 'dictation_stream_chunk',
+          dictationId,
+          seq: seqRef.current++,
+          audio: base64,
+          format: 'audio/webm;codecs=opus',
+        });
+      }
+    };
+    
+    mediaRecorder.start(250);  // 250ms chunks
+    mediaRecorderRef.current = mediaRecorder;
+    setIsRecording(true);
+  }
+  
+  function stopRecording() {
+    const mediaRecorder = mediaRecorderRef.current;
+    if (!mediaRecorder) return;
+    
+    mediaRecorder.stop();
+    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+    
+    sendWsMessage({
+      type: 'dictation_stream_finish',
+      dictationId: dictationIdRef.current,
+      finalSeq: seqRef.current - 1,
+    });
+    
+    setIsRecording(false);
+  }
+  
+  // Listen for transcription result
+  useEffect(() => {
+    return subscribeTextMessages((msg) => {
+      if (msg.type === 'dictation_stream_final' && 
+          msg.payload.dictationId === dictationIdRef.current) {
+        onTranscription(msg.payload.text);
+        dictationIdRef.current = null;
+      }
+    });
+  }, [onTranscription]);
+  
+  return (
+    <Button onClick={isRecording ? stopRecording : startRecording}>
+      {isRecording ? <MicOff /> : <Mic />}
+    </Button>
+  );
+}
+```
+
+### Integration Flow
+
+```
+Browser (MediaRecorder)
+    │
+    │ WebSocket (dictation_stream_chunk)
+    ▼
+DictationStreamManager (existing)
+    │
+    │ SpeechToTextProvider.transcribe()
+    ▼
+LocalWhisperSTTProvider ────────► Whisper Container
+    │                                   │
+    │ Transcription result              │
+    ▼                                   ▼
+Session ──────────────────────────────────
+    │
+    │ dictation_stream_final
+    ▼
+Client (inserts text into chat input)
+```
+
+---
+
+## Git Push Architecture
+
+### Current State — Already Implemented
+
+**Server (existing):**
+
+```typescript
+// session.ts lines 4609-4635
+private async handleCheckoutPushRequest(
+  msg: Extract<SessionInboundMessage, { type: 'checkout_push_request' }>
+): Promise<void> {
+  const { cwd, requestId } = msg
+  try {
+    await pushCurrentBranch(cwd)
+    this.emit({
+      type: 'checkout_push_response',
+      payload: { cwd, success: true, error: null, requestId },
+    })
+  } catch (error) {
+    this.emit({
+      type: 'checkout_push_response',
+      payload: { cwd, success: false, error: this.toCheckoutError(error), requestId },
+    })
+  }
+}
+```
+
+**Client (existing):**
+
+```typescript
+// daemon-client.ts
+async checkoutPush(cwd: string, requestId?: string): Promise<CheckoutPushPayload>
+```
+
+### UI Changes Needed
+
+**Add Push button to DiffPanel:**
+
+```typescript
+// diff-panel.tsx
+function DiffPanel({ cwd, ... }: DiffPanelProps) {
+  const [pushPending, setPushPending] = useState(false);
+  
+  async function handlePush() {
+    setPushPending(true);
+    const requestId = crypto.randomUUID();
+    
+    sendWsMessage({
+      type: 'checkout_push_request',
+      cwd,
+      requestId,
+    });
+    
+    // Response handled in useEffect
+  }
+  
+  useEffect(() => {
+    return subscribeTextMessages((msg) => {
+      if (msg.type === 'checkout_push_response') {
+        setPushPending(false);
+        if (msg.payload.success) {
+          toast.success('Pushed to remote');
+          // Refresh checkout status
+          refreshCheckoutStatus();
+        } else {
+          toast.error(`Push failed: ${msg.payload.error?.message ?? 'Unknown error'}`);
+        }
+      }
+    });
+  }, []);
+  
+  return (
+    <Button onClick={handlePush} disabled={pushPending || !hasRemote}>
+      {pushPending ? <Spinner /> : <GitBranch />}
+      Push
+    </Button>
+  );
+}
+```
+
+### Auth Handling
+
+Git push uses system credentials:
+- **SSH:** Docker mounts `~/.ssh:/root/.ssh:ro` (see docker-compose.yml)
+- **HTTPS:** Git credential helper or environment variables
+- No additional auth handling needed in application
+
+---
+
+## Data Flow Diagrams
+
+### Multi-Tab Terminal Flow
+
+```
+User clicks "+" tab
+       │
+       ▼
+sendWsMessage({ type: 'create_thread_tab_request', projectId, threadId })
+       │
+       ▼
+Server: terminalManager.createThreadTab()
+       │
+       ├──► tmux new-window -t {sessionKey}
+       │
+       ▼
+Response: { terminalId, tabIndex }
+       │
+       ▼
+Client: tabStore.addTab(), setActiveTab()
+       │
+       ├──► Create new xterm.js Terminal
+       ├──► Create new TerminalStreamAdapter
+       │
+       ├──► sendWsMessage({ type: 'attach_terminal_stream_request', terminalId })
+       │
+       ▼
+Response: { streamId }
+       │
+       ▼
+adapter.confirmAttachedStream(streamId)
+       │
+       ▼
+Binary frames routed by streamId to correct adapter
+```
+
+### AI Chat Overlay Flow
+
+```
+Terminal runs OpenCode agent
+       │
+       ▼
+AgentManager produces AgentTimelineItem[]
+       │
+       ▼
+Session emits: { type: 'agent_stream', payload: { event: { type: 'timeline', item } } }
+       │
+       ▼
+Client subscribeTextMessages()
+       │
+       ├──► Filter type === 'agent_stream' && event.type === 'timeline'
+       │
+       ▼
+chatStore.addMessage(timelineItemToChatMessage(item))
+       │
+       ▼
+ChatOverlay re-renders with new message
+```
+
+### Voice Input Flow
+
+```
+User clicks mic button
+       │
+       ▼
+navigator.mediaDevices.getUserMedia({ audio: true })
+       │
+       ▼
+MediaRecorder.ondataavailable (250ms chunks)
+       │
+       ├──► sendWsMessage({ type: 'dictation_stream_chunk', audio: base64 })
+       │
+       ▼
+Server: DictationStreamManager.handleChunk()
+       │
+       ├──► Accumulate chunks
+       │
+       ▼
+User stops recording → dictation_stream_finish
+       │
+       ├──► SpeechToTextProvider.transcribe()
+       │
+       ▼
+Response: { type: 'dictation_stream_final', text }
+       │
+       ▼
+Client inserts text into chat input
+```
+
+---
+
+## Build Order (Dependency-Based)
+
+### Phase 1: Git Push UI (1-2 days)
+**Dependencies:** None — backend exists
+**Tasks:**
+1. Add Push button to DiffPanel
+2. Wire to existing `checkout_push_request`
+3. Handle response, show toast
+4. Refresh checkout status on success
+
+### Phase 2: Multi-Tab Foundation (3-5 days)
+**Dependencies:** None — extends existing systems
+
+**Server (2 days):**
+1. Add `createThreadTab()` to terminal manager using tmux `new-window`
+2. Add `listThreadTabs()` using tmux `list-windows`
+3. Add `closeThreadTab()` using tmux `kill-window`
+4. Add message handlers to session.ts
+
+**Client (2-3 days):**
+1. Create TabStore (Zustand)
+2. TabBar component with +/close buttons
+3. Multiple TerminalStreamAdapter management
+4. Frame routing by streamId
+5. Tab state in thread store
+
+### Phase 3: AI Chat Overlay (3-5 days)
+**Dependencies:** Multi-tab helpful but not blocking
+
+**Day 1-2:**
+1. Create ChatStore (Zustand)
+2. Subscribe to `agent_stream` events
+3. Timeline item → chat message mapping
+
+**Day 3-4:**
+1. ChatOverlay component
+2. ChatBubble components (user, assistant, tool, reasoning)
+3. ChatInput with submit
+
+**Day 5:**
+1. Toggle/position controls (right, bottom, floating)
+2. Minimize/maximize
+3. Integration with existing layout
+
+### Phase 4: Voice Input (2-3 days)
+**Dependencies:** AI Chat overlay (for input target)
+
+**Day 1:**
+1. VoiceInput component with MediaRecorder
+2. Dictation stream messaging
+
+**Day 2:**
+1. Handle transcription responses
+2. Insert text into chat input
+3. Visual feedback (recording indicator, waveform)
+
+**Day 3 (optional):**
+1. Local Whisper container setup
+2. LocalWhisperSTTProvider
+
+### Recommended Sequence
+
+```
+Week 1: Git Push UI (done) + Multi-Tab Foundation (in progress)
+Week 2: Multi-Tab Completion + AI Chat Overlay
+Week 3: Voice Input + Integration Testing
+```
+
+---
+
+## Component Boundaries
+
+| Component | Package | Responsibility | Status |
+|-----------|---------|----------------|--------|
+| TerminalManager | server | tmux session/window lifecycle | Exists, extend |
+| Session | server | WebSocket message handling | Exists, add handlers |
+| DictationStreamManager | server | Audio streaming to STT | Exists |
+| SpeechToTextProvider | server | STT abstraction | Exists |
+| ThreadStore | web | Thread state | Exists |
+| TabStore | web | Tab state within threads | **NEW** |
+| ChatStore | web | AI chat messages | **NEW** |
+| TerminalStreamAdapter | web | Binary mux frame handling | Exists, instance per tab |
+| TabBar | web | Tab UI | **NEW** |
+| ChatOverlay | web | AI chat rendering | **NEW** |
+| VoiceInput | web | MediaRecorder + dictation | **NEW** |
+| DiffPanel | web | Diff view + git actions | Exists, add push button |
+
+---
+
+## Integration Points Summary
+
+| Feature | Server Integration | Client Integration | Status |
+|---------|-------------------|-------------------|--------|
+| Multi-tab | TerminalManager (tmux windows) | TabStore, multiple adapters | New |
+| AI chat | AgentManager stream subscription | ChatStore, ChatOverlay | New (uses existing) |
+| Voice | DictationStreamManager | MediaRecorder, VoiceInput | New (uses existing) |
+| Git push | Session (existing handler) | DiffPanel button | UI only |
+
+---
+
+## Risk Areas
+
+1. **Multi-tab tmux complexity:** Window management across disconnects/reconnects needs careful state sync
+2. **Agent stream subscription:** Must handle agent restarts, thread switches, timeline gaps
+3. **Voice audio formats:** Browser codec support varies (prefer webm/opus, fallback to pcm)
+4. **Chat/terminal input sync:** Both paths must work, ensure consistent UX
+
+---
 
 ## Sources
 
-| Source | Type | Confidence |
-|--------|------|------------|
-| Paseo source code (old-oisin-ui fork) | Direct code analysis | HIGH |
-| Paseo GitHub (getpaseo/paseo) | Official repo, v0.1.15 | HIGH |
-| Paseo server package.json | Dependency analysis | HIGH |
-| Paseo app package.json | Dependency analysis | HIGH |
-| OpenHands GitHub | Architecture comparison | MEDIUM |
-| xterm.js documentation | Official docs | HIGH |
-| node-pty | Standard library for PTY in Node.js | HIGH |
-| @xterm/headless | Server-side terminal emulation | HIGH |
-| ws library | Industry-standard WebSocket for Node.js | HIGH |
+- **Codebase analysis:** binary-mux.ts, terminal-manager.ts, session.ts, messages.ts
+- **Existing implementations:** dictation-stream-manager.ts, speech providers
+- **Docker setup:** docker-compose.yml, Dockerfile
+- **Agent timeline:** timeline-projection.ts, agent-sdk-types.ts
+
+---
+
+## Previous Architecture Context
+
+For full system architecture (daemon, terminal manager, binary mux, worktrees), see the original ARCHITECTURE.md content that documents the foundational patterns. This document focuses specifically on v3 TABS COOLERS feature integration.
