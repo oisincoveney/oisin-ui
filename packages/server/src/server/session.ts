@@ -4413,6 +4413,8 @@ export class Session {
           requestId,
         },
       })
+      // Refresh checkout status after successful commit so push indicator updates
+      await this.handleCheckoutStatusRequest({ type: 'checkout_status_request', cwd, requestId: `${requestId}-status` })
     } catch (error) {
       this.emit({
         type: 'checkout_commit_response',
